@@ -19,7 +19,7 @@ ARG python_version=3.10
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
 ARG onnx_version=1.19.0
-ARG pydantic_version=2.8.2
+ARG pydantic_version=2.9.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
@@ -109,14 +109,11 @@ RUN pip3 install ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protob
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
     opencv-contrib-python-headless safetensors scipy onnx sentence_transformers onnxruntime autoawq==${autoawq_version} \
-    tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
-    # TODO: installing optimum here due to version conflict.
-    && pip3 install ${djl_converter_wheel} optimum==${optimum_version} --no-deps \
+    tokenizers==${tokenizers_version} pydantic==${pydantic_version} torch==${torch_version} torchvision==${torch_vision_version} \
+    ${djl_converter_wheel} optimum==${optimum_version} ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} \
     && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
     && pip3 cache purge
 
-RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} \
-    && pip3 cache purge
 
 # Add CUDA-Compat
 RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
