@@ -35,7 +35,6 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HF_HOME=/tmp/.cache/huggingface
-ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 # set cudnn9 library path
 ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
