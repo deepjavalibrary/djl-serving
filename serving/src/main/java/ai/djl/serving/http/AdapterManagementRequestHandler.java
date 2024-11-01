@@ -172,10 +172,6 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String modelName,
             String adapterAlias) {
-
-        String adapterName = NettyUtils.getRequiredParameter(decoder, "name");
-        String src = NettyUtils.getRequiredParameter(decoder, "src");
-
         WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
         WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
@@ -189,6 +185,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("LoRA is not enabled.");
         }
 
+        String adapterName = NettyUtils.getRequiredParameter(decoder, "name");
+        String src = NettyUtils.getRequiredParameter(decoder, "src");
+        String alias = adapterAlias == null ? adapterName : adapterAlias;
+
         Map<String, String> options = new ConcurrentHashMap<>();
         for (Map.Entry<String, List<String>> entry : decoder.parameters().entrySet()) {
             if (entry.getValue().size() == 1) {
@@ -197,7 +197,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         }
         boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
         Adapter<Input, Output> adapter =
-                Adapter.newInstance(modelInfo, adapterName, adapterAlias, src, pin, options);
+                Adapter.newInstance(modelInfo, adapterName, alias, src, pin, options);
         adapter.register(wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
@@ -208,7 +208,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 .exceptionally(
                         t -> {
                             onException(t.getCause(), ctx);
-                            Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm);
+                            Adapter.unregister(adapterName, alias, modelInfo, wlm);
                             return null;
                         });
     }
@@ -232,14 +232,14 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("LoRA is not enabled.");
         }
 
+        if (adapterAlias == null) {
+            adapterAlias = adapterName;
+        }
+
         Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
 
         if (adapter == null) {
-            throw new BadRequestException(
-                    404,
-                    "The adapter "
-                            + (adapterAlias == null ? adapterName : adapterAlias)
-                            + " was not found");
+            throw new BadRequestException(404, "The adapter " + adapterAlias + " was not found");
         }
 
         Map<String, String> options = new ConcurrentHashMap<>();
@@ -250,7 +250,6 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         }
         String src = options.get("src");
         boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
-
         adapter.setAlias(adapterAlias);
         if (src != null) {
             adapter.setSrc(src);
@@ -286,14 +285,14 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("LoRA is not enabled.");
         }
 
+        if (adapterAlias == null) {
+            adapterAlias = adapterName;
+        }
+
         Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
 
         if (adapter == null) {
-            throw new BadRequestException(
-                    404,
-                    "The adapter "
-                            + (adapterAlias == null ? adapterName : adapterAlias)
-                            + " was not found");
+            throw new BadRequestException(404, "The adapter " + adapterAlias + " was not found");
         }
 
         DescribeAdapterResponse adapterResponse = new DescribeAdapterResponse(adapter);
@@ -313,6 +312,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                         modelInfo.getProperties().getProperty("option.enable_lora", "false"));
         if (!enableLora) {
             throw new BadRequestException("LoRA is not enabled.");
+        }
+
+        if (adapterAlias == null) {
+            adapterAlias = adapterName;
         }
 
         Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm)

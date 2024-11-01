@@ -645,13 +645,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (!adapters.containsKey(name)) {
                 throw new NoSuchElementException(
                         "The adapter "
-                                + (alias == null ? name : alias)
+                                + alias
                                 + " was not found and therefore cannot be unregistered");
             }
             Adapter<I, O> adapter = adapters.remove(name);
-            if (alias != null) {
-                adapter.setAlias(alias);
-            }
+            adapter.setAlias(alias);
             return adapter;
         }
     }
