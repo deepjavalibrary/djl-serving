@@ -24,6 +24,8 @@ The goal of this document is for the user to be able to:
 - Qwen (since LMI V8 0.26.0)
 - GPT2/SantaCoder/StarCoder (since LMI V8 0.26.0)
 - Phi2 (since LMI V8 0.27.0)
+- OPT (since LMI V9 0.27.0)
+- Gemma (since LMI V10 0.28.0)
 
 For model that are not listed here, you can use [this tutorial](trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
@@ -42,7 +44,7 @@ Refer [here](https://github.com/aws/deep-learning-containers/blob/master/availab
 For example:
 
 ```
-docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.28.0-tensorrtllm0.9.0-cu122
+docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125
 ```
 
 ### Step 3: Set the environment variables:
@@ -91,7 +93,7 @@ docker run --runtime=nvidia --gpus all --shm-size 12gb \
 -e OPTION_TENSOR_PARALLEL_DEGREE=$OPTION_TENSOR_PARALLEL_DEGREE \
 -e OPTION_MAX_ROLLING_BATCH_SIZE=$OPTION_MAX_ROLLING_BATCH_SIZE \
 -e OPTION_DTYPE=$OPTION_DTYPE \
- 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.28.0-tensorrtllm0.9.0-cu122 python /opt/djl/partition/trt_llm_partition.py \
+ 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125 python /opt/djl/partition/trt_llm_partition.py \
 --properties_dir $PWD \
 --trt_llm_model_repo /tmp/trtllm \
 --tensor_parallel_degree $OPTION_TENSOR_PARALLEL_DEGREE

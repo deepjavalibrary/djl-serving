@@ -24,13 +24,13 @@ Refer [here](https://github.com/aws/deep-learning-containers/blob/master/availab
 For example:
 
 ```
-docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-tensorrtllm0.7.1-cu122
+docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125
 ```
 
 You can also pull the container from DockerHub:
 
 ```
-docker pull deepjavalibrary/djl-serving:0.26.0-tensorrt-llm
+docker pull deepjavalibrary/djl-serving:0.30.0-tensorrt-llm
 ```
 
 ### Step 3: Login the container and prepare the environment
@@ -40,7 +40,7 @@ You need to manually login into the container to proceed for conversion
 ```
 docker run -it --runtime=nvidia --gpus all \
 --shm-size 12g \
-deepjavalibrary/djl-serving:0.26.0-tensorrt-llm \
+deepjavalibrary/djl-serving:0.30.0-tensorrt-llm \
 /bin/bash
 ```
 
@@ -53,20 +53,20 @@ You can check it with
 pip show tensorrt-llm
 # Output
 # Name: tensorrt-llm
-# Version: 0.7.1
+# Version: 0.12.0
 ```
 
-Then just clone the TensorRT-LLM Triton backend for model preparation. If the version is 0.5.0, then you need to checkout the tag for that version (v0.5.0).
+Then just clone the TensorRT-LLM Triton backend for model preparation. If the version is 0.12.0, then you need to checkout the tag for that version (v0.12.0).
 ```
-git clone https://github.com/triton-inference-server/tensorrtllm_backend -b v0.5.0
+git clone https://github.com/triton-inference-server/tensorrtllm_backend -b v0.12.0
 cd tensorrtllm_backend && rm -rf tensorrt_llm
-git clone https://github.com/NVIDIA/TensorRT-LLM -b v0.5.0 tensorrt_llm
+git clone https://github.com/NVIDIA/TensorRT-LLM -b v0.12.0 tensorrt_llm
 ```
 
 
 ### Step 4: Build TensorRT-LLM compatible model
 
-The following work we do is very similar to Triton Server model preparation. You can find more information on the [official preparation doc](https://github.com/triton-inference-server/tensorrtllm_backend/tree/release/0.5.0?tab=readme-ov-file#prepare-tensorrt-llm-engines).
+The following work we do is very similar to Triton Server model preparation. You can find more information on the [official preparation doc](https://github.com/triton-inference-server/tensorrtllm_backend/tree/release/0.12.0?tab=readme-ov-file#prepare-tensorrt-llm-engines).
 Our environment is pre-configured all necessary packages, so we don't need to pip install anything.
 
 Here we just need to
@@ -143,7 +143,7 @@ parameters: {
 }
 ```
 
-Here is a table contains TRTLLM supported parameters with our suggestions. (up to 0.6.1)
+Here is a table contains TRTLLM supported parameters with our suggestions for version 0.6.1. For newer versions, please see the [TRT-LLM user guide](../user_guides/trt_llm_user_guide.md).
 
 | Name                           | Settings                | Meaning                                                                                                                                                                        |
 |--------------------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -159,7 +159,7 @@ Here is a table contains TRTLLM supported parameters with our suggestions. (up t
 | exclude_input_in_output        | True                    | This will helps to follow the same way LMI generating as the result. Remove the prefix (input)     
 
 
-(0.6.1) Also need to remove some configs that are used for dynamic batching:
+(v0.6.1+) Also need to remove some configs that are used for dynamic batching:
 
 ```
 dynamic_batching {
@@ -213,7 +213,7 @@ ls triton_model_repo/tensorrt_llm/1/
 Prepare necessary credentials for your models and do upload:
 
 ```
-aws s3 sync triton_model_repo/tensorrt_llm/ s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/baichuan-13b-chat/
+aws s3 sync triton_model_repo/tensorrt_llm/ s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/baichuan-13b-chat/
 ```
 
 Note: We always need to create two folders here to load the model. Saying if you store like the followings:
@@ -230,13 +230,13 @@ s3://<some-bucket>/...<some_folders>../folder1/
 and in our case is:
 
 ```
-s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/
 ```
 
 Check the file is there
 
 ```
-aws s3 ls s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/baichuan-13b-chat/
+aws s3 ls s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/baichuan-13b-chat/
                            PRE 1/
 2023-12-19 01:58:03        733 config.json
 2023-12-19 01:58:03       4425 config.pbtxt
@@ -254,7 +254,7 @@ Finally, you can use one of the following configuration to load your model on Sa
 
  ### 1. Environment variables:
 ```
-HF_MODEL_ID=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+HF_MODEL_ID=s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/
 OPTION_TENSOR_PARALLEL_DEGREE=2
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
@@ -264,7 +264,7 @@ OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 engine=Python
 option.mpi_mode=true
-option.model_id=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+option.model_id=s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/
 option.tensor_parallel_degree=2
 option.max_rolling_batch_size=64
 ```
