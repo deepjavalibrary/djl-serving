@@ -113,7 +113,7 @@ RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cuda-compat-12-5 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"

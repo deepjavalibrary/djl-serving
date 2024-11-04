@@ -989,7 +989,8 @@ trtllm_handler_list = {
     },
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
-        "option.dtype": "bf16"
+        "option.dtype": "bf16",
+        "option.max_rolling_batch_size": 128,
     },
     "llama-3-1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
