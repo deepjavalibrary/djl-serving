@@ -166,8 +166,10 @@ class PythonEngine(object):
                         f"Invalid output type: {type(outputs)}")
             except Exception as e:
                 logging.exception("Failed invoke service.invoke_handler()")
-                if type(e).__name__ == "OutOfMemoryError" or type(
-                        e).__name__ == "MemoryError":
+                if (type(e).__name__ == "OutOfMemoryError"
+                        or type(e).__name__ == "MemoryError"
+                        or "No available memory for the cache blocks" in str(e)
+                        or "CUDA error: out of memory" in str(e)):
                     outputs = Output(code=507, message=str(e))
                 else:
                     outputs = Output().error(str(e))
