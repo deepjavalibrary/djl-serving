@@ -22,14 +22,14 @@ ARG neuronx_distributed_version=0.9.0
 ARG neuronx_cc_version=2.15.128.0
 ARG neuronx_cc_stubs_version=2.15.128.0
 ARG torch_xla_version=2.1.4
-ARG transformers_version=4.43.2
+ARG transformers_version=4.45.2
 ARG accelerate_version=0.29.2
 ARG diffusers_version=0.28.2
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.24
 ARG huggingface_hub_version=0.25.2
 # %2B is the url escape for the '+' character
-ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.6.0%2Bnightly-py3-none-any.whl"
+ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.6.2%2Bnightly-py3-none-any.whl"
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
