@@ -28,6 +28,7 @@ public abstract class Adapter<I, O> {
 
     protected ModelInfo<I, O> modelInfo;
     protected String name;
+    protected String alias;
     protected String src;
     protected boolean pin;
     protected Map<String, String> options;
@@ -43,11 +44,13 @@ public abstract class Adapter<I, O> {
     protected Adapter(
             ModelInfo<I, O> modelInfo,
             String name,
+            String alias,
             String src,
             boolean pin,
             Map<String, String> options) {
         this.modelInfo = modelInfo;
         this.name = name;
+        this.alias = alias;
         this.src = src;
         this.pin = pin;
         this.options = options;
@@ -70,6 +73,7 @@ public abstract class Adapter<I, O> {
     public static <I, O> Adapter<I, O> newInstance(
             ModelInfo<I, O> modelInfo,
             String name,
+            String alias,
             String src,
             boolean pin,
             Map<String, String> options) {
@@ -86,7 +90,8 @@ public abstract class Adapter<I, O> {
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
             return (Adapter<I, O>)
-                    new PyAdapter((ModelInfo<Input, Output>) modelInfo, name, src, pin, options);
+                    new PyAdapter(
+                            (ModelInfo<Input, Output>) modelInfo, name, alias, src, pin, options);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");
@@ -106,8 +111,12 @@ public abstract class Adapter<I, O> {
      * @return the new adapter
      */
     public static <I, O> Adapter<I, O> newInstance(
-            ModelInfo<I, O> modelInfo, String name, String src, Map<String, String> options) {
-        return newInstance(modelInfo, name, src, false, options);
+            ModelInfo<I, O> modelInfo,
+            String name,
+            String alias,
+            String src,
+            Map<String, String> options) {
+        return newInstance(modelInfo, name, alias, src, false, options);
     }
 
     /**
@@ -121,8 +130,8 @@ public abstract class Adapter<I, O> {
      * @param adapterName the adapter name
      */
     public static <I, O> CompletableFuture<O> unregister(
-            String adapterName, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
-        Adapter<I, O> adapter = modelInfo.unregisterAdapter(adapterName);
+            String adapterName, String alias, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
+        Adapter<I, O> adapter = modelInfo.unregisterAdapter(adapterName, alias);
 
         // Add the unregister adapter job to job queue.
         // Because we only support one worker thread for LoRA,
@@ -156,6 +165,24 @@ public abstract class Adapter<I, O> {
      */
     public void setName(String name) {
         this.name = name;
+    }
+
+    /**
+     * Returns the adapter alias.
+     *
+     * @return the adapter alias
+     */
+    public String getAlias() {
+        return alias == null ? name : alias;
+    }
+
+    /**
+     * Sets the adapter alias.
+     *
+     * @param alias the adapter alias
+     */
+    public void setAlias(String alias) {
+        this.alias = alias;
     }
 
     /**

@@ -298,6 +298,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                                 Adapter.newInstance(
                                                         this,
                                                         adapterName,
+                                                        null,
                                                         adapterDir.toAbsolutePath().toString(),
                                                         Collections.emptyMap());
                                         registerAdapter(adapter);
@@ -607,7 +608,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (adapters.containsKey(adapter.getName())) {
                 throw new IllegalArgumentException(
                         "The adapter "
-                                + adapter.getName()
+                                + adapter.getAlias()
                                 + " already exists. If you want to replace it, please unregistering"
                                 + " before registering a new adapter with the same name.");
             }
@@ -625,7 +626,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (!adapters.containsKey(adapter.getName())) {
                 throw new NoSuchElementException(
                         "The adapter "
-                                + adapter.getName()
+                                + adapter.getAlias()
                                 + " was not found and therefore can't be updated");
             }
             adapters.put(adapter.getName(), adapter);
@@ -638,16 +639,18 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
      * @param name the adapter to remove
      * @return the removed adapter
      */
-    public Adapter<I, O> unregisterAdapter(String name) {
+    public Adapter<I, O> unregisterAdapter(String name, String alias) {
         synchronized (this) {
             // TODO: Remove from current workers
             if (!adapters.containsKey(name)) {
                 throw new NoSuchElementException(
                         "The adapter "
-                                + name
+                                + alias
                                 + " was not found and therefore cannot be unregistered");
             }
-            return adapters.remove(name);
+            Adapter<I, O> adapter = adapters.remove(name);
+            adapter.setAlias(alias);
+            return adapter;
         }
     }
 

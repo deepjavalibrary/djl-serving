@@ -210,7 +210,7 @@ def parse_adapters(request_input: TextInput, input_item: Input,
                                kwargs.get("adapter_registry"))
         else:
             # inference with just base model.
-            adapters_per_item = [""] * input_len
+            adapters_per_item = [("", "")] * input_len
 
         if input_len != len(adapters_per_item):
             raise ValueError(
@@ -229,15 +229,17 @@ def parse_adapters(request_input: TextInput, input_item: Input,
 def _fetch_adapters_from_input(input_map: dict, input_item: Input):
     adapters_per_item = []
     if "adapters" in input_map:
-        adapters_per_item = input_map.pop("adapters", [])
+        adapters_per_item = (input_map.pop("adapters"), None)
 
     # check content, possible in workflow approach
     if input_item.contains_key("adapter"):
-        adapters_per_item = input_item.get_as_string("adapter")
+        adapters_per_item = (input_item.get_as_string("adapter"), None)
 
     # check properties, possible from header
-    if "adapter" in input_item.get_properties():
-        adapters_per_item = input_item.get_properties()["adapter"]
+    if "X-Amzn-SageMaker-Adapter-Identifier" in input_item.get_properties():
+        adapters_per_item = (
+            input_item.get_property("X-Amzn-SageMaker-Adapter-Identifier"),
+            input_item.get_property("X-Amzn-SageMaker-Adapter-Alias"))
 
     if not isinstance(adapters_per_item, list):
         adapters_per_item = [adapters_per_item]
@@ -246,9 +248,9 @@ def _fetch_adapters_from_input(input_map: dict, input_item: Input):
 
 
 def _validate_adapters(adapters_per_item, adapter_registry):
-    for adapter_name in adapters_per_item:
+    for adapter_name, adapter_alias in adapters_per_item:
         if adapter_name and adapter_name not in adapter_registry:
-            raise ValueError(f"Adapter {adapter_name} is not registered")
+            raise ValueError(f"Adapter {adapter_alias} is not registered")
 
 
 def parse_lmi_default_request_rolling_batch(payload):

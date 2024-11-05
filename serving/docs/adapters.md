@@ -106,7 +106,7 @@ There are a few things to keep in mind which choosing a calling technique.
    Instead, just call the workflow as normal.
 2. Each technique must be implemented by the model handler by parsing the adapter from the Input parameter, content, or body respectively.
    Our built-in implementations support it from all options
-3. Some of these techniques may not work in all situations. For example, only the custom attributes strategy will work in Amazon SageMaker as it blocks the other options.
+3. Some of these techniques may not work in all situations. For example, only the header strategy will work in Amazon SageMaker as it blocks the other options.
 
 
 ### (Recommended) Adapters parameter Calling
@@ -137,9 +137,9 @@ curl -X POST http://127.0.0.1:8080/invocations?adapter=adapter_1 \
     -d '{"inputs": ["How is the weather"], "parameters": {"max_new_tokens": 25}}'
 ```
 
-### SageMaker Custom Attributes
+### SageMaker Header
 
-This passes the adapter through the use of the SageMaker Custom Attributes header.
+This passes the adapter through the use of the SageMaker header.
 It is reflected in the Input properties.
 This option will work in Amazon SageMaker.
 
@@ -147,7 +147,7 @@ This option will work in Amazon SageMaker.
 curl -X POST http://127.0.0.1:8080/invocations \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -H "X-Amzn-SageMaker-Custom-Attributes: adapter=adapter_1"
+    -H "X-Amzn-SageMaker-Adapter-Identifier: adapter_1"
     -d '{"inputs": ["How is the weather"], "parameters": {"max_new_tokens": 25}}'
 ```
 
