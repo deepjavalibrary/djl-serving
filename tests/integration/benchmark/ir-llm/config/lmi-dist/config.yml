@@ -1,0 +1,136 @@
+region: "us-west-2"
+
+cloudwatch:
+  metrics_namespace: "djl-benchmark-nightly"
+
+s3:
+  bucket_name: "djl-benchmark"
+  folder: "lmi-dist"
+
+# Please provide your HF_TOKEN
+#hf_token: ""
+
+metrics:
+  timeToFirstToken_p50:
+    metric_name: "TTFT_P50"
+    unit: "Milliseconds"
+    
+  timeToFirstToken_p99:
+    metric_name: "TTFT_P99"
+    unit: "Milliseconds"
+  
+  intertokenLatency_p50:
+    metric_name: "InterTokenLatency_P50"
+    unit: "Milliseconds"
+    
+  intertokenLatency_p99:
+    metric_name: "InterTokenLatency_P99"
+    unit: "Milliseconds"
+    
+  costPerMillionInputTokens: 
+    metric_name: "CostPerMillionInputTokens"
+    unit: "Count"
+    
+  costPerMillionOutputTokens: 
+    metric_name: "CostPerMillionOutputTokens"
+    unit: "None"
+  
+  tokenizerFailed_Sum: 
+    metric_name: "TokenizerErrorRate"
+    unit: "Percent"
+
+  numberOfInputTokens_p50:
+    metric_name: "NumberOfInputTokens_p50"
+    unit: "None"
+      
+  numberOfInputTokens_p99:
+    metric_name: "NumberOfInputTokens_p99"
+    unit: "None"
+
+  numberOfOutputTokens_p50:
+    metric_name: "NumberOfOutputTokens_p50"
+    unit: "None"
+      
+  numberOfOutputTokens_p99:
+    metric_name: "NumberOfOutputTokens_p99"
+    unit: "None"
+
+  clientInvocationErrors_Sum:
+    metric_name: "ClientInvocationErrorRate"
+    unit: "Percent"
+
+  emptyInferenceResponse_Sum:
+    metric_name: "EmptyInferenceResponseRate"
+    unit: "Percent"
+
+benchmarks:
+  - model: "Llama-3.1-8b"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_passive_Llama-3-1-8b.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
+        action: yes 
+  - model: "Llama-3.1-8b-suzuka"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_LMI_V12_Llama-3-1-8b-suzuka.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-8b-instruct"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_passive_Llama-3-1-8b-instruct.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-8b-instruct-suzuka"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_LMI_V12_Llama-3-1-8b-instruct-suzuka.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-70b"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_passive_Llama-3-1-70b.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-70b-suzuka"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_LMI_V12_Llama-3-1-70b-suzuka.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-70b-instruct"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_passive_Llama-3-1-70b-instruct.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-70b-instruct-suzuka"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_LMI_V12_Llama-3-1-70b-instruct-suzuka.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-405b-fp8"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_passive_Llama-3-1-405b-fp8.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
+        action: no 
+  - model: "Llama-3.1-405b-instruct-fp8"
+    endpoints: 
+      - endpoint: "sagemaker"
+        image: "LMI-dist"
+        config: "benchmark_config_passive_Llama-3-1-405b-instruct-fp8.json"
+        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
+        action: no 

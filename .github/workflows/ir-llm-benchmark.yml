@@ -1,0 +1,127 @@
+name: SageMaker PythonSDK Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "candidate release version, or nightly. Default is nightly"
+        required: false
+        default: 'nightly'
+      sagemaker-repository:
+        description: 'Link to Github repository for SageMaker Python SDK. Can be a personal fork.'
+        required: false
+        default: ''
+      repository-branch:
+        description: 'The branch from the SagMaker Python SDK fork to use for testing'
+        required: false
+        default: ''
+      run_benchmark:
+        description: 'Runs benchmark and upload to cloud watch metrics'
+        required: false
+        default: 'true'
+  schedule:
+    - cron: '0 4 * * *'
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new CPU instance
+        id: create_cpu1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+    outputs:
+      cpu_instance_id1: ${{ steps.create_cpu1.outputs.action_cpu_instance_id }}
+      cpu_instance_id2: ${{ steps.create_cpu2.outputs.action_cpu_instance_id }}
+
+
+  endpoint-tests:
+    runs-on: [ self-hosted, cpu ]
+    timeout-minutes: 120
+    needs: create-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [lmi, tensorrt-llm]
+    env:
+      run_benchmark: ${{ github.event.inputs.run_benchmark || 'true' }}
+      image_type: ${{ github.event.inputs.mode || 'nightly' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install -U boto3 awscli
+      - name: Install SageMaker Python SDK
+        working-directory: tests/integration
+        run: |
+          ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} ${{ github.event.inputs.repository-branch }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-west-2
+      - name: Test llama3-8b
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py llama3-8b sme ${image_type} ${{ matrix.container}} ${run_benchmark}
+          echo "sleep 30 seconds to allow endpoint deletion"
+          sleep 30
+      - name: Test mistral-7b
+        if: ${{ always() }}
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py mistral-7b sme ${image_type} ${{ matrix.container}} ${run_benchmark}
+          echo "sleep 30 seconds to allow endpoint deletion"
+          sleep 30
+      - name: Test phi-2
+        if: ${{ always() }}
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py phi-2 sme ${image_type} ${{ matrix.container}} ${run_benchmark}
+          echo "sleep 30 seconds to allow endpoint deletion"
+          sleep 30
+      - name: Test llava-v1.6
+        if: ${{ always() && matrix.container == 'lmi' }}
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py llava-v1.6 sme ${image_type} ${{ matrix.container }} ${run_benchmark}
+      - name: Test Multi Model Endpoint
+        if: ${{ always() }}
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py mme_common mme ${image_type} ${{ matrix.container}} ${run_benchmark}
+          echo "sleep 30 seconds to allow endpoint deletion"
+          sleep 30
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, endpoint-tests ]
+    steps:
+      - name: Cleanup dangling SageMaker resources
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          ./cleanup_sagemaker_resources.sh sm-integration-test us-west-2
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id2 }}
+          ./stop_instance.sh $instance_id
