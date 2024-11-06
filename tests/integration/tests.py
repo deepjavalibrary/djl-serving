@@ -29,19 +29,22 @@ class Runner:
         self.client_file_handler = None
 
         # Compute flavor and repo
-        repo = "deepjavalibrary/djl-serving"
-        if djl_version is None or len(
-                djl_version) == 0 or djl_version == "nightly":
-            flavor = f"{container}-nightly"
-        else:
-            if djl_version == "temp":
-                repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
-                flavor = f"{container}-{os.environ['GITHUB_SHA']}"
-            else:
-                if container == "cpu":
-                    flavor = djl_version
-                else:
-                    flavor = f"{djl_version}-{container}"
+        # repo = "deepjavalibrary/djl-serving"
+        # if djl_version is None or len(
+        #         djl_version) == 0 or djl_version == "nightly":
+        #     flavor = f"{container}-nightly"
+        # else:
+        #     if djl_version == "temp":
+        #         repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+        #         flavor = f"{container}-{os.environ['GITHUB_SHA']}"
+        #     else:
+        #         if container == "cpu":
+        #             flavor = djl_version
+        #         else:
+        #             flavor = f"{djl_version}-{container}"
+
+        repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+        flavor = "tensorrt-llm-17151527010a8aa7a36b39ba8590da0ab5e3dd81"
 
         self.image = f"{repo}:{flavor}"
 
