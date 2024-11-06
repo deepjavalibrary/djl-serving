@@ -131,9 +131,12 @@ class NeoShardingService():
 
     def run_sharding(self):
         try:
-            pp_degree = int(self.properties.get("option.pipeline_parallel_degree", 1))
+            pp_degree = int(
+                self.properties.get("option.pipeline_parallel_degree", 1))
             if pp_degree!=1:
-                raise ValueError(f"Sharding does not currently support Pipeline Parallelism. Received {pp_degree}.")
+                raise ValueError(
+                    f"Sharding does not currently support Pipeline Parallelism. Received {pp_degree}."
+                )
             self.shard_lmi_dist_model(
                 input_dir=self.INPUT_MODEL_DIRECTORY,
                 output_dir=self.OUTPUT_MODEL_DIRECTORY,
