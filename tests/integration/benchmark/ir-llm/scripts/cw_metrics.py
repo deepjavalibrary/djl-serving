@@ -102,8 +102,8 @@ def run_benchmark(config_yml, benchmark_config_dir, benchmark_metric_dir):
         s3_bucket = config.get("s3", {}).get("bucket_name", "djl-benchmark")
         s3_folder = config.get("s3", {}).get("folder", "lmi-dist")
         current_date = datetime.now().strftime("%Y-%m-%d")
-        s3_metrics_folder = f"{s3_folder}/{current_date}/metrics/"
-        s3_config_folder = f"{s3_folder}/{current_date}/config/"
+        s3_metrics_folder = f"{current_date}/{s3_folder}/metrics/"
+        s3_config_folder = f"{current_date}/{s3_folder}/config/"
         s3_job_config_object = f"{s3_config_folder}config.yml"
 
         for benchmark in config["benchmarks"]:
