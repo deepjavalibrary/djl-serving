@@ -8,28 +8,28 @@ permissions:
   contents: read
 
 jobs:
-  create-runners-p4d:
+  create-runners-g6:
     runs-on: [ self-hosted, scheduler ]
     steps:
-      - name: Create new P4d.24xl instance
-        id: create_gpu_p4d
+      - name: Create new g612xl instance
+        id: create_gpu_g6
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_lmic_p4d $token djl-serving
+          ./start_instance.sh action_g6 $token djl-serving
     outputs:
-      p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
+      g6_instance_id: ${{ steps.create_gpu_g6.outputs.action_g6_instance_id }}
 
   lmi-deps-build:
-    runs-on: [ self-hosted, p4d ]
+    runs-on: [ self-hosted, g6 ]
     container:
       image: nvidia/cuda:12.4.1-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 20g
     timeout-minutes: 90
-    needs: create-runners-p4d
+    needs: create-runners-g6
     steps:
       - uses: actions/checkout@v4
       - name: Setup Environment
@@ -46,7 +46,7 @@ jobs:
           . ./venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install "numpy<2" cmake awscli packaging wheel setuptools ninja git-remote-codecommit
-          python -m pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu124
+          python -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -60,14 +60,14 @@ jobs:
 #          cd flash-attention-v2
 #          pip wheel . --no-deps
 #          cp flash_attn-*.whl ../build_artifacts
-      - name: Build vllm 0.6.2 MLlama fix
+      - name: Build vllm 0.6.3.post1 with PT 2.5.1
         run: |
           . ./venv/bin/activate
-          git clone https://github.com/siddvenk/vllm -b lmi_v12
+          git clone https://github.com/siddvenk/vllm -b lmi_vllm_0.6.3.post1
           cd vllm
           export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
           export MAX_JOBS=64
-          export SETUPTOOLS_SCM_PRETEND_VERSION=0.6.2
+          export SETUPTOOLS_SCM_PRETEND_VERSION=0.6.3.post1
           export NVCC_THREADS=8
           export VLLM_FA_CMAKE_GPU_ARCHES="80-real;90-real"
           export CMAKE_BUILD_TYPE=Release
@@ -80,7 +80,7 @@ jobs:
           path: build_artifacts/
 
   lmi-deps-upload:
-    runs-on: [ self-hosted, p4d ]
+    runs-on: [ self-hosted, g6]
     needs: lmi-deps-build
     steps:
       - name: Set up Python3
@@ -95,15 +95,15 @@ jobs:
           name: build-artifacts
       - name: upload to S3
         run: |
-          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt231/
+          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt251/
 
-  stop-runners-p4d:
+  stop-runners-g6:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners-p4d, lmi-deps-build, lmi-deps-upload ]
+    needs: [ create-runners-g6, lmi-deps-build, lmi-deps-upload ]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners-p4d.outputs.p4d_instance_id }}
+          instance_id=${{ needs.create-runners-g6.outputs.p4d_instance_id }}
           ./stop_instance.sh $instance_id
