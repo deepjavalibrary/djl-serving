@@ -133,7 +133,7 @@ class NeoShardingService():
         try:
             pp_degree = int(
                 self.properties.get("option.pipeline_parallel_degree", 1))
-            if pp_degree!=1:
+            if pp_degree !=1:
                 raise ValueError(
                     f"Sharding does not currently support Pipeline Parallelism. Received {pp_degree}."
                 )
