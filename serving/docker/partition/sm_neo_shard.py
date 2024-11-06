@@ -128,15 +128,16 @@ class NeoShardingService():
 
         del engine
         torch.cuda.empty_cache()
-        # MPI.COMM_WORLD.Barrier()
 
     def run_sharding(self):
         try:
+            pp_degree = int(self.properties.get("option.pipeline_parallel_degree", 1))
+            if pp_degree!=1:
+                raise ValueError(f"Sharding does not currently support Pipeline Parallelism. Received {pp_degree}.")
             self.shard_lmi_dist_model(
                 input_dir=self.INPUT_MODEL_DIRECTORY,
                 output_dir=self.OUTPUT_MODEL_DIRECTORY,
-                pp_degree=int(
-                    self.properties.get("option.pipeline_parallel_degree", 1)),
+                pp_degree=pp_degree,
                 tp_degree=int(
                     self.properties["option.tensor_parallel_degree"]),
                 chunk_mb=CHUNK_MB)
@@ -159,7 +160,6 @@ def main():
         MPI.COMM_WORLD.Barrier()
         write_error_to_file(exc, neo_sharding_service.COMPILATION_ERROR_FILE)
         raise exc
-        # MPI.COMM_WORLD.Abort(1)
     finally:
         MPI.Finalize()
 

@@ -53,7 +53,7 @@ class NeoDispatcher:
         return properties
 
     def is_valid_sharding_config(self):
-        # TODO: once pp is supported, add add requirement and remove default value
+        # TODO: once pp is supported, add requirement and remove default value
         return (self.properties.get("option.load_format") in VALID_LOAD_FORMATS
                 and self.properties.get("option.tensor_parallel_degree")
                 is not None)
