@@ -20,8 +20,6 @@ from sagemaker.jumpstart.model import JumpStartModel
 from sagemaker.model import Model
 from sagemaker.utils import name_from_base
 
-#import logging
-#logging.basicConfig(level=logging.DEBUG)
 
 @dataclass
 class BenchmarkConfiguration:

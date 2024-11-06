@@ -1,4 +1,4 @@
-name: SageMaker PythonSDK Integration Tests
+name: SageMaker LLM Benchmark
 
 on:
    schedule:
@@ -20,7 +20,6 @@ jobs:
     outputs:
       cpu_instance_id1: ${{ steps.create_cpu1.outputs.action_cpu_instance_id }}
       
-
   endpoint-tests:
     runs-on: [ self-hosted, cpu ]
     timeout-minutes: 120
@@ -37,19 +36,20 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install -U boto3 awscli
-      - name: Install IR-LLM
-        working-directory: tests/integration/benchmark/ir-llm/sagemaker
-        run: |
-          pip3 install --quiet sagemaker-2.227.1.dev0-py3-none-any.whl
-          aws configure add-model --service-model file://sagemaker-2017-07-24.normal.json  --service-name sagemaker
-      # - name: Install SageMaker Python SDK
-      #   working-directory: tests/integration
-      #   run: |
-      #     ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} ${{ github.event.inputs.repository-branch }}
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-west-2
+      - name: Install IR-LLM
+        working-directory: tests/integration/benchmark/ir-llm
+        run: |
+          aws s3 cp s3://sagemaker-python-sdk-ir-llm/sagemaker-latest.dev0-py3-none-any.whl .
+          aws s3 cp s3://sagemaker-python-sdk-ir-llm/sagemaker.normal.json .
+          aws s3 cp s3://djl-accounts/hf_token .
+          export HF_TOKEN=$(head -n1 hf_token|cut -d '=' -f2)
+          pip3 install --quiet sagemaker-latest.dev0-py3-none-any.whl
+          aws configure add-model --service-model file://sagemaker.normal.json  --service-name sagemaker
       - name: Prepare dir to store metrics
         working-directory: tests/integration/benchmark/ir-llm
         run: |

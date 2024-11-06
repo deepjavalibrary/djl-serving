@@ -1,14 +1,11 @@
 region: "us-west-2"
 
 cloudwatch:
-  metrics_namespace: "djl-benchmark-nightly"
+  metrics_namespace: "SageMaker_LLM_Benchmark"
 
 s3:
   bucket_name: "djl-benchmark"
-  folder: "trtllm"
-
-# Please provide your HF_TOKEN
-#hf_token: ""
+  folder: "sm-trtllm"
 
 metrics:
   timeToFirstToken_p50:
