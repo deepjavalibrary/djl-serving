@@ -201,10 +201,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
-                                sendOutput(o, ctx);
                                 if (o.getCode() < 300) {
                                     modelInfo.registerAdapter(adapter);
                                 }
+                                sendOutput(o, ctx);
                             }
                         })
                 .exceptionally(
@@ -262,10 +262,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
-                                sendOutput(o, ctx);
                                 if (o.getCode() < 300) {
                                     modelInfo.updateAdapter(adapter);
                                 }
+                                sendOutput(o, ctx);
                             }
                         })
                 .exceptionally(
@@ -333,10 +333,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
-                                sendOutput(o, ctx);
                                 if (o.getCode() < 300) {
                                     modelInfo.unregisterAdapter(adapter.getName(), adapterAlias);
                                 }
+                                sendOutput(o, ctx);
                             }
                         })
                 .exceptionally(
