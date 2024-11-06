@@ -885,6 +885,11 @@ vllm_model_list = {
 }
 
 vllm_neo_model_list = {
+    "tiny-llama-fml": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.load_format": 'sagemaker-fast-model-loader',
+    },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
     },
@@ -1423,7 +1428,7 @@ def build_vllm_model(model):
 def build_vllm_neo_model(model):
     if model not in vllm_neo_model_list:
         raise ValueError(
-            f"{model} is not one of the supporting handler {list(transformers_neuronx_neo_list.keys())}"
+            f"{model} is not one of the supporting handler {list(vllm_neo_model_list.keys())}"
         )
     options = vllm_neo_model_list[model]
     create_neo_input_model(options)
