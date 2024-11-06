@@ -41,7 +41,7 @@ ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.
 ARG peft_version=0.13.2
 
 # TODO: replace with actual wheel location once published
-ARG sagemaker_fast_model_loader_wheel="https://publish.djl.ai/sagemaker_fast_model_loader/sagemaker_fast_model_loader-0.1.0-cp310-cp310-linux_x86_64.whl"
+ARG sagemaker_fast_model_loader_wheel="https://sagemaker.fast-model-loader.releases/sagemaker_fast_model_loader-0.1.0-cp310-cp310-linux_x86_64.whl"
 
 EXPOSE 8080
 
