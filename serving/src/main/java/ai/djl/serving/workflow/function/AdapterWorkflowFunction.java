@@ -104,8 +104,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
             WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(adapter.modelName);
             if (wp != null) {
                 ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
-                Adapter.unregister(
-                        adapter.adapter.getName(), adapter.adapter.getName(), modelInfo, wlm);
+                Adapter.unregister(adapter.adapter, modelInfo, wlm);
             }
         }
     }

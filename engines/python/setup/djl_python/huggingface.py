@@ -506,14 +506,13 @@ def register_adapter(inputs: Input):
     adapter_pin = inputs.get_property(
         "pin").lower() == "true" if inputs.get_property("pin") else False
 
-    if not os.path.exists(adapter_path):
-        raise ValueError(
-            f"Only local LoRA models are supported. {adapter_path} is not a valid path"
-        )
-    _service.adapter_registry[adapter_name] = inputs
-
     added = False
     try:
+        if not os.path.exists(adapter_path):
+            raise ValueError(
+                f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+            )
+
         added = _service.rolling_batch.add_lora(adapter_name, adapter_path)
         if not added:
             raise RuntimeError(
@@ -524,6 +523,8 @@ def register_adapter(inputs: Input):
             if not pinned:
                 raise RuntimeError(
                     f"Failed to pin LoRA adapter {adapter_alias}")
+
+        _service.adapter_registry[adapter_name] = inputs
     except Exception as e:
         if added:
             logging.info(
@@ -569,13 +570,13 @@ def update_adapter(inputs: Input):
                 "pin").lower() == "true" and not adapter_pin:
             raise NotImplementedError(f"Unpin adapter is not supported.")
 
-        _service.adapter_registry[adapter_name] = inputs
-
         if adapter_pin:
             pinned = _service.rolling_batch.pin_lora(adapter_name)
             if not pinned:
                 raise RuntimeError(
                     f"Failed to pin LoRA adapter {adapter_alias}")
+
+        _service.adapter_registry[adapter_name] = inputs
     except Exception as e:
         if any(msg in str(e)
                for msg in ("No free lora slots",
@@ -600,7 +601,6 @@ def unregister_adapter(inputs: Input):
 
     if adapter_name not in _service.adapter_registry:
         raise ValueError(f"Adapter {adapter_alias} not registered.")
-    del _service.adapter_registry[adapter_name]
 
     try:
         removed = _service.rolling_batch.remove_lora(adapter_name)
@@ -608,6 +608,8 @@ def unregister_adapter(inputs: Input):
             logging.info(
                 f"Remove LoRA adapter {adapter_alias} returned false, the adapter may have already been evicted."
             )
+
+        del _service.adapter_registry[adapter_name]
     except Exception as e:
         return Output().error("remove_adapter_error", message=str(e))
 

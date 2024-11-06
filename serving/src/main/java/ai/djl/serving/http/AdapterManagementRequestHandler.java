@@ -202,12 +202,14 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                         (o, t) -> {
                             if (o != null) {
                                 sendOutput(o, ctx);
+                                if (o.getCode() < 300) {
+                                    modelInfo.registerAdapter(adapter);
+                                }
                             }
                         })
                 .exceptionally(
                         t -> {
                             onException(t.getCause(), ctx);
-                            Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm);
                             return null;
                         });
     }
@@ -261,6 +263,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                         (o, t) -> {
                             if (o != null) {
                                 sendOutput(o, ctx);
+                                if (o.getCode() < 300) {
+                                    modelInfo.updateAdapter(adapter);
+                                }
                             }
                         })
                 .exceptionally(
@@ -314,11 +319,24 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("LoRA is not enabled.");
         }
 
-        Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm)
+        Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
+
+        if (adapter == null) {
+            throw new BadRequestException(
+                    404,
+                    "The adapter "
+                            + (adapterAlias == null ? adapterName : adapterAlias)
+                            + " was not found");
+        }
+
+        Adapter.unregister(adapter, modelInfo, wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
                                 sendOutput(o, ctx);
+                                if (o.getCode() < 300) {
+                                    modelInfo.unregisterAdapter(adapter.getName(), adapterAlias);
+                                }
                             }
                         })
                 .exceptionally(
