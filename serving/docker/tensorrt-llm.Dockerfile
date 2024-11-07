@@ -16,9 +16,9 @@ ARG python_version=3.10
 ARG TORCH_VERSION=2.4.0
 ARG djl_version
 ARG djl_serving_version
-ARG transformers_version=4.44.2
-ARG accelerate_version=0.32.1
-ARG tensorrtlibs_version=10.1.0
+ARG transformers_version=4.42.4
+ARG accelerate_version=0.33.0
+ARG tensorrtlibs_version=10.3.0
 # %2B is the url escape for the '+' character
 ARG trtllm_toolkit_version=0.12.0%2Bnightly
 ARG trtllm_version=v0.12.0
@@ -79,18 +79,13 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
 # Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets==${datasets_version} pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
-    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp flax easydict fbgemm-gpu && \
-    pip3 cache purge
-
-# Install TensorRT and TRT-LLM Deps
-RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} janus==${janus_version} nvidia-modelopt==${modelopt_version} && \
-    pip install --no-deps ${trtllm_wheel} && \
+    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp flax easydict fbgemm-gpu tensorrt==${tensorrtlibs_version} \
+    janus==${janus_version} nvidia-modelopt==${modelopt_version} ${trtllm_wheel} ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
-    pip3 cache purge
+    pip cache purge
 
 # download dependencies
-RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
-    mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
+RUN mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm_common.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm_common.so && \
