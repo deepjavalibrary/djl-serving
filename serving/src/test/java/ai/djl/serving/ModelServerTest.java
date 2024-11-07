@@ -21,14 +21,12 @@ import static org.testng.Assert.fail;
 
 import ai.djl.engine.Engine;
 import ai.djl.modality.Classifications.Classification;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
-import ai.djl.serving.http.DescribeAdapterResponse;
-import ai.djl.serving.http.DescribeWorkflowResponse;
+import ai.djl.serving.http.*;
 import ai.djl.serving.http.DescribeWorkflowResponse.Model;
-import ai.djl.serving.http.ErrorResponse;
-import ai.djl.serving.http.ServerStartupException;
-import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.http.list.ListAdaptersResponse;
 import ai.djl.serving.http.list.ListModelsResponse;
 import ai.djl.serving.http.list.ListWorkflowsResponse;
@@ -37,6 +35,9 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.ModelStore;
+import ai.djl.serving.wlm.Adapter;
+import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
 import ai.djl.util.JsonUtils;
@@ -262,16 +263,16 @@ public class ModelServerTest {
             testPredictionsInvalidRequestSize(channel);
 
             // adapter API
-            testAdapterRegister(channel, true, true);
-            testAdapterUpdate(channel, true);
+            testRegisterAdapter(channel, true, true);
+            testUpdateAdapter(channel, true);
             testAdapterNoPredictRegister();
             testAdapterPredict(channel);
             testAdapterDirPredict(channel);
             testAdapterInvoke(channel);
-            testAdapterList(channel, true);
-            testAdapterDescribe(channel, true);
+            testListAdapter(channel, true);
+            testDescribeAdapter(channel, true);
             testAdapterScale(channel);
-            testAdapterUnregister(channel, true);
+            testUnregisterAdapter(channel, true);
 
             // plugin tests
             testStaticHtmlRequest();
@@ -294,6 +295,17 @@ public class ModelServerTest {
             testRegisterModelMissingUrl();
             testRegisterModelNotFound();
             testRegisterModelConflict();
+            testRegisterAdapterConflict();
+            testRegisterAdapterModelNotFound();
+            testRegisterAdapterHandlerError();
+            testUpdateAdapterModelNotFound();
+            testUpdateAdapterNotFound();
+            testUpdateAdapterHandlerError();
+            testListAdapterModelNotFound();
+            testDescribeAdapterModelNotFound();
+            testDescribeAdapterNotFound();
+            testUnregisterAdapterModelNotFound();
+            testUnregisterAdapterNotFound();
             testServiceUnavailable();
 
             ConfigManagerTest.testSsl();
@@ -390,12 +402,12 @@ public class ModelServerTest {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
-            testAdapterRegister(channel, false, false);
-            testAdapterUpdate(channel, false);
+            testRegisterAdapter(channel, false, false);
+            testUpdateAdapter(channel, false);
             testAdapterPredict(channel);
-            testAdapterList(channel, false);
-            testAdapterDescribe(channel, false);
-            testAdapterUnregister(channel, false);
+            testListAdapter(channel, false);
+            testDescribeAdapter(channel, false);
+            testUnregisterAdapter(channel, false);
 
             channel.close().sync();
 
@@ -976,7 +988,7 @@ public class ModelServerTest {
         channel2.close().sync();
     }
 
-    private void testAdapterRegister(Channel channel, boolean registerModel, boolean modelPrefix)
+    private void testRegisterAdapter(Channel channel, boolean registerModel, boolean modelPrefix)
             throws InterruptedException {
         logTestFunction();
         String url;
@@ -996,13 +1008,120 @@ public class ModelServerTest {
         assertHttpOk();
     }
 
-    private void testAdapterUpdate(Channel channel, boolean modelPrefix)
+    private void testRegisterAdapterConflict() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/adaptecho";
+        String url = strModelPrefix + "/adapters?name=adaptable&src=src&echooption=opt";
+
+        request(channel, HttpMethod.POST, url);
+        assertHttpOk();
+
+        // Test adapter already registered error
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+        assertHttpCode(HttpResponseStatus.CONFLICT.code());
+    }
+
+    private void testRegisterAdapterModelNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/invalid_model";
+        String url = strModelPrefix + "/adapters?name=adaptable&echooption=opt";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
+    }
+
+    private void testRegisterAdapterHandlerError() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String modelName = "adaptecho";
+        String adapterName = "adaptable2";
+        String strModelPrefix = "/models/" + modelName;
+        String url = strModelPrefix + "/adapters?name=" + adapterName + "&src=src&error=true";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+        assertHttpCode(HttpResponseStatus.FAILED_DEPENDENCY.code());
+
+        // Assert adapters not added
+        WorkerPool<Input, Output> wp =
+                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
+        ModelInfo<Input, Output> modelInfo = (ModelInfo<Input, Output>) wp.getWpc();
+        assertNull(modelInfo.getAdapter(adapterName));
+    }
+
+    private void testUpdateAdapter(Channel channel, boolean modelPrefix)
             throws InterruptedException {
         logTestFunction();
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
-        String url = strModelPrefix + "/adapters/adaptable/update?pin=true";
+        String url = strModelPrefix + "/adapters/adaptable/update?src=src1";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
+
+        url = strModelPrefix + "/adapters/adaptable/update?src=src";
+        request(channel, HttpMethod.POST, url);
+        assertHttpOk();
+    }
+
+    private void testUpdateAdapterModelNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/invalid_model";
+        String url = strModelPrefix + "/adapters/adaptable/update?src=src1";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
+    }
+
+    private void testUpdateAdapterNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/adaptecho";
+        String url = strModelPrefix + "/adapters/invalid_adapter/update?src=src1";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
+    }
+
+    private void testUpdateAdapterHandlerError() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String modelName = "adaptecho";
+        String adapterName = "adaptable";
+        String strModelPrefix = "/models/" + modelName;
+        String url = strModelPrefix + "/adapters/" + adapterName + "/update?src=src1&error=true";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+        assertHttpCode(HttpResponseStatus.FAILED_DEPENDENCY.code());
+
+        // Assert adapters not updated
+        WorkerPool<Input, Output> wp =
+                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
+        ModelInfo<Input, Output> modelInfo = (ModelInfo<Input, Output>) wp.getWpc();
+        Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
+        assertEquals("src", adapter.getSrc());
     }
 
     private void testAdapterMissing() throws InterruptedException {
@@ -1021,7 +1140,7 @@ public class ModelServerTest {
         channel.close().sync();
 
         if (!System.getProperty("os.name").startsWith("Win")) {
-            assertHttpCode(503);
+            assertHttpCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
         }
     }
 
@@ -1044,7 +1163,7 @@ public class ModelServerTest {
         channel.close().sync();
 
         if (!System.getProperty("os.name").startsWith("Win")) {
-            assertHttpCode(400);
+            assertHttpCode(HttpResponseStatus.BAD_REQUEST.code());
         }
     }
 
@@ -1122,7 +1241,7 @@ public class ModelServerTest {
         assertEquals(result, "adaptableopttestInvokeAdapter");
     }
 
-    private void testAdapterList(Channel channel, boolean modelPrefix) throws InterruptedException {
+    private void testListAdapter(Channel channel, boolean modelPrefix) throws InterruptedException {
         logTestFunction();
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
         String url = strModelPrefix + "/adapters";
@@ -1132,7 +1251,21 @@ public class ModelServerTest {
         assertTrue(resp.getAdapters().stream().anyMatch(a -> "adaptable".equals(a.getName())));
     }
 
-    private void testAdapterDescribe(Channel channel, boolean modelPrefix)
+    private void testListAdapterModelNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/invalid_model";
+        String url = strModelPrefix + "/adapters";
+        request(channel, HttpMethod.GET, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
+    }
+
+    private void testDescribeAdapter(Channel channel, boolean modelPrefix)
             throws InterruptedException {
         logTestFunction();
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
@@ -1143,6 +1276,34 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), "adaptable");
         assertEquals(resp.getSrc(), "src");
+    }
+
+    private void testDescribeAdapterModelNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/invalid_model";
+        String url = strModelPrefix + "/adapters/adaptable";
+        request(channel, HttpMethod.GET, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
+    }
+
+    private void testDescribeAdapterNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/adaptecho";
+        String url = strModelPrefix + "/adapters/invalid_adapter";
+        request(channel, HttpMethod.GET, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
     private void testAdapterScale(Channel channel) throws InterruptedException {
@@ -1160,13 +1321,41 @@ public class ModelServerTest {
         testAdapterPredict(channel);
     }
 
-    private void testAdapterUnregister(Channel channel, boolean modelPrefix)
+    private void testUnregisterAdapter(Channel channel, boolean modelPrefix)
             throws InterruptedException {
         logTestFunction();
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
         String url = strModelPrefix + "/adapters/adaptable";
         request(channel, HttpMethod.DELETE, url);
         assertHttpOk();
+    }
+
+    private void testUnregisterAdapterModelNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/invalid_model";
+        String url = strModelPrefix + "/adapters/adaptable";
+        request(channel, HttpMethod.DELETE, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
+    }
+
+    private void testUnregisterAdapterNotFound() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String strModelPrefix = "/models/adaptecho";
+        String url = strModelPrefix + "/adapters/invalid_adapter";
+        request(channel, HttpMethod.DELETE, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
@@ -1410,7 +1599,7 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(resp.getCode(), 409);
+            assertEquals(resp.getCode(), HttpResponseStatus.CONFLICT.code());
             assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
         }
     }
@@ -1472,7 +1661,7 @@ public class ModelServerTest {
 
         channel = connect(Connector.ConnectorType.INFERENCE);
         request(channel, HttpMethod.GET, "/ping");
-        assertHttpCode(503);
+        assertHttpCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
     }
 
     private void testKServeV2HealthReady(Channel channel) throws InterruptedException {

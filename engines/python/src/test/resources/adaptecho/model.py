@@ -13,11 +13,6 @@
 """
 Test Python model example.
 """
-
-import logging
-import sys
-import time
-
 from djl_python import Input
 from djl_python import Output
 
@@ -26,23 +21,33 @@ adapters = dict()
 
 def register_adapter(inputs: Input):
     global adapters
-    name = inputs.get_properties()["name"]
+    name = inputs.get_property("name")
+    if inputs.contains_key("error"):
+        return Output().error(f"error",
+                              message=f"Failed to register adapter: {name}")
     adapters[name] = inputs
     return Output().add("Successfully registered adapter")
 
 
 def update_adapter(inputs: Input):
     global adapters
-    name = inputs.get_properties()["name"]
+    name = inputs.get_property("name")
     if name not in adapters:
-        raise ValueError(f"Adapter {name} not registered.")
+        return Output().error(f"error",
+                              message=f"Adapter {name} not registered.")
+    if inputs.contains_key("error"):
+        return Output().error(f"error",
+                              message=f"Failed to update adapter: {name}")
     adapters[name] = inputs
     return Output().add("Successfully updated adapter")
 
 
 def unregister_adapter(inputs: Input):
     global adapters
-    name = inputs.get_properties()["name"]
+    name = inputs.get_property("name")
+    if inputs.contains_key("error"):
+        return Output().error(f"error",
+                              message=f"Failed to unregister adapter: {name}")
     del adapters[name]
     return Output().add("Successfully unregistered adapter")
 

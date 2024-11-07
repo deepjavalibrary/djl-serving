@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -100,7 +101,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[2];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName, adapterAlias);
-            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[3])) {
+            } else if (segments.length == 4
+                    && HttpMethod.POST.equals(method)
+                    && "update".equalsIgnoreCase(segments[3])) {
                 handleUpdateAdapter(ctx, decoder, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName, adapterAlias);
@@ -126,7 +129,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[4];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName, adapterAlias);
-            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[5])) {
+            } else if (segments.length == 6
+                    && HttpMethod.POST.equals(method)
+                    && "update".equalsIgnoreCase(segments[5])) {
                 handleUpdateAdapter(ctx, decoder, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName, adapterAlias);
@@ -204,7 +209,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                                 if (o.getCode() < 300) {
                                     modelInfo.registerAdapter(adapter);
                                 }
-                                sendOutput(o, ctx);
+                                handleOutput(o, ctx);
                             }
                         })
                 .exceptionally(
@@ -252,20 +257,32 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         String src = options.get("src");
         boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
 
-        adapter.setAlias(adapterAlias);
+        Adapter<Input, Output> newAdapter =
+                Adapter.newInstance(
+                        modelInfo,
+                        adapter.getName(),
+                        adapter.getAlias(),
+                        adapter.getSrc(),
+                        adapter.isPin(),
+                        adapter.getOptions());
+        newAdapter.setAlias(adapterAlias);
         if (src != null) {
-            adapter.setSrc(src);
+            newAdapter.setSrc(src);
         }
-        adapter.setPin(pin);
+        if (adapter.isPin() != pin) {
+            newAdapter.setPin(pin);
+        }
+        newAdapter.getOptions().putAll(options);
 
-        adapter.update(wlm)
+        newAdapter
+                .update(wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
                                 if (o.getCode() < 300) {
-                                    modelInfo.updateAdapter(adapter);
+                                    modelInfo.updateAdapter(newAdapter);
                                 }
-                                sendOutput(o, ctx);
+                                handleOutput(o, ctx);
                             }
                         })
                 .exceptionally(
@@ -336,7 +353,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                                 if (o.getCode() < 300) {
                                     modelInfo.unregisterAdapter(adapter.getName(), adapterAlias);
                                 }
-                                sendOutput(o, ctx);
+                                handleOutput(o, ctx);
                             }
                         })
                 .exceptionally(
@@ -354,21 +371,18 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         return (ModelInfo<Input, Output>) wp.getWpc();
     }
 
-    private void sendOutput(Output output, ChannelHandlerContext ctx) {
+    private void handleOutput(Output output, ChannelHandlerContext ctx) {
         if (ctx == null) {
             return;
         }
 
         int code = output.getCode();
         if (code >= 300) {
-            NettyUtils.sendJsonResponse(
-                    ctx,
-                    new ErrorResponse(code, null, output.getMessage()),
-                    HttpResponseStatus.valueOf(code));
-        } else {
-            NettyUtils.sendJsonResponse(
-                    ctx, new StatusResponse(output.getMessage()), HttpResponseStatus.valueOf(code));
+            throw new BadRequestException(output.getCode(), output.getMessage());
         }
+
+        NettyUtils.sendJsonResponse(
+                ctx, new StatusResponse(output.getMessage()), HttpResponseStatus.valueOf(code));
     }
 
     private void onException(Throwable t, ChannelHandlerContext ctx) {
@@ -391,6 +405,12 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             } else {
                 code = config.getWlmErrorHttpCode();
             }
+        } else if (t instanceof NoSuchElementException) {
+            logger.warn(requestIdLogPrefix, t);
+            code = HttpResponseStatus.NOT_FOUND.code();
+        } else if (t instanceof IllegalArgumentException) {
+            logger.warn(requestIdLogPrefix, t);
+            code = HttpResponseStatus.CONFLICT.code();
         } else {
             logger.warn("{} Unexpected error", requestIdLogPrefix, t);
             code = config.getServerErrorHttpCode();
