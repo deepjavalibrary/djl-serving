@@ -39,7 +39,7 @@ jobs:
           mkdir build_artifacts
       - name: Set up Python3
         run: |
-          ./serving/docker/scripts/install_python.sh 3.10
+          ./serving/docker/scripts/install_python.sh 3.11
       - name: Install torch dependencies
         run: |
           python -m venv venv
