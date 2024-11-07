@@ -26,7 +26,7 @@ def register_adapter(inputs: Input):
         return Output().error(f"error",
                               message=f"Failed to register adapter: {name}")
     adapters[name] = inputs
-    return Output().add("Successfully registered adapter")
+    return Output(message=f"Adapter {name} registered")
 
 
 def update_adapter(inputs: Input):
@@ -39,17 +39,17 @@ def update_adapter(inputs: Input):
         return Output().error(f"error",
                               message=f"Failed to update adapter: {name}")
     adapters[name] = inputs
-    return Output().add("Successfully updated adapter")
+    return Output(message=f"Adapter {name} updated")
 
 
 def unregister_adapter(inputs: Input):
     global adapters
     name = inputs.get_property("name")
-    if inputs.contains_key("error"):
+    if name not in adapters:
         return Output().error(f"error",
-                              message=f"Failed to unregister adapter: {name}")
+                              message=f"Adapter {name} not registered.")
     del adapters[name]
-    return Output().add("Successfully unregistered adapter")
+    return Output(message=f"Adapter {name} unregistered")
 
 
 def handle(inputs: Input):

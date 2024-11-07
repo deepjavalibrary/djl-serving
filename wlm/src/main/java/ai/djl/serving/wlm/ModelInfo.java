@@ -639,14 +639,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
      * @param name the adapter to remove
      * @return the removed adapter
      */
-    public Adapter<I, O> unregisterAdapter(String name, String alias) {
+    public Adapter<I, O> unregisterAdapter(String name) {
         synchronized (this) {
             // TODO: Remove from current workers
             if (!adapters.containsKey(name)) {
                 throw new NoSuchElementException(
-                        "The adapter "
-                                + (alias == null ? name : alias)
-                                + " was not found and therefore cannot be unregistered");
+                        "The adapter was not found and therefore cannot be unregistered");
             }
             return adapters.remove(name);
         }

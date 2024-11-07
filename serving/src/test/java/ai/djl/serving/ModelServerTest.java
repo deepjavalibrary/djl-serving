@@ -21,12 +21,14 @@ import static org.testng.Assert.fail;
 
 import ai.djl.engine.Engine;
 import ai.djl.modality.Classifications.Classification;
-import ai.djl.modality.Input;
-import ai.djl.modality.Output;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
-import ai.djl.serving.http.*;
+import ai.djl.serving.http.DescribeAdapterResponse;
+import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.DescribeWorkflowResponse.Model;
+import ai.djl.serving.http.ErrorResponse;
+import ai.djl.serving.http.ServerStartupException;
+import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.http.list.ListAdaptersResponse;
 import ai.djl.serving.http.list.ListModelsResponse;
 import ai.djl.serving.http.list.ListWorkflowsResponse;
@@ -35,9 +37,6 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.ModelStore;
-import ai.djl.serving.wlm.Adapter;
-import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
 import ai.djl.util.JsonUtils;
@@ -1006,6 +1005,9 @@ public class ModelServerTest {
         url = strModelPrefix + "/adapters?name=adaptable&src=src&echooption=opt";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
+
+        StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(statusResp.getStatus(), "Adapter adaptable registered");
     }
 
     private void testRegisterAdapterConflict() throws InterruptedException {
@@ -1036,7 +1038,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.POST, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1054,11 +1055,16 @@ public class ModelServerTest {
         channel.close().sync();
         assertHttpCode(HttpResponseStatus.FAILED_DEPENDENCY.code());
 
-        // Assert adapters not added
-        WorkerPool<Input, Output> wp =
-                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
-        ModelInfo<Input, Output> modelInfo = (ModelInfo<Input, Output>) wp.getWpc();
-        assertNull(modelInfo.getAdapter(adapterName));
+        // Assert adapter not added
+        channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        url = strModelPrefix + "/adapters";
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
+        assertFalse(resp.getAdapters().stream().anyMatch(a -> "adaptable2".equals(a.getName())));
     }
 
     private void testUpdateAdapter(Channel channel, boolean modelPrefix)
@@ -1072,6 +1078,9 @@ public class ModelServerTest {
         url = strModelPrefix + "/adapters/adaptable/update?src=src";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
+
+        StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(statusResp.getStatus(), "Adapter adaptable updated");
     }
 
     private void testUpdateAdapterModelNotFound() throws InterruptedException {
@@ -1084,7 +1093,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.POST, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1098,7 +1106,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.POST, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1116,12 +1123,18 @@ public class ModelServerTest {
         channel.close().sync();
         assertHttpCode(HttpResponseStatus.FAILED_DEPENDENCY.code());
 
-        // Assert adapters not updated
-        WorkerPool<Input, Output> wp =
-                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
-        ModelInfo<Input, Output> modelInfo = (ModelInfo<Input, Output>) wp.getWpc();
-        Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
-        assertEquals("src", adapter.getSrc());
+        // Assert adapter not updated
+        channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        url = strModelPrefix + "/adapters/" + adapterName;
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        DescribeAdapterResponse resp =
+                JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
+        assertEquals(resp.getName(), adapterName);
+        assertEquals(resp.getSrc(), "src");
     }
 
     private void testAdapterMissing() throws InterruptedException {
@@ -1246,6 +1259,7 @@ public class ModelServerTest {
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
         String url = strModelPrefix + "/adapters";
         request(channel, HttpMethod.GET, url);
+        assertHttpOk();
 
         ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
         assertTrue(resp.getAdapters().stream().anyMatch(a -> "adaptable".equals(a.getName())));
@@ -1261,7 +1275,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.GET, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1271,6 +1284,7 @@ public class ModelServerTest {
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
         String url = strModelPrefix + "/adapters/adaptable";
         request(channel, HttpMethod.GET, url);
+        assertHttpOk();
 
         DescribeAdapterResponse resp =
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
@@ -1288,7 +1302,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.GET, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1302,7 +1315,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.GET, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1328,6 +1340,9 @@ public class ModelServerTest {
         String url = strModelPrefix + "/adapters/adaptable";
         request(channel, HttpMethod.DELETE, url);
         assertHttpOk();
+
+        StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(statusResp.getStatus(), "Adapter adaptable unregistered");
     }
 
     private void testUnregisterAdapterModelNotFound() throws InterruptedException {
@@ -1340,7 +1355,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.DELETE, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 
@@ -1354,7 +1368,6 @@ public class ModelServerTest {
         request(channel, HttpMethod.DELETE, url);
         channel.closeFuture().sync();
         channel.close().sync();
-
         assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
     }
 

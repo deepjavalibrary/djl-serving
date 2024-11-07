@@ -538,8 +538,8 @@ def register_adapter(inputs: Input):
         return Output().error(f"register_adapter_error", message=str(e))
 
     logging.info(
-        f"Registered adapter {adapter_name} from {adapter_path} successfully")
-    return Output(message=f"Adapter {adapter_name} registered")
+        f"Registered adapter {adapter_alias} from {adapter_path} successfully")
+    return Output(message=f"Adapter {adapter_alias} registered")
 
 
 def update_adapter(inputs: Input):
