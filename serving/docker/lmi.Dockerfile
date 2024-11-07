@@ -15,7 +15,7 @@ ARG cuda_version=cu124
 ARG djl_version
 ARG djl_serving_version
 # Base Deps
-ARG python_version=3.10
+ARG python_version=3.11
 ARG torch_version=2.5.1
 ARG torch_vision_version=0.20.1
 ARG djl_torch_version=2.4.0
@@ -40,7 +40,7 @@ ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0%2Bnightly-py
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_version=0.13.2
 
-ARG sagemaker_fast_model_loader_wheel="https://publish.djl.ai/fast-model-loader/sagemaker_fast_model_loader-0.1.0-a090380-cp310-cp310-linux_x86_64.whl"
+ARG sagemaker_fast_model_loader_wheel="https://publish.djl.ai/fast-model-loader/sagemaker_fast_model_loader-0.1.0-cp311-cp311-linux_x86_64.whl"
 
 EXPOSE 8080
 
@@ -55,8 +55,8 @@ ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 # set cudnn9 library path
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
+ENV LD_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/nvidia/cudnn/lib/
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu124-precxx11
