@@ -888,7 +888,7 @@ vllm_neo_model_list = {
     "tiny-llama-fml": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.tensor_parallel_degree": 2,
-        "option.load_format": 'sagemaker-fast-model-loader',
+        "option.load_format": 'sagemaker_fast_model_loader',
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",

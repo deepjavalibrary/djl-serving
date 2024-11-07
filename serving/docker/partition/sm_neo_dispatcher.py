@@ -53,10 +53,21 @@ class NeoDispatcher:
         return properties
 
     def is_valid_sharding_config(self):
-        # TODO: once pp is supported, add requirement and remove default value
-        return (self.properties.get("option.load_format") in VALID_LOAD_FORMATS
-                and self.properties.get("option.tensor_parallel_degree")
-                is not None)
+        if self.properties.get("option.load_format") in VALID_LOAD_FORMATS:
+            if self.properties.get("option.quantize"):
+                raise ValueError(
+                    f"Sharding & Quantization are mutually exclusive. Please Quantize first & then Shard. Received load_format={self.properties.get('option.load_format')} & quantize={self.properties.get('option.quantize')}."
+                )
+            if not int(self.properties.get("option.tensor_parallel_degree")):
+                raise ValueError(
+                    f"Please specify a non-zero tensor_parallel_degree while Sharding. Received {self.properties.get('option.tensor_parallel_degree')}."
+                )
+            if int(self.properties.get("option.pipeline_parallel_degree", 1)) != 1:
+                raise ValueError(
+                    f"Sharding does not currently support Pipeline Parallelism. Received {self.properties.get('option.pipeline_parallel_degree')}."
+                )
+            return True
+        return False
 
     def _get_mpirun_command(self, task: NeoTask, num_processes: int):
         return [
@@ -108,6 +119,7 @@ class NeoDispatcher:
         match self.serving_features:
             case "vllm,lmi-dist":
                 if self.is_valid_sharding_config():
+                    print(f"Sharding Model...")
                     self.run_task(NeoTask.SHARDING)
                 else:
                     self.run_task(NeoTask.QUANTIZATION)
