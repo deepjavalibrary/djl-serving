@@ -16,7 +16,7 @@ ARG python_version=3.10
 ARG TORCH_VERSION=2.4.0
 ARG djl_version
 ARG djl_serving_version
-ARG transformers_version=4.42.4
+ARG transformers_version=4.44.2
 ARG accelerate_version=0.33.0
 ARG tensorrtlibs_version=10.3.0
 # %2B is the url escape for the '+' character
@@ -77,11 +77,12 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
 
 # Install PyTorch
 # Qwen needs transformers_stream_generator, tiktoken and einops
-RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
+RUN pip install torch==${TORCH_VERSION} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets==${datasets_version} pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
     transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp flax easydict fbgemm-gpu tensorrt==${tensorrtlibs_version} \
     janus==${janus_version} nvidia-modelopt==${modelopt_version} ${trtllm_wheel} ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
+    pip install transformers==${transformers_version} && \
     pip cache purge
 
 # download dependencies
