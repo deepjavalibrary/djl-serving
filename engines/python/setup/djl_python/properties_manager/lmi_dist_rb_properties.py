@@ -31,6 +31,10 @@ class LmiDistQuantizeMethods(str, Enum):
     squeezellm = 'squeezellm'
 
 
+class LmiDistLoadFormats(str, Enum):
+    sagemaker_fast_model_loader = 'sagemaker_fast_model_loader'
+
+
 class LmiDistRbProperties(Properties):
     engine: Optional[str] = None
     dtype: Optional[str] = "auto"
@@ -79,6 +83,14 @@ class LmiDistRbProperties(Properties):
         if self.enable_lora and self.speculative_draft_model:
             raise AssertionError(
                 f"Cannot enable lora and speculative decoding at the same time"
+            )
+        return self
+
+    @model_validator(mode='after')
+    def validate_speculative_and_fml(self):
+        if self.load_format == LmiDistLoadFormats.sagemaker_fast_model_loader and self.speculative_draft_model:
+            raise AssertionError(
+                f"Cannot enable sagemaker_fast_model_loader and speculative decoding at the same time"
             )
         return self
 
