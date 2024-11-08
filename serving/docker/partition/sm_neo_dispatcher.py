@@ -59,15 +59,14 @@ class NeoDispatcher:
                     f"Sharding & Quantization are mutually exclusive. "
                     f"Please Quantize first & then Shard. "
                     f"Received load_format={self.properties.get('option.load_format')} "
-                    f"& quantize={self.properties.get('option.quantize')}."
-                )
+                    f"& quantize={self.properties.get('option.quantize')}.")
             if not int(self.properties.get("option.tensor_parallel_degree")):
                 raise ValueError(
                     f"Please specify a non-zero tensor_parallel_degree while Sharding. "
                     f"Received {self.properties.get('option.tensor_parallel_degree')}."
                 )
             if int(self.properties.get("option.pipeline_parallel_degree",
-                                       1)) != 1:
+                                       1)) > 1:
                 raise ValueError(
                     f"Sharding does not currently support Pipeline Parallelism. "
                     f"Received {self.properties.get('option.pipeline_parallel_degree')}."
