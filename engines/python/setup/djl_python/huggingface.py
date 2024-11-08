@@ -503,8 +503,8 @@ def register_adapter(inputs: Input):
     adapter_name = inputs.get_property("name")
     adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
-    adapter_pin = inputs.get_property(
-        "pin").lower() == "true" if inputs.get_property("pin") else False
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
 
     added = False
     try:
@@ -553,21 +553,22 @@ def update_adapter(inputs: Input):
     adapter_name = inputs.get_property("name")
     adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
-    adapter_pin = inputs.get_property(
-        "pin").lower() == "true" if inputs.get_property("pin") else False
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
 
     if adapter_name not in _service.adapter_registry:
         raise ValueError(f"Adapter {adapter_alias} not registered.")
 
     try:
-        adapter_old = _service.adapter_registry[adapter_name]
-        if adapter_old.get_property("src") and adapter_old.get_property(
+        old_adapter = _service.adapter_registry[adapter_name]
+        if old_adapter.get_property("src") and old_adapter.get_property(
                 "src") != adapter_path:
             raise NotImplementedError(
                 f"Updating adapter path is not supported.")
 
-        if adapter_old.get_property("pin") and adapter_old.get_property(
-                "pin").lower() == "true" and not adapter_pin:
+        old_adapter_pin = inputs.get_as_string(
+            "pin").lower() == "true" if inputs.contains_key("pin") else False
+        if old_adapter_pin and not adapter_pin:
             raise NotImplementedError(f"Unpin adapter is not supported.")
 
         if adapter_pin:

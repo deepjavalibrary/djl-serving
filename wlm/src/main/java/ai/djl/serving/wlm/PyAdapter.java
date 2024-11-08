@@ -25,7 +25,6 @@ public class PyAdapter extends Adapter<Input, Output> {
      *
      * @param name the adapter name
      * @param src the adapter src
-     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
     protected PyAdapter(
@@ -33,9 +32,8 @@ public class PyAdapter extends Adapter<Input, Output> {
             String name,
             String alias,
             String src,
-            boolean pin,
             Map<String, String> options) {
-        super(modelInfo, name, alias, src, pin, options);
+        super(modelInfo, name, alias, src, options);
     }
 
     @Override
@@ -45,7 +43,6 @@ public class PyAdapter extends Adapter<Input, Output> {
         input.addProperty("name", name);
         input.addProperty("alias", alias);
         input.addProperty("src", src);
-        input.addProperty("pin", String.valueOf(pin));
         for (Map.Entry<String, String> entry : options.entrySet()) {
             input.add(entry.getKey(), entry.getValue());
         }
@@ -59,7 +56,6 @@ public class PyAdapter extends Adapter<Input, Output> {
         input.addProperty("name", name);
         input.addProperty("alias", alias);
         input.addProperty("src", src);
-        input.addProperty("pin", String.valueOf(pin));
         for (Map.Entry<String, String> entry : options.entrySet()) {
             input.add(entry.getKey(), entry.getValue());
         }

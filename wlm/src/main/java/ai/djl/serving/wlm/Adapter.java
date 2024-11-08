@@ -30,7 +30,6 @@ public abstract class Adapter<I, O> {
     protected String name;
     protected String alias;
     protected String src;
-    protected boolean pin;
     protected Map<String, String> options;
 
     /**
@@ -38,7 +37,6 @@ public abstract class Adapter<I, O> {
      *
      * @param name the adapter name
      * @param src the adapter source
-     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
     protected Adapter(
@@ -46,13 +44,11 @@ public abstract class Adapter<I, O> {
             String name,
             String alias,
             String src,
-            boolean pin,
             Map<String, String> options) {
         this.modelInfo = modelInfo;
         this.name = name;
         this.alias = alias;
         this.src = src;
-        this.pin = pin;
         this.options = options;
     }
 
@@ -65,7 +61,6 @@ public abstract class Adapter<I, O> {
      * @param modelInfo the base model for the new adapter
      * @param name the adapter name
      * @param src the adapter source
-     * @param pin whether to pin the adapter
      * @param options additional adapter options
      * @return the new adapter
      */
@@ -75,7 +70,6 @@ public abstract class Adapter<I, O> {
             String name,
             String alias,
             String src,
-            boolean pin,
             Map<String, String> options) {
         // TODO Allow URL support
         try {
@@ -90,33 +84,11 @@ public abstract class Adapter<I, O> {
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
             return (Adapter<I, O>)
-                    new PyAdapter(
-                            (ModelInfo<Input, Output>) modelInfo, name, alias, src, pin, options);
+                    new PyAdapter((ModelInfo<Input, Output>) modelInfo, name, alias, src, options);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");
         }
-    }
-
-    /**
-     * Constructs a new {@link Adapter}.
-     *
-     * <p>After registration, you should call {@link #register(WorkLoadManager)}. This doesn't
-     * affect the worker pool itself.
-     *
-     * @param modelInfo the base model for the new adapter
-     * @param name the adapter name
-     * @param src the adapter source
-     * @param options additional adapter options
-     * @return the new adapter
-     */
-    public static <I, O> Adapter<I, O> newInstance(
-            ModelInfo<I, O> modelInfo,
-            String name,
-            String alias,
-            String src,
-            Map<String, String> options) {
-        return newInstance(modelInfo, name, alias, src, false, options);
     }
 
     /**
@@ -203,24 +175,6 @@ public abstract class Adapter<I, O> {
     }
 
     /**
-     * Returns whether to pin the adapter.
-     *
-     * @return whether to pin the adapter
-     */
-    public boolean isPin() {
-        return pin;
-    }
-
-    /**
-     * Sets whether to pin the adapter.
-     *
-     * @param pin whether to pin the adapter
-     */
-    public void setPin(boolean pin) {
-        this.pin = pin;
-    }
-
-    /**
      * Returns the adapter options.
      *
      * @return the adapter options
@@ -236,6 +190,15 @@ public abstract class Adapter<I, O> {
      */
     public void setOptions(Map<String, String> options) {
         this.options = options;
+    }
+
+    /**
+     * Returns whether to pin the adapter.
+     *
+     * @return whether to pin the adapter
+     */
+    public boolean isPin() {
+        return Boolean.parseBoolean(options.getOrDefault("pin", "false"));
     }
 
     /**

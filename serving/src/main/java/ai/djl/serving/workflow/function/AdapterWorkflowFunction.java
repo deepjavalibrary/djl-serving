@@ -71,7 +71,6 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 String modelName = (String) config.get("model");
                 String adapterName = entry.getKey();
                 String src = (String) config.get("src");
-                boolean pin = Boolean.parseBoolean((String) config.getOrDefault("pin", "false"));
 
                 Map<String, String> options = new ConcurrentHashMap<>();
                 if (config.containsKey("options") && config.get("options") instanceof Map) {
@@ -86,7 +85,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
                 ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
                 Adapter<Input, Output> adapter =
-                        Adapter.newInstance(modelInfo, adapterName, adapterName, src, pin, options);
+                        Adapter.newInstance(modelInfo, adapterName, adapterName, src, options);
 
                 // Register adapter
                 adapter.register(wlm)
