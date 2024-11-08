@@ -193,6 +193,15 @@ public abstract class Adapter<I, O> {
     }
 
     /**
+     * Returns whether to load the adapter weights.
+     *
+     * @return whether to load the adapter weights
+     */
+    public boolean isLoad() {
+        return Boolean.parseBoolean(options.getOrDefault("load", "true"));
+    }
+
+    /**
      * Returns whether to pin the adapter.
      *
      * @return whether to pin the adapter
