@@ -87,13 +87,19 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
                 Adapter<Input, Output> adapter =
                         Adapter.newInstance(modelInfo, adapterName, adapterName, src, pin, options);
-                adapters.put(adapterName, new AdapterReference(modelName, adapter));
-            }
-        }
 
-        // Register adapters
-        for (AdapterReference adapter : adapters.values()) {
-            adapter.adapter.register(wlm);
+                // Register adapter
+                adapter.register(wlm)
+                        .whenCompleteAsync(
+                                (o, t) -> {
+                                    if (o != null && o.getCode() < 300) {
+                                        modelInfo.registerAdapter(adapter);
+                                        adapters.put(
+                                                adapterName,
+                                                new AdapterReference(modelName, adapter));
+                                    }
+                                });
+            }
         }
     }
 
@@ -104,8 +110,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
             WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(adapter.modelName);
             if (wp != null) {
                 ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
-                Adapter.unregister(
-                        adapter.adapter.getName(), adapter.adapter.getName(), modelInfo, wlm);
+                Adapter.unregister(adapter.adapter, modelInfo, wlm);
             }
         }
     }

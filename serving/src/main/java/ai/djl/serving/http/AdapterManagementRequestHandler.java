@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -100,7 +101,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[2];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName, adapterAlias);
-            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[3])) {
+            } else if (segments.length == 4
+                    && HttpMethod.POST.equals(method)
+                    && "update".equalsIgnoreCase(segments[3])) {
                 handleUpdateAdapter(ctx, decoder, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName, adapterAlias);
@@ -126,7 +129,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[4];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName, adapterAlias);
-            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[5])) {
+            } else if (segments.length == 6
+                    && HttpMethod.POST.equals(method)
+                    && "update".equalsIgnoreCase(segments[5])) {
                 handleUpdateAdapter(ctx, decoder, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName, adapterAlias);
@@ -141,7 +146,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         WorkerPool<Input, Output> wp =
                 ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
         if (wp == null) {
-            throw new BadRequestException(404, "The model " + modelName + " was not found");
+            throw new BadRequestException(
+                    HttpResponseStatus.NOT_FOUND.code(),
+                    "The model " + modelName + " was not found");
         }
         ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
         boolean enableLora =
@@ -175,7 +182,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
         WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
-            throw new BadRequestException(404, "The model " + modelName + " was not found");
+            throw new BadRequestException(
+                    HttpResponseStatus.NOT_FOUND.code(),
+                    "The model " + modelName + " was not found");
         }
         ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
         boolean enableLora =
@@ -201,13 +210,16 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
+                                if (o.getCode() >= 300) {
+                                    throw new BadRequestException(o.getCode(), o.getMessage());
+                                }
+                                modelInfo.registerAdapter(adapter);
                                 sendOutput(o, ctx);
                             }
                         })
                 .exceptionally(
                         t -> {
                             onException(t.getCause(), ctx);
-                            Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm);
                             return null;
                         });
     }
@@ -221,7 +233,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
         WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
-            throw new BadRequestException(404, "The model " + modelName + " was not found");
+            throw new BadRequestException(
+                    HttpResponseStatus.NOT_FOUND.code(),
+                    "The model " + modelName + " was not found");
         }
         ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
         boolean enableLora =
@@ -235,31 +249,46 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
         if (adapter == null) {
             throw new BadRequestException(
-                    404,
+                    HttpResponseStatus.NOT_FOUND.code(),
                     "The adapter "
                             + (adapterAlias == null ? adapterName : adapterAlias)
                             + " was not found");
         }
 
-        Map<String, String> options = new ConcurrentHashMap<>();
+        Map<String, String> options = new ConcurrentHashMap<>(adapter.getOptions());
         for (Map.Entry<String, List<String>> entry : decoder.parameters().entrySet()) {
             if (entry.getValue().size() == 1) {
                 options.put(entry.getKey(), entry.getValue().get(0));
             }
         }
-        String src = options.get("src");
-        boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
 
-        adapter.setAlias(adapterAlias);
-        if (src != null) {
-            adapter.setSrc(src);
+        Adapter<Input, Output> newAdapter =
+                Adapter.newInstance(
+                        modelInfo,
+                        adapterName,
+                        adapter.getAlias(),
+                        adapter.getSrc(),
+                        adapter.isPin(),
+                        options);
+        if (adapterAlias != null) {
+            newAdapter.setAlias(adapterAlias);
         }
-        adapter.setPin(pin);
+        if (options.containsKey("src")) {
+            newAdapter.setSrc(options.get("src"));
+        }
+        if (options.containsKey("pin")) {
+            newAdapter.setPin(Boolean.parseBoolean(options.get("pin")));
+        }
 
-        adapter.update(wlm)
+        newAdapter
+                .update(wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
+                                if (o.getCode() >= 300) {
+                                    throw new BadRequestException(o.getCode(), o.getMessage());
+                                }
+                                modelInfo.updateAdapter(newAdapter);
                                 sendOutput(o, ctx);
                             }
                         })
@@ -275,7 +304,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         WorkerPool<Input, Output> wp =
                 ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
         if (wp == null) {
-            throw new BadRequestException(404, "The model " + modelName + " was not found");
+            throw new BadRequestException(
+                    HttpResponseStatus.NOT_FOUND.code(),
+                    "The model " + modelName + " was not found");
         }
         ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
         boolean enableLora =
@@ -289,7 +320,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
         if (adapter == null) {
             throw new BadRequestException(
-                    404,
+                    HttpResponseStatus.NOT_FOUND.code(),
                     "The adapter "
                             + (adapterAlias == null ? adapterName : adapterAlias)
                             + " was not found");
@@ -304,7 +335,9 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
         WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
-            throw new BadRequestException(404, "The model " + modelName + " was not found");
+            throw new BadRequestException(
+                    HttpResponseStatus.NOT_FOUND.code(),
+                    "The model " + modelName + " was not found");
         }
         ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
         boolean enableLora =
@@ -314,10 +347,28 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("LoRA is not enabled.");
         }
 
-        Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm)
+        Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
+
+        if (adapter == null) {
+            throw new BadRequestException(
+                    HttpResponseStatus.NOT_FOUND.code(),
+                    "The adapter "
+                            + (adapterAlias == null ? adapterName : adapterAlias)
+                            + " was not found");
+        }
+
+        if (adapterAlias != null) {
+            adapter.setAlias(adapterAlias);
+        }
+
+        Adapter.unregister(adapter, modelInfo, wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
+                                if (o.getCode() >= 300) {
+                                    throw new BadRequestException(o.getCode(), o.getMessage());
+                                }
+                                modelInfo.unregisterAdapter(adapterName);
                                 sendOutput(o, ctx);
                             }
                         })
@@ -341,16 +392,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             return;
         }
 
-        int code = output.getCode();
-        if (code >= 300) {
-            NettyUtils.sendJsonResponse(
-                    ctx,
-                    new ErrorResponse(code, null, output.getMessage()),
-                    HttpResponseStatus.valueOf(code));
-        } else {
-            NettyUtils.sendJsonResponse(
-                    ctx, new StatusResponse(output.getMessage()), HttpResponseStatus.valueOf(code));
-        }
+        NettyUtils.sendJsonResponse(
+                ctx,
+                new StatusResponse(output.getMessage()),
+                HttpResponseStatus.valueOf(output.getCode()));
     }
 
     private void onException(Throwable t, ChannelHandlerContext ctx) {
@@ -373,6 +418,12 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             } else {
                 code = config.getWlmErrorHttpCode();
             }
+        } else if (t instanceof NoSuchElementException) {
+            logger.warn(requestIdLogPrefix, t);
+            code = HttpResponseStatus.NOT_FOUND.code();
+        } else if (t instanceof IllegalArgumentException) {
+            logger.warn(requestIdLogPrefix, t);
+            code = HttpResponseStatus.CONFLICT.code();
         } else {
             logger.warn("{} Unexpected error", requestIdLogPrefix, t);
             code = config.getServerErrorHttpCode();

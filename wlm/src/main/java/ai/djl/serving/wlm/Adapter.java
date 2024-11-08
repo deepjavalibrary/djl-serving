@@ -124,15 +124,14 @@ public abstract class Adapter<I, O> {
      *
      * <p>This unregisters it in the wpc for new threads and all existing threads.
      *
+     * @param adapter the adapter to unregister
+     * @param modelInfo the base model for the adapter
      * @param wlm the workflow manager to remove the adapter from
      * @param <I> the input type
      * @param <O> the output type
-     * @param adapterName the adapter name
      */
     public static <I, O> CompletableFuture<O> unregister(
-            String adapterName, String alias, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
-        Adapter<I, O> adapter = modelInfo.unregisterAdapter(adapterName, alias);
-
+            Adapter<I, O> adapter, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
         // Add the unregister adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add unregister adapter job once.
@@ -247,8 +246,6 @@ public abstract class Adapter<I, O> {
      * @param wlm the workload manager
      */
     public CompletableFuture<O> register(WorkLoadManager wlm) {
-        modelInfo.registerAdapter(this);
-
         // Add the register adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add register adapter job once.
@@ -264,8 +261,6 @@ public abstract class Adapter<I, O> {
      * @param wlm the workload manager to register this adapter in
      */
     public CompletableFuture<O> update(WorkLoadManager wlm) {
-        modelInfo.updateAdapter(this);
-
         // Add the update adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add update adapter job once.
