@@ -30,6 +30,8 @@ class LmiDistQuantizeMethods(str, Enum):
     marlin = 'marlin'
     squeezellm = 'squeezellm'
 
+class LmiDistLoadFormats(str, Enum):
+    sagemaker_fast_model_loader = 'sagemaker_fast_model_loader'
 
 class LmiDistLoadFormats(str, Enum):
     sagemaker_fast_model_loader = 'sagemaker_fast_model_loader'
