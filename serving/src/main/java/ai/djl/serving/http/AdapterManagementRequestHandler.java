@@ -203,9 +203,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 options.put(entry.getKey(), entry.getValue().get(0));
             }
         }
-        boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
         Adapter<Input, Output> adapter =
-                Adapter.newInstance(modelInfo, adapterName, adapterAlias, src, pin, options);
+                Adapter.newInstance(modelInfo, adapterName, adapterAlias, src, options);
         adapter.register(wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
@@ -264,20 +263,12 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
         Adapter<Input, Output> newAdapter =
                 Adapter.newInstance(
-                        modelInfo,
-                        adapterName,
-                        adapter.getAlias(),
-                        adapter.getSrc(),
-                        adapter.isPin(),
-                        options);
+                        modelInfo, adapterName, adapter.getAlias(), adapter.getSrc(), options);
         if (adapterAlias != null) {
             newAdapter.setAlias(adapterAlias);
         }
         if (options.containsKey("src")) {
             newAdapter.setSrc(options.get("src"));
-        }
-        if (options.containsKey("pin")) {
-            newAdapter.setPin(Boolean.parseBoolean(options.get("pin")));
         }
 
         newAdapter
