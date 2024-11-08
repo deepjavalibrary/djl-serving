@@ -36,7 +36,7 @@ ARG tokenizers_version=0.20.1
 ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt251/vllm-0.6.3.post1%2Bcu124-cp311-cp311-linux_x86_64.whl"
 ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0%2Bnightly-py3-none-any.whl"
+ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0-cp311-cp311-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_version=0.13.2
 
