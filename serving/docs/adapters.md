@@ -1,6 +1,6 @@
 # Adapters
 
-**Note that this API is experimental and is subject to change.
+**Note that this API is experimental and is subject to change.**
 
 DJL Serving has first class support for adapters.
 Adapters are patches or changes that can be made to a model to fine tune it for a particular usage.
@@ -16,13 +16,29 @@ For a concrete usage, there are several notebook examples:
 - [Advanced Example](https://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/multi_lora_adapter_inference_advanced.html)
 - [Example with Environment Variable Configuration](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Llama2/Llama2-7b/LMI/llama2-7b-multi-lora-adapters-sagemaker.ipynb)
 
-### Backend Support
+## Backend Support
 
 There are several backends that support the use of adapters.
 Depending on the backend, additional configurations may be required to enable adapter support or available to configure it.
 More details can be found in the user guide.
 
-- [vLLM](https://docs.djl.ai/docs/serving/serving/docs/lmi/user_guides/lmi-dist_user_guide.html#adapter-support)
+- [LMI-Dist](https://docs.djl.ai/master/docs/serving/serving/docs/lmi/user_guides/lmi-dist_user_guide.html#lora-adapter-support)
+- [vLLM](https://docs.djl.ai/master/docs/serving/serving/docs/lmi/user_guides/vllm_user_guide.html#lora-adapter-support)
+
+## Configurations
+
+Here are the settings that are available when using LoRA Adapter.
+
+| Item                             | Environment Variable             | LMI Version | Configuration Type | Description                                                                                                                                                                                                                                                                                              | Example value    |
+|----------------------------------|----------------------------------|-------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|
+| option.enable_lora               | OPTION_ENABLE_LORA               | \>= 0.27.0  | Pass Through       | This config enables support for LoRA adapters.                                                                                                                                                                                                                                                           | Default: `false` |
+| option.max_loras                 | OPTION_MAX_LORAS                 | \>= 0.27.0  | Pass Through       | This config determines the maximum number of LoRA adapters that can be run at once. Allocates GPU memory for those number adapters.                                                                                                                                                                      | Default: `4`     |
+| option.max_lora_rank             | OPTION_MAX_LORA_RANK             | \>= 0.27.0  | Pass Through       | This config determines the maximum rank allowed for a LoRA adapter. Set this value to maximum rank of your adapters. Setting a larger value will enable more adapters at a greater memory usage cost.                                                                                                    | Default: `16`    |
+| option.max_cpu_loras             | OPTION_MAX_CPU_LORAS             | \>= 0.27.0  | Pass Through       | Maximum number of LoRAs to store in CPU memory. Must be >= than max_loras. Defaults to max_loras.                                                                                                                                                                                                        | Default: `None`  |
+| option.fully_sharded_loras       | OPTION_FULLY_SHARDED_LORAS       | \>= 0.31.0  | Pass Through       | By default, only half of the LoRA computation is sharded with tensor parallelism. Enabling this will use the fully sharded layers. At high sequence length, max rank or tensor parallel size, this is likely faster.                                                                                     | Default: `true`  |
+| option.lora_extra_vocab_size     | OPTION_LORA_EXTRA_VOCAB_SIZE     | \>= 0.31.0  | Pass Through       | This config determines the maximum additional vocabulary that can be added through a LoRA adapter.                                                                                                                                                                                                       | Default: `256`   |
+| option.long_lora_scaling_factors | OPTION_LONG_LORA_SCALING_FACTORS | \>= 0.31.0  | Pass Through       | Specify multiple scaling factors (which can be different from base model scaling factor - see eg. Long LoRA) to allow for multiple LoRA adapters trained with those scaling factors to be used at the same time. If not specified, only adapters trained with the base model scaling factor are allowed. | Default: `None`  |
+| option.lora_dtype                | OPTION_LORA_DTYPE                | \>= 0.31.0  | Pass Through       | Data type for LoRA. Valid values are auto, float16, bfloat16, float32. If auto, will default to base model dtype.                                                                                                                                                                                        | Default: `auto`  |
 
 ## Managing Adapters
 
@@ -57,10 +73,11 @@ See the [Adapter Management API Documentation](adapters_api.md) for details.
 However, this option may be difficult to use inside wrapping systems such as Amazon SageMaker.
 
 ```
-GET  models/{modelName}/adapters               - List adapters
-GET  models/{modelName}/adapters/{adapterName} - Get adapter description
-POST models/{modelName}/adapters               - Create adapter
-DEL  models/{modelName}/adapters/{adapterName} - Delete adapter
+GET  models/{model_name}/adapters                        - List adapters
+GET  models/{model_name}/adapters/{adapter_name}         - Get adapter description
+POST models/{model_name}/adapters                        - Create adapter
+POST models/{model_name}/adapters/{adapter_name}/update  - Update adapter
+DEL  models/{model_name}/adapters/{adapter_name}         - Delete adapter
 ```
 
 ### Workflow Adapters
@@ -117,7 +134,6 @@ If the adapters is not passed, the base model will be used for inference.
 You can also specify the base model for an element in the batch by using the empty string `""`.
 
 ```
-
 curl -X POST http://127.0.0.1:8080/invocations \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
