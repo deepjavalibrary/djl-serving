@@ -23,58 +23,52 @@ def parse_csv_table(csv_file):
     return data_list
 
 
-def publish_cw_metrics(
-    cw, metrics_namespace, metrics, csv_table, model_name, endpoint_type, container
-):
+def publish_cw_metrics(cw, metrics_namespace, metrics, csv_table, model_name,
+                       endpoint_type, container):
     for row in csv_table:
         for field_name, field_value in row.items():
             if field_name in metrics:
-                if (
-                    field_name == "tokenizerFailed_Sum"
-                    or field_name == "emptyInferenceResponse_Sum"
-                    or field_name == "clientInvocationErrors_Sum"
-                ):
+                if (field_name == "tokenizerFailed_Sum"
+                        or field_name == "emptyInferenceResponse_Sum"
+                        or field_name == "clientInvocationErrors_Sum"):
                     if float(row["clientInvocations_Sum"]) > 0.0:
-                        field_value = (
-                            float(row[field_name])
-                            * 100
-                            // float(row["clientInvocations_Sum"])
-                        )
+                        field_value = (float(row[field_name]) * 100 //
+                                       float(row["clientInvocations_Sum"]))
                     else:
                         field_value = 0.0
 
-                metric_data = [
-                    {
-                        "MetricName": metrics[field_name]["metric_name"],
-                        "Dimensions": [
-                            {
-                                "Name": "Model",
-                                "Value": model_name,
-                            },
-                            {
-                                "Name": "Endpoint",
-                                "Value": endpoint_type,
-                            },
-                            {
-                                "Name": "Container",
-                                "Value": container,
-                            },
-                            {
-                                "Name": "InstanceType",
-                                "Value": row["InstanceType"],
-                            },
-                            {
-                                "Name": "Concurrency",
-                                "Value": row["Concurrency"],
-                            },
-                        ],
-                        "Unit": metrics[field_name]["unit"],
-                        "Value": float(field_value),
-                    }
-                ]
-                response = cw.put_metric_data(
-                    Namespace=metrics_namespace, MetricData=metric_data
-                )
+                metric_data = [{
+                    "MetricName":
+                    metrics[field_name]["metric_name"],
+                    "Dimensions": [
+                        {
+                            "Name": "Model",
+                            "Value": model_name,
+                        },
+                        {
+                            "Name": "Endpoint",
+                            "Value": endpoint_type,
+                        },
+                        {
+                            "Name": "Container",
+                            "Value": container,
+                        },
+                        {
+                            "Name": "InstanceType",
+                            "Value": row["InstanceType"],
+                        },
+                        {
+                            "Name": "Concurrency",
+                            "Value": row["Concurrency"],
+                        },
+                    ],
+                    "Unit":
+                    metrics[field_name]["unit"],
+                    "Value":
+                    float(field_value),
+                }]
+                response = cw.put_metric_data(Namespace=metrics_namespace,
+                                              MetricData=metric_data)
                 logging.info(
                     "publish metric: %s, model: %s, endpoint: %s, container: %s, instance_type: %s, concurrency: %s, response: %s",
                     metrics[field_name]["metric_name"],
@@ -94,9 +88,8 @@ def run_benchmark(config_yml, benchmark_config_dir, benchmark_metric_dir):
         if config is None:
             logging.fatal("Invalid config.yml")
         region = config.get("region", "us-west-2")
-        metrics_namespace = config.get("cloudwatch", {}).get(
-            "metrics_namespace", "Rubikon"
-        )
+        metrics_namespace = config.get("cloudwatch",
+                                       {}).get("metrics_namespace", "Rubikon")
         metrics = config.get("metrics", {})
         hf_token = os.getenv("HF_TOKEN", "")
         s3_bucket = config.get("s3", {}).get("bucket_name", "djl-benchmark")
@@ -132,9 +125,10 @@ def run_benchmark(config_yml, benchmark_config_dir, benchmark_metric_dir):
 
                     s3_config_object = f"{s3_config_folder}{config_file}"
                     session = boto3.session.Session()
-                    cloudwatch = session.client("cloudwatch", region_name=region)
+                    cloudwatch = session.client("cloudwatch",
+                                                region_name=region)
                     s3 = session.client("s3", region_name=region)
-                
+
                     s3.upload_file(
                         Path(config_yml),
                         s3_bucket,
@@ -152,7 +146,7 @@ def run_benchmark(config_yml, benchmark_config_dir, benchmark_metric_dir):
                     logging.info(
                         f"file {csv_file} uploaded successfully to s3://{s3_bucket}/{s3_metrics_object}"
                     )
-                
+
                     publish_cw_metrics(
                         cloudwatch,
                         metrics_namespace,
@@ -163,15 +157,18 @@ def run_benchmark(config_yml, benchmark_config_dir, benchmark_metric_dir):
                         image,
                     )
                 except Exception as e:
-                    logging.error(f"Error in running benchmark with {config_file} on {dataset}, error: {e}")
-
+                    logging.error(
+                        f"Error in running benchmark with {config_file} on {dataset}, error: {e}"
+                    )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--jobs", "-j", type=str, required=True, help="Specify the config.yml path"
-    )
+    parser.add_argument("--jobs",
+                        "-j",
+                        type=str,
+                        required=True,
+                        help="Specify the config.yml path")
     parser.add_argument(
         "--configs",
         "-c",

@@ -44,29 +44,39 @@ class BenchmarkConfiguration:
                 **self.image_uri_args,
             )
         else:
-            raise ValueError("Either 'image_uri' or 'image_uri_args' key must be provided in configuration file.")
+            raise ValueError(
+                "Either 'image_uri' or 'image_uri_args' key must be provided in configuration file."
+            )
 
 
 def get_benchmarking_session(region_name: str) -> Session:
     """Create a Session for inference recommender benchmarking job."""
     boto_session = boto3.Session(region_name=region_name)
     sagemaker = boto3.client(service_name="sagemaker", region_name=region_name)
-    sagemaker_runtime = boto3.client(service_name="sagemaker-runtime", region_name=region_name)
-    return Session(boto_session=boto_session, sagemaker_client=sagemaker, sagemaker_runtime_client=sagemaker_runtime)
+    sagemaker_runtime = boto3.client(service_name="sagemaker-runtime",
+                                     region_name=region_name)
+    return Session(boto_session=boto_session,
+                   sagemaker_client=sagemaker,
+                   sagemaker_runtime_client=sagemaker_runtime)
 
 
-def run_benchmark_job(configuration_file, payload_url, metrics_dir, region="us-west-2", hf_token=None) -> None:    
+def run_benchmark_job(configuration_file,
+                      payload_url,
+                      metrics_dir,
+                      region="us-west-2",
+                      hf_token=None) -> None:
     """Serially execute a benchmark job for each provided configuration file."""
 
     session = get_benchmarking_session(region)
-    benchmarker = Benchmarker(role_arn=session.get_caller_identity_arn(), sagemaker_session=session)
+    benchmarker = Benchmarker(role_arn=session.get_caller_identity_arn(),
+                              sagemaker_session=session)
 
-        
     with open(configuration_file, "r") as f:
         configuration_dict = json.load(f)
 
     if hf_token is not None:
-        configuration_dict = json.loads(json.dumps(configuration_dict).replace("{{hub_token}}", hf_token))
+        configuration_dict = json.loads(
+            json.dumps(configuration_dict).replace("{{hub_token}}", hf_token))
     configuration = BenchmarkConfiguration(**configuration_dict)
 
     model = Model(
@@ -76,27 +86,32 @@ def run_benchmark_job(configuration_file, payload_url, metrics_dir, region="us-w
         **configuration.model_args,
     )
     if configuration.use_jumpstart_prod_artifact:
-        js_model = JumpStartModel(model_id=configuration.jumpstart_model_id, sagemaker_session=session)
+        js_model = JumpStartModel(model_id=configuration.jumpstart_model_id,
+                                  sagemaker_session=session)
         model.model_data = js_model.model_data
     model.env["OPTION_ENABLE_STREAMING"] = "true"
-    model.env["OPTION_TGI_COMPAT"] = "true"  # required workaround for Rubikon V
+    model.env[
+        "OPTION_TGI_COMPAT"] = "true"  # required workaround for Rubikon V
 
     benchmark_job = benchmarker.create_benchmark_job(
-        job_name=name_from_base(f"ir-js-{configuration_file.stem.replace('_', '-')}"),
+        job_name=name_from_base(
+            f"ir-js-{configuration_file.stem.replace('_', '-')}"),
         model=model,
         sample_payload_url=payload_url,
         content_type="application/json",
-        benchmark_configurations=[ConfigGrid(**x) for x in configuration.benchmark_configurations],
+        benchmark_configurations=[
+            ConfigGrid(**x) for x in configuration.benchmark_configurations
+        ],
         traffic_pattern=TrafficPatternConfig(
             #traffic_pattern=PresetTrafficPattern.LOGISTIC_GROWTH,
             traffic_pattern=[
                 Concurrency(duration_in_seconds=600, concurrent_users=1),
                 Concurrency(duration_in_seconds=600, concurrent_users=2),
-                Concurrency(duration_in_seconds=300, concurrent_users=4),       
-                Concurrency(duration_in_seconds=300, concurrent_users=8),       
-                Concurrency(duration_in_seconds=300, concurrent_users=16), 
+                Concurrency(duration_in_seconds=300, concurrent_users=4),
+                Concurrency(duration_in_seconds=300, concurrent_users=8),
+                Concurrency(duration_in_seconds=300, concurrent_users=16),
                 Concurrency(duration_in_seconds=300, concurrent_users=32),
-                Concurrency(duration_in_seconds=300, concurrent_users=64), 
+                Concurrency(duration_in_seconds=300, concurrent_users=64),
             ],
             inference_invocation_types=STREAMING_INVOCATION_TYPE,
         ),
@@ -105,13 +120,16 @@ def run_benchmark_job(configuration_file, payload_url, metrics_dir, region="us-w
             "MaxInvocations": 600000,
             "MaxModelLatencyInMs": 50000,
         },
-        tokenizer_config={"ModelId": configuration.tokenizer_model_id, "AcceptEula": True},
+        tokenizer_config={
+            "ModelId": configuration.tokenizer_model_id,
+            "AcceptEula": True
+        },
         job_duration=10800,
     )
     time.sleep(5)
     benchmark_job.wait()
 
-    local_file = Path(benchmark_job.get_benchmark_results_csv_path(download=True, local_path=metrics_dir))
+    local_file = Path(
+        benchmark_job.get_benchmark_results_csv_path(download=True,
+                                                     local_path=metrics_dir))
     local_file.rename(local_file.with_stem(configuration_file.stem))
-
-
