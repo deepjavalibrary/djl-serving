@@ -890,7 +890,8 @@ vllm_neo_model_list = {
         "option.tensor_parallel_degree": 2,
         "option.load_format": "sagemaker_fast_model_loader",
     },
-    "llama3-8b-unmerged-lora": {
+    "llama3-8b-unmerged-lora-fml": {
+        "option.load_format": "sagemaker_fast_model_loader",
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree": "2",
         "option.task": "text-generation",
@@ -1325,9 +1326,6 @@ def create_neo_input_model(properties, adapter_ids=[], adapter_names=[]):
         for key, value in properties.items():
             if key != "option.model_id":
                 f.write(f"{key}={value}\n")
-    
-    with open(os.path.join(model_download_path, "serving.properties"), "r") as f:
-        print(f.read())
 
     # create Neo files/dirs
     open(os.path.join(model_path, "errors.json"), "w").close()
