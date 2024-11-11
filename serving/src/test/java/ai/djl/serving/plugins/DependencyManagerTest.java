@@ -31,7 +31,7 @@ public class DependencyManagerTest {
             DependencyManager dm = DependencyManager.getInstance();
             dm.installEngine("XGBoost");
 
-            dm.installDependency("ai.djl.pytorch:pytorch-jni:2.1.1-0.27.0");
+            dm.installDependency("ai.djl.pytorch:pytorch-jni:2.4.0-0.30.0");
 
             Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));
         } finally {
