@@ -1315,7 +1315,7 @@ def write_model_artifacts(properties,
                 adapter_cache[adapter_id] = dir
 
 
-def create_neo_input_model(properties, adapter_ids=[], adapter_names=[]):
+def create_neo_input_model(properties):
     model_path = "models"
     model_download_path = os.path.join(model_path, "uncompiled")
     if os.path.exists(model_path):
@@ -1346,16 +1346,18 @@ def create_neo_input_model(properties, adapter_ids=[], adapter_names=[]):
         cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
     subprocess.check_call(cmd)
 
+    adapter_ids = properties.pop("adapter_ids", [])
+    adapter_names = properties.pop("adapter_names", [])
     # Copy Adapaters if any
     if adapter_ids:
-        print("copying adapater models")
+        print("copying adapter models")
         adapters_path = os.path.join(model_download_path, "adapters")
         os.makedirs(adapters_path, exist_ok=True)
         ## install huggingface_hub in your workflow file to use this
         from huggingface_hub import snapshot_download
         adapter_cache = {}
         for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
-            print(f"copying adapater models {adapter_id} {adapter_name}")
+            print(f"copying adapter models {adapter_id} {adapter_name}")
             dir = os.path.join(adapters_path, adapter_name)
             if adapter_id in adapter_cache:
                 shutil.copytree(adapter_cache[adapter_id], dir)
