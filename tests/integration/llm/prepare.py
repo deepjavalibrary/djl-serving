@@ -1325,6 +1325,9 @@ def create_neo_input_model(properties, adapter_ids=[], adapter_names=[]):
         for key, value in properties.items():
             if key != "option.model_id":
                 f.write(f"{key}={value}\n")
+    
+    with open(os.path.join(model_download_path, "serving.properties"), "r") as f:
+        print(f.read())
 
     # create Neo files/dirs
     open(os.path.join(model_path, "errors.json"), "w").close()
@@ -1347,12 +1350,14 @@ def create_neo_input_model(properties, adapter_ids=[], adapter_names=[]):
 
     # Copy Adapaters if any
     if adapter_ids:
+        print("copying adapater models")
         adapters_path = os.path.join(model_download_path, "adapters")
         os.makedirs(adapters_path, exist_ok=True)
         ## install huggingface_hub in your workflow file to use this
         from huggingface_hub import snapshot_download
         adapter_cache = {}
         for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
+            print(f"copying adapater models {adapter_id} {adapter_name}")
             dir = os.path.join(adapters_path, adapter_name)
             if adapter_id in adapter_cache:
                 shutil.copytree(adapter_cache[adapter_id], dir)
