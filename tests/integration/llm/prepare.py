@@ -890,7 +890,7 @@ vllm_neo_model_list = {
         "option.tensor_parallel_degree": 2,
         "option.load_format": "sagemaker_fast_model_loader",
     },
-    "llama3-8b-unmerged-lora-fml": {
+    "llama3-8b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree": "2",
         "option.task": "text-generation",
