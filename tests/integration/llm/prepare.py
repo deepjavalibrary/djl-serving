@@ -888,7 +888,22 @@ vllm_neo_model_list = {
     "tiny-llama-fml": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.tensor_parallel_degree": 2,
-        "option.load_format": 'sagemaker_fast_model_loader',
+        "option.load_format": "sagemaker_fast_model_loader",
+    },
+    "llama3-8b-unmerged-lora-fml": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": "2",
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "option.max_lora_rank": 64,
+        "adapter_ids": [
+            "UnderstandLing/Llama-3-8B-Instruct-fr",
+            "UnderstandLing/Llama-3-8B-Instruct-es",
+        ],
+        "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization": "0.8",
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
@@ -897,14 +912,14 @@ vllm_neo_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": "4",
         "option.max_rolling_batch_size": "4",
-        "option.awq_block_size": "256"
+        "option.awq_block_size": "256",
     },
     "llama-3.1-8b-fp8-options": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.quantize": "fp8",
         "option.tensor_parallel_degree": "4",
-        "option.fp8_activation_scheme": "dynamic"
-    }
+        "option.fp8_activation_scheme": "dynamic",
+    },
 }
 
 lmi_dist_aiccl_model_list = {
@@ -1299,7 +1314,7 @@ def write_model_artifacts(properties,
                 adapter_cache[adapter_id] = dir
 
 
-def create_neo_input_model(properties):
+def create_neo_input_model(properties, adapter_ids=[], adapter_names=[]):
     model_path = "models"
     model_download_path = os.path.join(model_path, "uncompiled")
     if os.path.exists(model_path):
@@ -1330,6 +1345,23 @@ def create_neo_input_model(properties):
         cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
     subprocess.check_call(cmd)
 
+    # Copy Adapaters if any
+    if adapter_ids:
+        adapters_path = os.path.join(model_download_path, "adapters")
+        os.makedirs(adapters_path, exist_ok=True)
+        ## install huggingface_hub in your workflow file to use this
+        from huggingface_hub import snapshot_download
+        adapter_cache = {}
+        for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
+            dir = os.path.join(adapters_path, adapter_name)
+            if adapter_id in adapter_cache:
+                shutil.copytree(adapter_cache[adapter_id], dir)
+            else:
+                os.makedirs(dir, exist_ok=True)
+                snapshot_download(adapter_id,
+                                  local_dir_use_symlinks=False,
+                                  local_dir=dir)
+                adapter_cache[adapter_id] = dir
 
 def build_hf_handler_model(model):
     if model not in hf_handler_list:
