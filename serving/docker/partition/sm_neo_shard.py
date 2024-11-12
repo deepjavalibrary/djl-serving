@@ -103,6 +103,7 @@ class NeoShardingService():
             enforce_eager=True,
             disable_custom_all_reduce=True,
             distributed_executor_backend="mp",
+            gpu_memory_utilization=0.99,
         )
         engine = engine_from_args(engine_args)
 
