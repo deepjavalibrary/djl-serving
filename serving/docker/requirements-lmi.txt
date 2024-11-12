@@ -1,0 +1,42 @@
+torch==2.5.1
+torchvision==0.20.1
+# sequence scheduler for hf accelerate rolling batch
+https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl
+peft==0.13.2
+protobuf==3.20.3
+transformers==4.45.2
+hf-transfer
+zstandard
+datasets==3.0.1
+mpi4py
+sentencepiece
+tiktoken
+blobfile
+einops
+accelerate==1.0.1
+bitsandbytes==0.44.1
+auto-gptq==0.7.1
+pandas
+pyarrow
+jinja2
+retrying
+opencv-contrib-python-headless
+safetensors
+scipy
+onnx
+sentence_transformers
+onnxruntime
+autoawq==0.2.5
+tokenizers==0.20.1
+pydantic==2.9.2
+# djl converter wheel for converting hf models to onnx/rust
+https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl
+optimum==1.23.2
+# flashinfer for vllm
+https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl
+# vllm wheel using PT 2.5.1
+https://publish.djl.ai/vllm/cu124-pt251/vllm-0.6.3.post1%2Bcu124-cp311-cp311-linux_x86_64.whl
+# lmi-dist wheel - need to change this to the one built by ci once ready
+https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0-cp311-cp311-linux_x86_64.whl
+# sagemaker fast model loader wheel
+https://publish.djl.ai/fast-model-loader/sagemaker_fast_model_loader-0.1.0-cp311-cp311-linux_x86_64.whl

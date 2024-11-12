@@ -1,0 +1,38 @@
+torch==2.4.0
+transformers==4.42.4
+accelerate==0.32.1
+peft==0.13.2
+sentencepiece
+mpi4py
+cuda-python==12.5
+onnx
+polygraphy
+pynvml==11.5.0
+datasets==2.19.1
+pydantic==2.6.1
+scipy
+torchprofile
+bitsandbytes
+ninja
+transformers_stream_generator
+einops
+tiktoken
+jinja2
+graphviz
+blobfile
+colored
+h5py
+strenum
+pulp
+flax
+easydict
+tensorrt==10.3.0
+janus==1.0.0
+nvidia-modelopt==0.15.0
+numpy==1.26.4
+# TRTLLM toolkit wheel
+https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-0.12.0%2Bnightly-py3-none-any.whl
+# TRTLLM wheel - contains necessary patch fix not available in OSS
+https://publish.djl.ai/tensorrt-llm/v0.12.0/tensorrt_llm-0.12.0-cp310-cp310-linux_x86_64.whl
+# Triton toolkit wheel - pybindings for trtllm
+https://publish.djl.ai/tritonserver/r24.04/tritontoolkit-24.4-py310-none-any.whl

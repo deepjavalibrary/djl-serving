@@ -14,33 +14,9 @@ FROM nvidia/cuda:$version
 ARG cuda_version=cu124
 ARG djl_version
 ARG djl_serving_version
-# Base Deps
 ARG python_version=3.11
-ARG torch_version=2.5.1
-ARG torch_vision_version=0.20.1
 ARG djl_torch_version=2.4.0
 ARG onnx_version=1.19.0
-ARG pydantic_version=2.9.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
-# HF Deps
-ARG protobuf_version=3.20.3
-ARG transformers_version=4.45.2
-ARG accelerate_version=1.0.1
-ARG bitsandbytes_version=0.44.1
-ARG optimum_version=1.23.2
-ARG auto_gptq_version=0.7.1
-ARG datasets_version=3.0.1
-ARG autoawq_version=0.2.5
-ARG tokenizers_version=0.20.1
-# LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt251/vllm-0.6.3.post1%2Bcu124-cp311-cp311-linux_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl"
-# %2B is the url escape for the '+' character
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0-cp311-cp311-linux_x86_64.whl"
-ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
-ARG peft_version=0.13.2
-
-ARG sagemaker_fast_model_loader_wheel="https://publish.djl.ai/fast-model-loader/sagemaker_fast_model_loader-0.1.0-cp311-cp311-linux_x86_64.whl"
 
 EXPOSE 8080
 
@@ -92,6 +68,9 @@ COPY partition /opt/djl/partition
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
+# Add CUDA-Compat
+RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ \
     && scripts/install_openssh.sh \
     && scripts/install_djl_serving.sh $djl_version $djl_serving_version \
@@ -105,49 +84,16 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     && pip3 cache purge \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --index-url https://download.pytorch.org/whl/cu124
-RUN pip3 install \
-    ${seq_scheduler_wheel} \
-    peft==${peft_version} \
-    protobuf==${protobuf_version} \
-    transformers==${transformers_version} \
-    hf-transfer \
-    zstandard \
-    datasets==${datasets_version} \
-    mpi4py \
-    sentencepiece \
-    tiktoken \
-    blobfile \
-    einops \
-    accelerate==${accelerate_version} \
-    bitsandbytes==${bitsandbytes_version} \
-    auto-gptq==${auto_gptq_version} \
-    pandas \
-    pyarrow \
-    jinja2 \
-    retrying \
-    opencv-contrib-python-headless \
-    safetensors \
-    scipy \
-    onnx \
-    sentence_transformers \
-    onnxruntime \
-    autoawq==${autoawq_version} \
-    tokenizers==${tokenizers_version} \
-    pydantic==${pydantic_version} \
-    ${djl_converter_wheel} \
-    optimum==${optimum_version} \
-    ${flash_infer_wheel} \
-    ${vllm_wheel} \
-    ${lmi_dist_wheel} \
-    torch==${torch_version} \
-    torchvision==${torch_vision_version} \
-    ${sagemaker_fast_model_loader_wheel} \
-    && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
-    && pip3 cache purge
-
-# Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+COPY requirements-lmi.txt ./requirements.txt
+RUN pip3 install -r requirements.txt
+# TODO: Migrate to llmcompressor, this repo is deprecated
+RUN git clone https://github.com/neuralmagic/AutoFP8.git && \
+    cd AutoFP8 && \
+    git reset --hard 4b2092c && \
+    pip3 install . --no-deps && \
+    cd .. && \
+    rm -rf AutoFP8 && \
+    pip3 cache purge
 
 RUN scripts/patch_oss_dlc.sh python \
     && scripts/security_patch.sh lmi \

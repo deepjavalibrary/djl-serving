@@ -13,27 +13,8 @@ ARG version=12.5.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu125
 ARG python_version=3.10
-ARG TORCH_VERSION=2.4.0
 ARG djl_version
 ARG djl_serving_version
-ARG transformers_version=4.44.2
-ARG accelerate_version=0.32.1
-ARG tensorrtlibs_version=10.1.0
-# %2B is the url escape for the '+' character
-ARG trtllm_toolkit_version=0.12.0%2Bnightly
-ARG trtllm_version=v0.12.0
-ARG cuda_python_version=12.5
-ARG peft_version=0.10.0
-ARG triton_version=r24.04
-ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://publish.djl.ai/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.12.0-cp310-cp310-linux_x86_64.whl"
-ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
-ARG pydantic_version=2.6.1
-ARG modelopt_version=0.15.0
-ARG janus_version=1.0.0
-ARG pynvml_verison=11.5.0
-ARG numpy_version=1.26.4
-ARG datasets_version=2.19.1
 
 EXPOSE 8080
 
@@ -68,35 +49,29 @@ COPY partition /opt/djl/partition
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
+# Add CUDA-Compat
+RUN apt-get update && apt-get install -y cuda-compat-12-5 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
 # Install OpenMPI and other deps
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev graphviz && \
     scripts/install_python.sh ${python_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch
-# Qwen needs transformers_stream_generator, tiktoken and einops
-RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
-    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets==${datasets_version} pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
-    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp flax easydict && \
-    pip3 cache purge
-
-# Install TensorRT and TRT-LLM Deps
-RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} janus==${janus_version} nvidia-modelopt==${modelopt_version} && \
-    pip install --no-deps ${trtllm_wheel} && \
-    pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
-    pip3 cache purge
-
-# download dependencies
-RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
-    mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
-    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
-    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm.so && \
-    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm_common.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm_common.so && \
-    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.10 https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libnvinfer_plugin_tensorrt_llm.so.10 && \
-    pip3 cache purge && \
+# download trt/triton dependencies
+RUN mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
+    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r24.04/libtritonserver.so && \
+    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/v0.12.0/libtriton_tensorrtllm.so && \
+    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm_common.so https://publish.djl.ai/tensorrt-llm/v0.12.0/libtriton_tensorrtllm_common.so && \
+    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.10 https://publish.djl.ai/tensorrt-llm/v0.12.0/libnvinfer_plugin_tensorrt_llm.so.10 && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements-trt.txt ./requirements.txt
+RUN pip3 install -r requirements.txt && pip3 cache purge
+# TRT depends on transformers<=4.42.4, but we need a higher version for llama 3.1
+RUN pip3 install transformers==4.44.2 --no-deps
 
 # Final steps
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
@@ -108,12 +83,7 @@ RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
-    pip3 install numpy==${numpy_version} && \
-    pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-# Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
@@ -123,7 +93,7 @@ LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL djl-serving-version=$djl_serving_version
-LABEL trtllm-version=$trtllm_version
+LABEL trtllm-version=v0.12.0
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver
-LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.5
