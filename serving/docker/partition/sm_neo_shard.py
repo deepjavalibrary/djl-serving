@@ -111,7 +111,9 @@ class NeoShardingService():
                                 False)).lower() == "true"
         max_rolling_batch_size = int(
             self.properties.get("option.max_rolling_batch_size", 256))
-        max_model_len = int(self.properties.get("option.max_model_len", None))
+        max_model_len = self.properties.get("option.max_model_len", None)
+        if max_model_len is not None:
+            max_model_len = int(max_model_len)
 
         engine_args = VllmEngineArgs(
             model=input_dir,
