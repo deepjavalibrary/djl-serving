@@ -95,6 +95,9 @@ class NeoShardingService():
     def shard_lmi_dist_model(self, input_dir: str, output_dir: str,
                              pp_degree: int, tp_degree: int,
                              chunk_mb: int) -> None:
+        # Use default LMI value of 0.9 for gpu_memory_utilization, unless set otherwise
+        gpu_memory_utilization = float(
+            self.properties.get("option.gpu_memory_utilization", 0.9))
 
         engine_args = VllmEngineArgs(
             model=input_dir,
@@ -103,7 +106,7 @@ class NeoShardingService():
             enforce_eager=True,
             disable_custom_all_reduce=True,
             distributed_executor_backend="mp",
-            gpu_memory_utilization=0.99,
+            gpu_memory_utilization=gpu_memory_utilization,
         )
         engine = engine_from_args(engine_args)
 
