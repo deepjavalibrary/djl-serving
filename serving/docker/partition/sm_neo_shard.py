@@ -98,15 +98,19 @@ class NeoShardingService():
         # Use default LMI value of 0.9 for gpu_memory_utilization, unless set otherwise
         gpu_memory_utilization = float(
             self.properties.get("option.gpu_memory_utilization", 0.9))
+        # Use default LMI value of False for enforce_eager, unless set otherwise
+        enforce_eager: bool = str(
+            self.properties.get("option.enforce_eager",
+                                False)).lower() == "true"
 
         engine_args = VllmEngineArgs(
             model=input_dir,
             pipeline_parallel_size=pp_degree,
             tensor_parallel_size=tp_degree,
-            enforce_eager=True,
             disable_custom_all_reduce=True,
             distributed_executor_backend="mp",
             gpu_memory_utilization=gpu_memory_utilization,
+            enforce_eager=enforce_eager,
         )
         engine = engine_from_args(engine_args)
 
