@@ -92,6 +92,13 @@ class NeoShardingService():
                 elif os.path.isdir(item_path):
                     shutil.copytree(item_path, os.path.join(output_dir, item))
 
+    def generate_properties_file(self):
+        with open(
+                os.path.join(self.OUTPUT_MODEL_DIRECTORY,
+                             "serving.properties"), "w") as f:
+            for key, value in self.properties.items():
+                f.write(f"{key}={value}\n")
+
     def shard_lmi_dist_model(self, input_dir: str, output_dir: str,
                              pp_degree: int, tp_degree: int,
                              chunk_mb: int) -> None:
@@ -153,6 +160,7 @@ def main():
     try:
         neo_sharding_service = NeoShardingService()
         neo_sharding_service.run_sharding()
+        neo_sharding_service.generate_properties_file()
 
     except Exception as exc:
         MPI.COMM_WORLD.Barrier()
