@@ -18,16 +18,17 @@ This is an extension of the [Management API](management_api.md) and can be acces
 
 `POST /models/{model_name}/adapters`
 
-* name - The adapter name.
-* src - The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
-* pin (optional): Whether to pin the adapter. LoRA adapters can be pinned in GPU without being evicted from LRUCache. This helps certain latency sensitive adapters to be present in GPU memory without being evicted.
+* name: The adapter name.
+* src: The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
+* load (optional): Whether to load the adapter weights, defaults to true. If this option is enabled, adapter weights will be loaded in GPU memory during registration.
+* pin (optional): Whether to pin the adapter, defaults to false. If this option is enabled, adapter weights will be loaded, and the adapter is pinned during registration. This helps certain latency sensitive adapters to be present in GPU memory without being evicted.
 * All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
 
 ```bash
-curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=..."
+curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=/opt/ml/model/adapters/a1"
 
 {
-  "status": "Adapter \"a1\" registered."
+  "status": "Adapter a1 registered"
 }
 ```
 
@@ -35,7 +36,7 @@ curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=..."
 
 `POST /models/{model_name}/adapters/{adapter_name}/update`
 
-* src - The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
+* load (optional): Whether to load the adapter weights.
 * pin (optional): Whether to pin the adapter. LoRA adapters can be pinned in GPU without being evicted from LRUCache. This helps certain latency sensitive adapters to be present in GPU memory without being evicted.
 * All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
 
@@ -43,7 +44,7 @@ curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=..."
 curl -X POST "http://localhost:8080/models/adaptecho/adapters/a1/update?pin=true"
 
 {
-  "status": "Adapter \"a1\" updated."
+  "status": "Adapter a1 updated"
 }
 ```
 
@@ -59,7 +60,7 @@ curl http://localhost:8080/models/adaptecho/adapters/a1
 [
   {
     "name": "a1",
-    "src": "...",
+    "src": "/opt/ml/model/adapters/a1",
     "pin": false
   }
 ]
@@ -75,7 +76,7 @@ Use the Unregister Adapter API to free up system resources:
 curl -X DELETE http://localhost:8080/models/adaptecho/adapters/a1
 
 {
-  "status": "Adapter \"a1\" unregistered"
+  "status": "Adapter a1 unregistered"
 }
 ```
 
@@ -83,8 +84,8 @@ curl -X DELETE http://localhost:8080/models/adaptecho/adapters/a1
 
 `GET /models/{model_name}/adapters`
 
-* limit - (optional) the maximum number of items to return. It is passed as a query parameter. The default value is `100`.
-* next_page_token - (optional) queries for next page. It is passed as a query parameter. This value is return by a previous API call.
+* limit (optional): the maximum number of items to return. It is passed as a query parameter. The default value is `100`.
+* next_page_token (optional): queries for next page. It is passed as a query parameter. This value is return by a previous API call.
 
 Use the Adapters API to query current registered adapters:
 
@@ -95,13 +96,13 @@ curl "http://localhost:8080/models/adaptecho/adapters"
 This API supports pagination:
 
 ```bash
-curl "http://localhost:8080/models/adaptecho/adapters?limit=2&next_page_token=0"
+curl "http://localhost:8080/models/adaptecho/adapters?limit=5&next_page_token=0"
 
 {
   "adapters": [
     {
       "name": "a1",
-      "src": "...",
+      "src": "/opt/ml/model/adapters/a1",
       "pin": false
     }
   ]
