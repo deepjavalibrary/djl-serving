@@ -1346,9 +1346,11 @@ def create_neo_input_model(properties):
         cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
     subprocess.check_call(cmd)
 
+    return
+
     adapter_ids = properties.pop("adapter_ids", [])
     adapter_names = properties.pop("adapter_names", [])
-    # Copy Adapaters if any
+    # Copy Adapters if any
     if adapter_ids:
         print("copying adapter models")
         adapters_path = os.path.join(model_download_path, "adapters")
