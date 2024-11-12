@@ -30,7 +30,6 @@ from lmi_dist.init_engine import engine_from_args
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.comms import comms
 
-MODEL_DIR_NAME = "sagemaker-fast-model-loader"
 CHUNK_MB = 8
 
 
@@ -107,7 +106,7 @@ class NeoShardingService():
         )
         engine = engine_from_args(engine_args)
 
-        model_dir = os.path.join(output_dir, MODEL_DIR_NAME)
+        model_dir = os.path.join(output_dir, sm_fml.MODEL_DIR_NAME)
         os.makedirs(model_dir, exist_ok=True)
 
         config_for_current_rank = engine.model_runner.vllm_worker.save_chunked_shard(
