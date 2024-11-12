@@ -20,8 +20,8 @@ This is an extension of the [Management API](management_api.md) and can be acces
 
 * name: The adapter name.
 * src: The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
-* load (optional): Whether to load the adapter weights, defaults to true. If this option is enabled, adapter weights will be loaded in GPU memory during registration.
-* pin (optional): Whether to pin the adapter, defaults to false. If this option is enabled, adapter weights will be loaded, and the adapter is pinned during registration. This helps certain latency sensitive adapters to be present in GPU memory without being evicted.
+* load (optional): Whether to load the adapter weights, defaults to `true`. If this option is enabled, adapter weights will be loaded in GPU memory during registration.
+* pin (optional): Whether to pin the adapter, defaults to `false`. If this option is enabled, adapter weights will be loaded, and the adapter is pinned during registration. This helps certain latency sensitive adapters to be present in GPU memory without being evicted.
 * All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
 
 ```bash
