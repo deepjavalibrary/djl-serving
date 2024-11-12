@@ -890,6 +890,18 @@ vllm_neo_model_list = {
         "option.tensor_parallel_degree": 2,
         "option.load_format": "sagemaker_fast_model_loader",
     },
+    "tiny-llama-lora-fml": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.load_format": "sagemaker_fast_model_loader",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "option.max_lora_rank": 64,
+        "adapter_ids": [
+            "barissglc/tinyllama-tarot-v1"
+        ],
+        "adapter_names": ["tarot"],
+    },
     "llama3-8b-unmerged-lora-fml": {
         "option.load_format": "sagemaker_fast_model_loader",
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
