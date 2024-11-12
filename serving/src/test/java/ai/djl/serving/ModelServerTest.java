@@ -1002,12 +1002,25 @@ public class ModelServerTest {
         testAdapterMissing();
 
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
-        url = strModelPrefix + "/adapters?name=adaptable&src=src&echooption=opt";
+        String adapterName = "adaptable";
+        url = strModelPrefix + "/adapters?name=" + adapterName + "&src=src&echooption=opt";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        assertEquals(statusResp.getStatus(), "Adapter adaptable registered");
+        assertEquals(statusResp.getStatus(), "Adapter " + adapterName + " registered");
+
+        // Assert adapter registered
+        url = strModelPrefix + "/adapters/" + adapterName;
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        DescribeAdapterResponse resp =
+                JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
+        assertEquals(resp.getName(), adapterName);
+        assertEquals(resp.getSrc(), "src");
+        assertTrue(resp.isLoad());
+        assertFalse(resp.isPin());
     }
 
     private void testRegisterAdapterConflict() throws InterruptedException {
@@ -1070,17 +1083,27 @@ public class ModelServerTest {
     private void testUpdateAdapter(Channel channel, boolean modelPrefix)
             throws InterruptedException {
         logTestFunction();
-        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
-        String url = strModelPrefix + "/adapters/adaptable/update?src=src1";
-        request(channel, HttpMethod.POST, url);
-        assertHttpOk();
 
-        url = strModelPrefix + "/adapters/adaptable/update?src=src";
+        String adapterName = "adaptable";
+        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
+        String url = strModelPrefix + "/adapters/" + adapterName + "/update?pin=true";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        assertEquals(statusResp.getStatus(), "Adapter adaptable updated");
+        assertEquals(statusResp.getStatus(), "Adapter " + adapterName + " updated");
+
+        // Assert adapter updated
+        url = strModelPrefix + "/adapters/" + adapterName;
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        DescribeAdapterResponse resp =
+                JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
+        assertEquals(resp.getName(), adapterName);
+        assertEquals(resp.getSrc(), "src");
+        assertTrue(resp.isLoad());
+        assertTrue(resp.isPin());
     }
 
     private void testUpdateAdapterModelNotFound() throws InterruptedException {
@@ -1117,7 +1140,11 @@ public class ModelServerTest {
         String modelName = "adaptecho";
         String adapterName = "adaptable";
         String strModelPrefix = "/models/" + modelName;
-        String url = strModelPrefix + "/adapters/" + adapterName + "/update?src=src1&error=true";
+        String url =
+                strModelPrefix
+                        + "/adapters/"
+                        + adapterName
+                        + "/update?src=src1&load=false&error=true";
         request(channel, HttpMethod.POST, url);
         channel.closeFuture().sync();
         channel.close().sync();
@@ -1135,6 +1162,8 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), adapterName);
         assertEquals(resp.getSrc(), "src");
+        assertTrue(resp.isLoad());
+        assertFalse(resp.isPin());
     }
 
     private void testAdapterMissing() throws InterruptedException {
@@ -1290,6 +1319,8 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), "adaptable");
         assertEquals(resp.getSrc(), "src");
+        assertTrue(resp.isLoad());
+        assertTrue(resp.isPin());
     }
 
     private void testDescribeAdapterModelNotFound() throws InterruptedException {
@@ -1337,12 +1368,24 @@ public class ModelServerTest {
             throws InterruptedException {
         logTestFunction();
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
-        String url = strModelPrefix + "/adapters/adaptable";
+        String adapterName = "adaptable";
+        String url = strModelPrefix + "/adapters/" + adapterName;
         request(channel, HttpMethod.DELETE, url);
         assertHttpOk();
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        assertEquals(statusResp.getStatus(), "Adapter adaptable unregistered");
+        assertEquals(statusResp.getStatus(), "Adapter " + adapterName + " unregistered");
+
+        // Assert adapter unregistered
+        channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        url = strModelPrefix + "/adapters";
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
+        assertFalse(resp.getAdapters().stream().anyMatch(a -> adapterName.equals(a.getName())));
     }
 
     private void testUnregisterAdapterModelNotFound() throws InterruptedException {

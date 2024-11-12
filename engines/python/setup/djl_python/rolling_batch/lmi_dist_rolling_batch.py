@@ -283,5 +283,5 @@ class LmiDistRollingBatch(RollingBatch):
         # 2) An adapter is not evicted, call add_lora() is not necessary.
         # But since whether an adapter is evicted is not exposed outside of engine,
         # and add_lora() in this case will take negligible time, we will still call add_lora().
-        self.engine.add_lora(lora_request)
-        return self.engine.pin_lora(lora_request.lora_int_id)
+        loaded = self.engine.add_lora(lora_request)
+        return loaded and self.engine.pin_lora(lora_request.lora_int_id)

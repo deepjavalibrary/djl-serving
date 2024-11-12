@@ -58,21 +58,24 @@ public class ListAdaptersResponse {
      *
      * @param name the adapter name
      * @param src the adapter source
+     * @param load whether to load the adapter weights
      * @param pin whether to pin the adapter
      */
-    public void addAdapter(String name, String src, boolean pin) {
-        adapters.add(new AdapterItem(name, src, pin));
+    public void addAdapter(String name, String src, boolean load, boolean pin) {
+        adapters.add(new AdapterItem(name, src, load, pin));
     }
 
     /** A class that holds the adapter response. */
     public static final class AdapterItem {
         private String name;
         private String src;
+        private boolean load;
         private boolean pin;
 
-        private AdapterItem(String name, String src, boolean pin) {
+        private AdapterItem(String name, String src, boolean load, boolean pin) {
             this.name = name;
             this.src = src;
+            this.load = load;
             this.pin = pin;
         }
 
