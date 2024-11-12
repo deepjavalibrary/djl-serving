@@ -896,14 +896,14 @@ vllm_neo_model_list = {
         "option.tensor_parallel_degree": "2",
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "adapter_ids": [
-            "UnderstandLing/Llama-3-8B-Instruct-fr",
-            "UnderstandLing/Llama-3-8B-Instruct-es",
-        ],
-        "adapter_names": ["french", "spanish"],
+        # "option.adapters": "adapters",
+        # "option.enable_lora": "true",
+        # "option.max_lora_rank": 64,
+        # "adapter_ids": [
+        #     "UnderstandLing/Llama-3-8B-Instruct-fr",
+        #     "UnderstandLing/Llama-3-8B-Instruct-es",
+        # ],
+        # "adapter_names": ["french", "spanish"],
         "option.gpu_memory_utilization": "0.8",
     },
     "llama-3.1-8b": {
