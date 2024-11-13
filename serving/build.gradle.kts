@@ -38,6 +38,7 @@ dependencies {
     testImplementation(libs.testng) {
         exclude(group = "junit", module = "junit")
     }
+    testImplementation(libs.mockito.core)
 }
 
 tasks {
