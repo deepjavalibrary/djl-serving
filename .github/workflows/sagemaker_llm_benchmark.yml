@@ -61,6 +61,7 @@ jobs:
             echo "Directory ${METRICS_DIR} already exists."
           fi
       - name: Run IR-LLM
+        run: |
           METRICS_DIR = "metrics_${{ matrix.engine}}"
           CONFIG_DIR = "config/${{ matrix.engine}}"
 
