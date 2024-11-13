@@ -578,12 +578,6 @@ vllm_model_spec = {
 }
 
 vllm_neo_model_spec = {
-    "llama3-8b-unmerged-lora": {
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
     "tiny-llama-fml": {
         "batch_size": [4],
         "seq_length": [32],

@@ -896,27 +896,9 @@ vllm_neo_model_list = {
         "option.load_format": "sagemaker_fast_model_loader",
         "option.adapters": "adapters",
         "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "adapter_ids": [
-            "barissglc/tinyllama-tarot-v1"
-        ],
+        "option.max_lora_rank": "64",
+        "adapter_ids": ["barissglc/tinyllama-tarot-v1"],
         "adapter_names": ["tarot"],
-    },
-    "llama3-8b-unmerged-lora-fml": {
-        "option.load_format": "sagemaker_fast_model_loader",
-        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
-        "option.tensor_parallel_degree": "2",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        # "option.adapters": "adapters",
-        # "option.enable_lora": "true",
-        # "option.max_lora_rank": 64,
-        # "adapter_ids": [
-        #     "UnderstandLing/Llama-3-8B-Instruct-fr",
-        #     "UnderstandLing/Llama-3-8B-Instruct-es",
-        # ],
-        # "adapter_names": ["french", "spanish"],
-        "option.gpu_memory_utilization": "0.8",
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
@@ -1379,6 +1361,7 @@ def create_neo_input_model(properties):
                                   local_dir_use_symlinks=False,
                                   local_dir=dir)
                 adapter_cache[adapter_id] = dir
+
 
 def build_hf_handler_model(model):
     if model not in hf_handler_list:

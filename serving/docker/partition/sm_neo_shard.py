@@ -108,12 +108,31 @@ class NeoShardingService():
             self.properties.get("option.gpu_memory_utilization", 0.9))
         enforce_eager: bool = str(
             self.properties.get("option.enforce_eager",
-                                False)).lower() == "true"
+                                "False")).lower() == "true"
         max_rolling_batch_size = int(
             self.properties.get("option.max_rolling_batch_size", 256))
         max_model_len = self.properties.get("option.max_model_len", None)
         if max_model_len is not None:
             max_model_len = int(max_model_len)
+
+        # LoraConfigs
+        enable_lora: bool = str(
+            self.properties.get("option.enable_lora",
+                                "false")).lower() == "true"
+        fully_sharded_loras: bool = str(
+            self.properties.get("option.fully_sharded_loras",
+                                "true")).lower() == "true"
+        max_loras: int = int(self.properties.get("option.max_loras", "4"))
+        max_lora_rank: int = int(
+            self.properties.get("option.max_lora_rank", "16"))
+        lora_extra_vocab_size: int = int(
+            self.properties.get("option.lora_extra_vocab_size", "256"))
+
+        lora_dtype: str = str(self.properties.get("option.lora_dtype", "auto"))
+
+        max_cpu_loras = None
+        if self.properties.get("option.max_cpu_loras"):
+            max_cpu_loras = int(self.properties.get("option.max_cpu_loras"))
 
         engine_args = VllmEngineArgs(
             model=input_dir,
@@ -125,7 +144,14 @@ class NeoShardingService():
             enforce_eager=enforce_eager,
             max_num_seqs=max_rolling_batch_size,
             max_model_len=max_model_len,
-        )
+            enable_lora=enable_lora,
+            max_lora_rank=max_lora_rank,
+            max_loras=max_loras,
+            lora_extra_vocab_size=lora_extra_vocab_size,
+            max_cpu_loras=max_cpu_loras,
+            fully_sharded_loras=fully_sharded_loras,
+            lora_dtype=lora_dtype)
+
         engine = engine_from_args(engine_args)
 
         model_dir = os.path.join(output_dir, sm_fml.MODEL_DIR_NAME)
