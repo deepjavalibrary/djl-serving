@@ -907,14 +907,14 @@ vllm_neo_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": "4",
         "option.max_rolling_batch_size": "4",
-        "option.awq_block_size": "256",
+        "option.awq_block_size": "256"
     },
     "llama-3.1-8b-fp8-options": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.quantize": "fp8",
         "option.tensor_parallel_degree": "4",
-        "option.fp8_activation_scheme": "dynamic",
-    },
+        "option.fp8_activation_scheme": "dynamic"
+    }
 }
 
 lmi_dist_aiccl_model_list = {
