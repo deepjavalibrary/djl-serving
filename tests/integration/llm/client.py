@@ -583,6 +583,12 @@ vllm_neo_model_spec = {
         "seq_length": [32],
         "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     },
+    "tiny-llama-lora-fml": {
+        "batch_size": [4],
+        "seq_length": [32],
+        "adapters": ["tarot"],
+        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    },
     "llama-3.1-8b": {
         "batch_size": [1],
         "seq_length": [256],

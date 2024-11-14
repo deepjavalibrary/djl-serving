@@ -888,7 +888,17 @@ vllm_neo_model_list = {
     "tiny-llama-fml": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.tensor_parallel_degree": 2,
-        "option.load_format": 'sagemaker_fast_model_loader',
+        "option.load_format": "sagemaker_fast_model_loader",
+    },
+    "tiny-llama-lora-fml": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.load_format": "sagemaker_fast_model_loader",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "option.max_lora_rank": "64",
+        "adapter_ids": ["barissglc/tinyllama-tarot-v1"],
+        "adapter_names": ["tarot"],
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
@@ -1329,6 +1339,28 @@ def create_neo_input_model(properties):
     else:
         cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
     subprocess.check_call(cmd)
+
+    adapter_ids = properties.pop("adapter_ids", [])
+    adapter_names = properties.pop("adapter_names", [])
+    # Copy Adapters if any
+    if adapter_ids:
+        print("copying adapter models")
+        adapters_path = os.path.join(model_download_path, "adapters")
+        os.makedirs(adapters_path, exist_ok=True)
+        ## install huggingface_hub in your workflow file to use this
+        from huggingface_hub import snapshot_download
+        adapter_cache = {}
+        for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
+            print(f"copying adapter models {adapter_id} {adapter_name}")
+            dir = os.path.join(adapters_path, adapter_name)
+            if adapter_id in adapter_cache:
+                shutil.copytree(adapter_cache[adapter_id], dir)
+            else:
+                os.makedirs(dir, exist_ok=True)
+                snapshot_download(adapter_id,
+                                  local_dir_use_symlinks=False,
+                                  local_dir=dir)
+                adapter_cache[adapter_id] = dir
 
 
 def build_hf_handler_model(model):
