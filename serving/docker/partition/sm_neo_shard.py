@@ -117,28 +117,30 @@ class NeoShardingService():
         # LoraConfigs
         lora_kwargs = {}
         if enable_lora := self.properties.get("option.enable_lora"):
-            lora_kwargs["enable_lora"] = enable_lora.lower() == "true"
-        if enable_lora:
-            max_loras: int = int(self.properties.get("option.max_loras", "4"))
-            max_lora_rank: int = int(
-                self.properties.get("option.max_lora_rank", "16"))
-            fully_sharded_loras: bool = (str(
-                self.properties.get("option.fully_sharded_loras",
-                                    "false")).lower() == "true")
-            lora_extra_vocab_size: int = int(
-                self.properties.get("option.lora_extra_vocab_size", "256"))
-            lora_dtype: str = self.properties.get("option.lora_dtype", "auto")
-            max_cpu_loras = None
-            if self.properties.get("option.max_cpu_loras"):
-                max_cpu_loras = int(
-                    self.properties.get("option.max_cpu_loras"))
+            enable_lora_bool = enable_lora.lower() == "true"
+            lora_kwargs["enable_lora"] = enable_lora_bool
 
-            lora_kwargs["fully_sharded_loras"] = fully_sharded_loras
-            lora_kwargs["max_loras"] = max_loras
-            lora_kwargs["max_lora_rank"] = max_lora_rank
-            lora_kwargs["lora_extra_vocab_size"] = lora_extra_vocab_size
-            lora_kwargs["lora_dtype"] = lora_dtype
-            lora_kwargs["max_cpu_loras"] = max_cpu_loras
+            if enable_lora_bool:
+                max_loras: int = int(self.properties.get("option.max_loras", "4"))
+                max_lora_rank: int = int(
+                    self.properties.get("option.max_lora_rank", "16"))
+                fully_sharded_loras: bool = (str(
+                    self.properties.get("option.fully_sharded_loras",
+                                        "false")).lower() == "true")
+                lora_extra_vocab_size: int = int(
+                    self.properties.get("option.lora_extra_vocab_size", "256"))
+                lora_dtype: str = self.properties.get("option.lora_dtype", "auto")
+                max_cpu_loras: int = None
+                if self.properties.get("option.max_cpu_loras"):
+                    max_cpu_loras = int(
+                        self.properties.get("option.max_cpu_loras"))
+
+                lora_kwargs["fully_sharded_loras"] = fully_sharded_loras
+                lora_kwargs["max_loras"] = max_loras
+                lora_kwargs["max_lora_rank"] = max_lora_rank
+                lora_kwargs["lora_extra_vocab_size"] = lora_extra_vocab_size
+                lora_kwargs["lora_dtype"] = lora_dtype
+                lora_kwargs["max_cpu_loras"] = max_cpu_loras
 
         engine_args = VllmEngineArgs(
             model=input_dir,
