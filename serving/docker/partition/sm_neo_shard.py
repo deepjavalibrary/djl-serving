@@ -127,8 +127,7 @@ class NeoShardingService():
                                     "false")).lower() == "true")
             lora_extra_vocab_size: int = int(
                 self.properties.get("option.lora_extra_vocab_size", "256"))
-            lora_dtype: str = str(
-                self.properties.get("option.lora_dtype", "auto"))
+            lora_dtype: str = self.properties.get("option.lora_dtype", "auto")
             max_cpu_loras = None
             if self.properties.get("option.max_cpu_loras"):
                 max_cpu_loras = int(
