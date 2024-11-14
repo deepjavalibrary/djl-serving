@@ -118,7 +118,6 @@ class NeoShardingService():
         lora_kwargs = {}
         if enable_lora := self.properties.get("option.enable_lora"):
             enable_lora_bool = enable_lora.lower() == "true"
-            lora_kwargs["enable_lora"] = enable_lora_bool
 
             if enable_lora_bool:
                 max_loras: int = int(self.properties.get("option.max_loras", "4"))
@@ -134,7 +133,8 @@ class NeoShardingService():
                 if self.properties.get("option.max_cpu_loras"):
                     max_cpu_loras = int(
                         self.properties.get("option.max_cpu_loras"))
-
+                
+                lora_kwargs["enable_lora"] = enable_lora_bool
                 lora_kwargs["fully_sharded_loras"] = fully_sharded_loras
                 lora_kwargs["max_loras"] = max_loras
                 lora_kwargs["max_lora_rank"] = max_lora_rank
