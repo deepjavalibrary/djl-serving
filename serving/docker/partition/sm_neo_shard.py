@@ -131,9 +131,8 @@ class NeoShardingService():
                     self.properties.get("option.lora_extra_vocab_size", "256"))
                 lora_dtype: str = self.properties.get("option.lora_dtype",
                                                       "auto")
-                max_cpu_loras: Optional[int] = None
-                if cpu_loras := self.properties.get("option.max_cpu_loras"):
-                    max_cpu_loras = int(cpu_loras)
+                max_cpu_loras: Optional[int] = self.properties.get(
+                    "option.max_cpu_loras")
 
                 lora_kwargs["enable_lora"] = enable_lora_bool
                 lora_kwargs["fully_sharded_loras"] = fully_sharded_loras
