@@ -1,0 +1,55 @@
+{
+    "tokenizer_model_id": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "jumpstart_model_id": "meta-textgeneration-llama-3-1-8b-instruct",
+    "use_jumpstart_prod_artifact": true,
+    "image_uri": "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:tensorrt-llm-nightly",
+    "image_uri_args": {
+        "framework": "djl-trtllm",
+        "version": "nightly"
+    },
+    "model_args": {
+        "env": {
+            "HF_MODEL_ID": "/opt/ml/model/",
+            "OPTION_MAX_SEQ_LEN": "8192",
+            "OPTION_MAX_NUM_TOKENS": "8192"
+        },
+        "enable_network_isolation": true
+    },
+    "benchmark_configurations": [
+        {
+            "instance_type": "ml.g5.12xlarge",
+            "env_params": {
+                "OPTION_GPU_MEMORY_UTILIZATION": [
+                    "0.85"
+                ]
+            }
+        },
+        {
+            "instance_type": "ml.g6.12xlarge",
+            "env_params": {
+                "OPTION_GPU_MEMORY_UTILIZATION": [
+                    "0.85"
+                ]
+            }
+        },
+        {
+            "instance_type": "ml.p4d.24xlarge",
+            "env_params": {
+                "TENSOR_PARALLEL_DEGREE": [
+                    "1"
+                ]
+            }
+        },
+        {
+            "instance_type": "ml.p5.48xlarge",
+            "env_params": {
+                "TENSOR_PARALLEL_DEGREE": [
+                    "1"
+                ],
+                "OPTION_GPU_MEMORY_UTILIZATION": [
+                    "0.95"
+                ]
+            }
+        }
+    ]
+}

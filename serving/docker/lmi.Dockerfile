@@ -18,7 +18,7 @@ ARG djl_serving_version
 ARG python_version=3.11
 ARG torch_version=2.5.1
 ARG torch_vision_version=0.20.1
-ARG djl_torch_version=2.4.0
+ARG djl_torch_version=2.5.1
 ARG onnx_version=1.19.0
 ARG pydantic_version=2.9.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"

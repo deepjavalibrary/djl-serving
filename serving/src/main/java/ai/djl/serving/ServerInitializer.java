@@ -39,6 +39,7 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
     private Connector.ConnectorType connectorType;
     private SslContext sslCtx;
     private FolderScanPluginManager pluginManager;
+    private final ClusterRequestHandler clusterRequestHandler;
 
     /**
      * Creates a new {@code HttpRequestHandler} instance.
@@ -54,6 +55,7 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
         this.sslCtx = sslCtx;
         this.connectorType = connectorType;
         this.pluginManager = pluginManager;
+        this.clusterRequestHandler = ClusterRequestHandler.getInstance();
     }
 
     /** {@inheritDoc} */
@@ -76,7 +78,7 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
                 pipeline.addLast("inference", new InferenceRequestHandler());
                 break;
             case CLUSTER:
-                pipeline.addLast("cluster", new ClusterRequestHandler());
+                pipeline.addLast("cluster", clusterRequestHandler);
                 break;
             case BOTH:
             default:

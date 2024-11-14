@@ -78,7 +78,11 @@ class LmiDistRollingBatch(RollingBatch):
             enable_lora=self.lmi_dist_config.enable_lora,
             max_loras=self.lmi_dist_config.max_loras,
             max_lora_rank=self.lmi_dist_config.max_lora_rank,
+            fully_sharded_loras=self.lmi_dist_config.fully_sharded_loras,
             lora_extra_vocab_size=self.lmi_dist_config.lora_extra_vocab_size,
+            long_lora_scaling_factors=self.lmi_dist_config.
+            long_lora_scaling_factors,
+            lora_dtype=self.lmi_dist_config.lora_dtype,
             max_cpu_loras=self.lmi_dist_config.max_cpu_loras,
             revision=self.lmi_dist_config.revision,
             enable_chunked_prefill=self.lmi_dist_config.enable_chunked_prefill,

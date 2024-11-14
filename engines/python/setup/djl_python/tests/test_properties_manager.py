@@ -440,6 +440,8 @@ class TestConfigManager(unittest.TestCase):
                              int(properties['max_model_len']))
             self.assertEqual(vllm_configs.enforce_eager,
                              bool(properties['enforce_eager']))
+            self.assertEqual(vllm_configs.enable_lora,
+                             bool(properties['enable_lora']))
             self.assertEqual(vllm_configs.gpu_memory_utilization,
                              float(properties['gpu_memory_utilization']))
 
@@ -457,6 +459,36 @@ class TestConfigManager(unittest.TestCase):
             vllm_props = VllmRbProperties(**properties)
             self.assertTrue(vllm_props.enforce_eager is False)
 
+        def test_long_lora_scaling_factors(properties):
+            properties['long_lora_scaling_factors'] = "3.0"
+            vllm_props = VllmRbProperties(**properties)
+            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+
+            properties['long_lora_scaling_factors'] = "3"
+            vllm_props = VllmRbProperties(**properties)
+            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+
+            properties['long_lora_scaling_factors'] = "3.0,4.0"
+            vllm_props = VllmRbProperties(**properties)
+            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+
+            properties['long_lora_scaling_factors'] = "3.0, 4.0 "
+            vllm_props = VllmRbProperties(**properties)
+            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+
+            properties['long_lora_scaling_factors'] = "(3.0,)"
+            vllm_props = VllmRbProperties(**properties)
+            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+
+            properties['long_lora_scaling_factors'] = "(3.0,4.0)"
+            vllm_props = VllmRbProperties(**properties)
+            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+
+        def test_invalid_long_lora_scaling_factors(properties):
+            properties['long_lora_scaling_factors'] = "a,b"
+            with self.assertRaises(ValueError):
+                VllmRbProperties(**properties)
+
         properties = {
             'model_id': 'sample_model_id',
             'engine': 'Python',
@@ -466,12 +498,15 @@ class TestConfigManager(unittest.TestCase):
             'dtype': 'fp16',
             'quantize': 'awq',
             'enforce_eager': "True",
+            'enable_lora': "true",
             "gpu_memory_utilization": "0.85",
             'load_format': 'pt'
         }
         test_vllm_valid(properties.copy())
         test_invalid_quantization_method(properties.copy())
         test_enforce_eager(properties.copy())
+        test_long_lora_scaling_factors(properties.copy())
+        test_invalid_long_lora_scaling_factors(properties.copy())
 
     def test_sd_inf2_properties(self):
         properties = {
@@ -507,6 +542,7 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(lmi_configs.dtype, 'auto')
             self.assertEqual(lmi_configs.gpu_memory_utilization, 0.9)
             self.assertTrue(lmi_configs.mpi_mode)
+            self.assertFalse(lmi_configs.enable_lora)
 
         def test_with_most_properties():
             properties = {
@@ -516,6 +552,7 @@ class TestConfigManager(unittest.TestCase):
                 'max_rolling_batch_size': '64',
                 'max_rolling_batch_prefill_tokens': '12500',
                 'dtype': 'fp32',
+                'enable_lora': "true",
             }
 
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
@@ -533,6 +570,8 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(lmi_configs.dtype, 'fp32')
             self.assertTrue(lmi_configs.mpi_mode)
             self.assertTrue(lmi_configs.trust_remote_code)
+            self.assertEqual(lmi_configs.enable_lora,
+                             bool(properties['enable_lora']))
 
         def test_invalid_quantization():
             properties = {'quantize': 'invalid'}
@@ -551,6 +590,36 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(lmi_configs.quantize.value,
                              LmiDistQuantizeMethods.squeezellm.value)
 
+        def test_long_lora_scaling_factors():
+            properties = {"long_lora_scaling_factors": "3.0"}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
+
+            properties = {"long_lora_scaling_factors": "3"}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
+
+            properties = {"long_lora_scaling_factors": "3.0,4.0"}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
+
+            properties = {"long_lora_scaling_factors": "3.0, 4.0 "}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
+
+            properties = {"long_lora_scaling_factors": "(3.0,)"}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
+
+            properties = {"long_lora_scaling_factors": "(3.0,4.0)"}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
+
+        def test_invalid_long_lora_scaling_factors():
+            properties = {'long_lora_scaling_factors': "(a,b)"}
+            with self.assertRaises(ValueError):
+                LmiDistRbProperties(**properties, **min_properties)
+
         min_properties = {
             'engine': 'MPI',
             'mpi_mode': 'true',
@@ -561,6 +630,8 @@ class TestConfigManager(unittest.TestCase):
         test_invalid_quantization()
         test_quantization_with_dtype_error()
         test_quantization_squeezellm()
+        test_long_lora_scaling_factors()
+        test_invalid_long_lora_scaling_factors()
 
     def test_scheduler_properties(self):
         properties = {
