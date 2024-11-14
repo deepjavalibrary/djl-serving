@@ -29,6 +29,7 @@ from mpi4py import MPI
 from lmi_dist.init_engine import engine_from_args
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.comms import comms
+from lmi_dist.vllm_engine import load_model_for_sharding
 
 CHUNK_MB = 8
 
@@ -156,12 +157,13 @@ class NeoShardingService():
             **lora_kwargs,
         )
 
-        engine = engine_from_args(engine_args)
+        engine_configs = engine_args.create_engine_configs()
+        engine_worker = load_model_for_sharding(engine_configs)
 
         model_dir = os.path.join(output_dir, sm_fml.MODEL_DIR_NAME)
         os.makedirs(model_dir, exist_ok=True)
 
-        config_for_current_rank = engine.model_runner.vllm_worker.save_chunked_shard(
+        config_for_current_rank = engine_worker.save_chunked_shard(
             output_dir=model_dir, chunk_mb=chunk_mb)
 
         # Gather results from all ranks to driver process
