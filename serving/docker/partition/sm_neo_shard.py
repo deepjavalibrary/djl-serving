@@ -16,7 +16,7 @@ import shutil
 import sys
 import logging
 from importlib.metadata import version
-from typing import Final
+from typing import Final, Optional
 
 from sm_neo_utils import (OptimizationFatalError, write_error_to_file,
                           get_neo_env_vars)
@@ -120,20 +120,21 @@ class NeoShardingService():
             enable_lora_bool = enable_lora.lower() == "true"
 
             if enable_lora_bool:
-                max_loras: int = int(self.properties.get("option.max_loras", "4"))
+                max_loras: int = int(
+                    self.properties.get("option.max_loras", "4"))
                 max_lora_rank: int = int(
                     self.properties.get("option.max_lora_rank", "16"))
-                fully_sharded_loras: bool = (str(
+                fully_sharded_loras: bool = str(
                     self.properties.get("option.fully_sharded_loras",
-                                        "false")).lower() == "true")
+                                        "false")).lower() == "true"
                 lora_extra_vocab_size: int = int(
                     self.properties.get("option.lora_extra_vocab_size", "256"))
-                lora_dtype: str = self.properties.get("option.lora_dtype", "auto")
-                max_cpu_loras: int = None
-                if self.properties.get("option.max_cpu_loras"):
-                    max_cpu_loras = int(
-                        self.properties.get("option.max_cpu_loras"))
-                
+                lora_dtype: str = self.properties.get("option.lora_dtype",
+                                                      "auto")
+                max_cpu_loras: Optional[int] = None
+                if cpu_loras := self.properties.get("option.max_cpu_loras"):
+                    max_cpu_loras = int(cpu_loras)
+
                 lora_kwargs["enable_lora"] = enable_lora_bool
                 lora_kwargs["fully_sharded_loras"] = fully_sharded_loras
                 lora_kwargs["max_loras"] = max_loras
