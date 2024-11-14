@@ -418,6 +418,20 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                     byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.SECONDS);
                     // Defer sending HTTP header until first chunk received.
                     // This allows inference update HTTP code.
+                    // If this is the first and last chunk, we're in a non-streaming case and can
+                    // use default response without chunked transfer encoding
+                    if (first && !supplier.hasNext()) {
+                        FullHttpResponse resp =
+                                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
+                        for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
+                            resp.headers().set(entry.getKey(), entry.getValue());
+                        }
+                        if (buf != null) {
+                            resp.content().writeBytes(buf);
+                        }
+                        NettyUtils.sendHttpResponse(ctx, resp, true);
+                        return;
+                    }
                     if (first) {
                         code = output.getCode();
                         status = new HttpResponseStatus(code, output.getMessage());
