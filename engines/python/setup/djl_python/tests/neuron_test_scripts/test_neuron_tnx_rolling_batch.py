@@ -105,22 +105,22 @@ class TestNeuronRollingBatch(unittest.TestCase):
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
         # --- Models ---
-        model_names = [
-            "llama",
-            "gpt2",
-            "gptneox",
-            "bloom",
-        ]
+        model_name_vs_artifacts = {
+            "llama": "s3://djl-llm/llama-tiny-4k/",
+            "gpt2": "s3://djl-llm/gpt2-tiny-4k/",
+            "gptneox": "s3://djl-llm/gpt-neox-tiny-4k/",
+            "bloom": "s3://djl-llm/bloom-tiny-4k/",
+        }
 
         # === Test ===
-        for model_id in model_names:
+        for model_id in model_name_vs_artifacts.keys():
             properties = {
                 "tensor_parallel_degree": 2,
                 "n_positions": "128",
                 "rolling_batch": "tnx",
                 "max_rolling_batch_size": 4,
                 "model_loading_timeout": 3600,
-                "model_id": artifacts(model_id)
+                "model_id": model_name_vs_artifacts[model_id]
             }
 
             # ===================== neuron-tnx ============================
