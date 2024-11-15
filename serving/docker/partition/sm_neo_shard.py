@@ -179,7 +179,6 @@ class NeoShardingService():
                 configs=configs,
             )
 
-        del engine
         torch.cuda.empty_cache()
 
     def run_sharding(self):
