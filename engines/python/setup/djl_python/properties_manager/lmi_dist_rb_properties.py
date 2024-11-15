@@ -12,24 +12,11 @@
 # the specific language governing permissions and limitations under the License.
 import ast
 from enum import Enum
-from typing import Optional, Mapping, Tuple
+from typing import Optional, Mapping, Tuple, Dict
 
 from pydantic import model_validator, field_validator
 
 from djl_python.properties_manager.properties import Properties
-
-
-class LmiDistQuantizeMethods(str, Enum):
-    awq = 'awq'
-    deepspeedfp = 'deepspeedfp'
-    fp8 = 'fp8'
-    fbgemm_fp8 = 'fbgemm_fp8'
-    gptq = 'gptq'
-    gptq_marlin = 'gptq_marlin'
-    gptq_marlin_24 = 'gptq_marlin_24'
-    awq_marlin = 'awq_marlin'
-    marlin = 'marlin'
-    squeezellm = 'squeezellm'
 
 
 class LmiDistLoadFormats(str, Enum):
@@ -40,7 +27,7 @@ class LmiDistRbProperties(Properties):
     engine: Optional[str] = None
     dtype: Optional[str] = "auto"
     load_format: Optional[str] = "auto"
-    quantize: Optional[LmiDistQuantizeMethods] = None
+    quantize: Optional[str] = None
     tensor_parallel_degree: int = 1
     pipeline_parallel_degree: int = 1
     max_rolling_batch_prefill_tokens: Optional[int] = None
