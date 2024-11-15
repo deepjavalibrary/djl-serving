@@ -10,28 +10,6 @@ from pydantic import field_validator, model_validator
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, is_rolling_batch_enabled
 
 
-class HFQuantizeMethods(str, Enum):
-    # added for backward compatibility lmi-dist
-    bitsandbytes = 'bitsandbytes'
-    gptq = 'gptq'
-
-    # huggingface
-    bitsandbytes4 = 'bitsandbytes4'
-    bitsandbytes8 = 'bitsandbytes8'
-
-    # TODO remove this after refactor of all handlers
-    # supported by vllm
-    awq = 'awq'
-    deepspeedfp = 'deepspeedfp'
-    fp8 = 'fp8'
-    fbgemm_fp8 = 'fbgemm_fp8'
-    gptq_marlin = 'gptq_marlin'
-    gptq_marlin_24 = 'gptq_marlin_24'
-    awq_marlin = 'awq_marlin'
-    marlin = 'marlin'
-    squeezellm = 'squeezellm'
-
-
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "auto":
         return dtype
@@ -57,7 +35,7 @@ class HuggingFaceProperties(Properties):
     device_map: str = None
     load_in_4bit: Optional[bool] = None
     load_in_8bit: Optional[bool] = None
-    quantize: Optional[HFQuantizeMethods] = None
+    quantize: Optional[str] = None
     low_cpu_mem_usage: Optional[bool] = False
     disable_flash_attn: Optional[bool] = True
 
@@ -81,15 +59,15 @@ class HuggingFaceProperties(Properties):
     @model_validator(mode='after')
     def set_quantize_for_backward_compatibility(self):
         if self.load_in_4bit:
-            self.quantize = HFQuantizeMethods.bitsandbytes4
+            self.quantize = "bitsandbytes4"
         elif self.load_in_8bit:
-            self.quantize = HFQuantizeMethods.bitsandbytes8
+            self.quantize = "bitsandbytes8"
 
         # TODO remove this after refactor of all handlers
         # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
-        if self.quantize == HFQuantizeMethods.bitsandbytes8 \
+        if self.quantize == "bitsandbytes8" \
                 and self.rolling_batch == RollingBatchEnum.lmidist:
-            self.quantize = HFQuantizeMethods.bitsandbytes
+            self.quantize = "bitsandbytes"
         return self
 
     @model_validator(mode='after')
@@ -152,12 +130,12 @@ class HuggingFaceProperties(Properties):
         }:
             return self
 
-        if self.quantize.value == HFQuantizeMethods.bitsandbytes8.value:
+        if self.quantize == "bitsandbytes8":
             if "device_map" not in self.kwargs:
                 raise ValueError(
                     "device_map should be set when load_in_8bit is set")
             self.kwargs["load_in_8bit"] = True
-        if self.quantize.value == HFQuantizeMethods.bitsandbytes4.value:
+        if self.quantize == "bitsandbytes4":
             if "device_map" not in self.kwargs:
                 raise ValueError(
                     "device_map should set when load_in_4bit is set")

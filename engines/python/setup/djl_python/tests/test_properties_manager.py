@@ -8,10 +8,10 @@ from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
     TnXMemoryLayout, TnXDtypeName, TnXModelLoaders)
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
-from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
+from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
-from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
+from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
 from djl_python.tests.utils import parameterized, parameters
 
@@ -405,12 +405,11 @@ class TestConfigManager(unittest.TestCase):
             'rolling_batch': 'lmi-dist'
         }
         hf_configs = HuggingFaceProperties(**properties)
-        self.assertEqual(hf_configs.quantize.value,
-                         HFQuantizeMethods.bitsandbytes.value)
+        self.assertEqual(hf_configs.quantize, "bitsandbytes")
 
     @parameters([{
         "model_id": "model_id",
-        "quantize": HFQuantizeMethods.bitsandbytes4.value
+        "quantize": "bitsandbytes4"
     }, {
         "model_id": "model_id",
         "load_in_8bit": "true"
@@ -444,13 +443,6 @@ class TestConfigManager(unittest.TestCase):
                              bool(properties['enable_lora']))
             self.assertEqual(vllm_configs.gpu_memory_utilization,
                              float(properties['gpu_memory_utilization']))
-
-        # test with invalid quantization
-        def test_invalid_quantization_method(properties):
-            properties['quantize'] = 'gguf'
-            with self.assertRaises(ValueError):
-                VllmRbProperties(**properties)
-            properties['quantize'] = 'awq'
 
         def test_enforce_eager(properties):
             properties.pop('enforce_eager')
@@ -503,7 +495,6 @@ class TestConfigManager(unittest.TestCase):
             'load_format': 'pt'
         }
         test_vllm_valid(properties.copy())
-        test_invalid_quantization_method(properties.copy())
         test_enforce_eager(properties.copy())
         test_long_lora_scaling_factors(properties.copy())
         test_invalid_long_lora_scaling_factors(properties.copy())
@@ -573,22 +564,10 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(lmi_configs.enable_lora,
                              bool(properties['enable_lora']))
 
-        def test_invalid_quantization():
-            properties = {'quantize': 'invalid'}
-            with self.assertRaises(ValueError):
-                LmiDistRbProperties(**properties, **min_properties)
-
-        def test_quantization_with_dtype_error():
-            # you cannot give both quantization method and dtype
-            properties = {'quantize': 'bitsandbytes', 'dtype': 'int8'}
-            with self.assertRaises(ValueError):
-                LmiDistRbProperties(**properties, **min_properties)
-
         def test_quantization_squeezellm():
             properties = {'quantize': 'squeezellm'}
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.quantize.value,
-                             LmiDistQuantizeMethods.squeezellm.value)
+            self.assertEqual(lmi_configs.quantize, "squeezellm")
 
         def test_long_lora_scaling_factors():
             properties = {"long_lora_scaling_factors": "3.0"}
@@ -627,8 +606,6 @@ class TestConfigManager(unittest.TestCase):
         }
         test_with_min_properties()
         test_with_most_properties()
-        test_invalid_quantization()
-        test_quantization_with_dtype_error()
         test_quantization_squeezellm()
         test_long_lora_scaling_factors()
         test_invalid_long_lora_scaling_factors()
