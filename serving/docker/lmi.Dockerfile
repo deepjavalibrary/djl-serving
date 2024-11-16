@@ -167,4 +167,4 @@ LABEL djl-version=$djl_version
 LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver, CUDA 12.4 can work on this one too
-LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.4
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
