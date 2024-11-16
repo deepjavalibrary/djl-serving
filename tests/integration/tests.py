@@ -634,19 +634,19 @@ class TestVllm1:
 @pytest.mark.gpu_4
 class TestVllmLora:
 
-    def test_lora_unmerged(self):
+    def test_lora_llama2_7b(self):
         with Runner('lmi', 'llama-7b-unmerged-lora') as r:
             prepare.build_vllm_model("llama-7b-unmerged-lora")
             r.launch()
             client.run("vllm_adapters llama-7b-unmerged-lora".split())
 
-    def test_lora_unmerged_overflow(self):
+    def test_lora_llama2_7b_overflow(self):
         with Runner('lmi', 'llama-7b-unmerged-lora-overflow') as r:
             prepare.build_vllm_model("llama-7b-unmerged-lora-overflow")
             r.launch()
             client.run("vllm_adapters llama-7b-unmerged-lora-overflow".split())
 
-    def test_lora_awq_llama2_13b(self):
+    def test_lora_llama2_13b_awq(self):
         with Runner('lmi', 'llama2-13b-awq-unmerged-lora') as r:
             prepare.build_vllm_model("llama2-13b-awq-unmerged-lora")
             r.launch()
@@ -658,11 +658,17 @@ class TestVllmLora:
             r.launch()
             client.run("vllm_adapters mistral-7b-unmerged-lora".split())
 
-    def test_lora_awq_mistral_7b(self):
+    def test_lora_mistral_7b_awq(self):
         with Runner('lmi', 'mistral-7b-awq-unmerged-lora') as r:
             prepare.build_vllm_model("mistral-7b-awq-unmerged-lora")
             r.launch()
             client.run("vllm_adapters mistral-7b-awq-unmerged-lora".split())
+
+    def test_lora_mistral_7b_gptq(self):
+        with Runner('lmi', 'mistral-7b-gptq-unmerged-lora') as r:
+            prepare.build_lmi_dist_model("mistral-7b-gptq-unmerged-lora")
+            r.launch()
+            client.run("vllm_adapters mistral-7b-gptq-unmerged-lora".split())
 
     def test_lora_llama3_8b(self):
         with Runner('lmi', 'llama3-8b-unmerged-lora') as r:
@@ -670,26 +676,38 @@ class TestVllmLora:
             r.launch()
             client.run("vllm_adapters llama3-8b-unmerged-lora".split())
 
+    def test_lora_gemma_7b(self):
+        with Runner('lmi', 'gemma-7b-unmerged-lora') as r:
+            prepare.build_lmi_dist_model("gemma-7b-unmerged-lora")
+            r.launch()
+            client.run("vllm_adapters gemma-7b-unmerged-lora".split())
+
+    def test_lora_phi2(self):
+        with Runner('lmi', 'phi2-unmerged-lora') as r:
+            prepare.build_lmi_dist_model("phi2-unmerged-lora")
+            r.launch()
+            client.run("vllm_adapters phi2-unmerged-lora".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.lora
 @pytest.mark.gpu_4
 class TestLmiDistLora:
 
-    def test_lora_unmerged(self):
+    def test_lora_llama2_7b(self):
         with Runner('lmi', 'llama-7b-unmerged-lora') as r:
             prepare.build_lmi_dist_model("llama-7b-unmerged-lora")
             r.launch()
             client.run("lmi_dist_adapters llama-7b-unmerged-lora".split())
 
-    def test_lora_unmerged_overflow(self):
+    def test_lora_llama2_7b_overflow(self):
         with Runner('lmi', 'llama-7b-unmerged-lora-overflow') as r:
             prepare.build_lmi_dist_model("llama-7b-unmerged-lora-overflow")
             r.launch()
             client.run(
                 "lmi_dist_adapters llama-7b-unmerged-lora-overflow".split())
 
-    def test_lora_awq_llama2_13b(self):
+    def test_lora_llama2_13b_awq(self):
         with Runner('lmi', 'llama2-13b-awq-unmerged-lora') as r:
             prepare.build_lmi_dist_model("llama2-13b-awq-unmerged-lora")
             r.launch()
@@ -702,18 +720,37 @@ class TestLmiDistLora:
             r.launch()
             client.run("lmi_dist_adapters mistral-7b-unmerged-lora".split())
 
-    def test_lora_awq_mistral_7b(self):
+    def test_lora_mistral_7b_awq(self):
         with Runner('lmi', 'mistral-7b-awq-unmerged-lora') as r:
             prepare.build_lmi_dist_model("mistral-7b-awq-unmerged-lora")
             r.launch()
             client.run(
                 "lmi_dist_adapters mistral-7b-awq-unmerged-lora".split())
 
+    def test_lora_mistral_7b_gptq(self):
+        with Runner('lmi', 'mistral-7b-gptq-unmerged-lora') as r:
+            prepare.build_lmi_dist_model("mistral-7b-gptq-unmerged-lora")
+            r.launch()
+            client.run(
+                "lmi_dist_adapters mistral-7b-gptq-unmerged-lora".split())
+
     def test_lora_llama3_8b(self):
         with Runner('lmi', 'llama3-8b-unmerged-lora') as r:
             prepare.build_lmi_dist_model("llama3-8b-unmerged-lora")
             r.launch()
             client.run("lmi_dist_adapters llama3-8b-unmerged-lora".split())
+
+    def test_lora_gemma_7b(self):
+        with Runner('lmi', 'gemma-7b-unmerged-lora') as r:
+            prepare.build_lmi_dist_model("gemma-7b-unmerged-lora")
+            r.launch()
+            client.run("lmi_dist_adapters gemma-7b-unmerged-lora".split())
+
+    def test_lora_phi2(self):
+        with Runner('lmi', 'phi2-unmerged-lora') as r:
+            prepare.build_lmi_dist_model("phi2-unmerged-lora")
+            r.launch()
+            client.run("lmi_dist_adapters phi2-unmerged-lora".split())
 
 
 @pytest.mark.inf

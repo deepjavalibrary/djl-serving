@@ -335,43 +335,64 @@ lmi_dist_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "TheBloke/Llama-2-7B-fp16"
+    },
+    "llama-7b-unmerged-lora-overflow": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": [f"english-alpaca-{i}" for i in range(20)],
+        "tokenizer": "TheBloke/Llama-2-7B-fp16"
     },
     "llama2-13b-awq-unmerged-lora": {
-        "batch_size": [3],
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["french", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b-unmerged-lora": {
-        "batch_size": [3],
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
+        "tokenizer": "unsloth/mistral-7b-instruct-v0.2"
     },
     "mistral-7b-awq-unmerged-lora": {
-        "batch_size": [3],
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
+        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
     },
-    "llama-7b-unmerged-lora-overflow": {
-        "max_memory_per_gpu": [15.0, 15.0],
-        "batch_size": [3],
+    "mistral-7b-gptq-unmerged-lora": {
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
-        "adapters": [f"english-alpaca-{i}" for i in range(20)],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "adapters": ["spanish", "german"],
+        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
     },
     "llama3-8b-unmerged-lora": {
-        "batch_size": [3],
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["french", "spanish"],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "unsloth/llama-3-8b-Instruct"
+    },
+    "gemma-7b-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["alpaca", "dante"],
+        "tokenizer": "unsloth/gemma-7b"
+    },
+    "phi2-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["sql", "bunny"],
+        "tokenizer": "microsoft/phi-2"
     },
     "llama-2-tiny": {
         "max_memory_per_gpu": [23.0],
@@ -521,43 +542,64 @@ vllm_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "llama2-13b-awq-unmerged-lora": {
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["russian", "spanish"],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "mistral-7b-unmerged-lora": {
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "mistral-7b-awq-unmerged-lora": {
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
+        "tokenizer": "TheBloke/Llama-2-7B-fp16"
     },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
-        "batch_size": [3],
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": [f"english-alpaca-{i}" for i in range(20)],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "TheBloke/Llama-2-7B-fp16"
     },
-    "llama3-8b-unmerged-lora": {
-        "batch_size": [3],
+    "llama2-13b-awq-unmerged-lora": {
+        "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["french", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mistral-7b-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "unsloth/mistral-7b-instruct-v0.2"
+    },
+    "mistral-7b-awq-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
+    },
+    "mistral-7b-gptq-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
+    },
+    "llama3-8b-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
+        "tokenizer": "unsloth/llama-3-8b-Instruct"
+    },
+    "gemma-7b-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["alpaca", "dante"],
+        "tokenizer": "unsloth/gemma-7b"
+    },
+    "phi2-unmerged-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["sql", "bunny"],
+        "tokenizer": "microsoft/phi-2"
     },
     "starcoder2-7b": {
         "max_memory_per_gpu": [25.0],
