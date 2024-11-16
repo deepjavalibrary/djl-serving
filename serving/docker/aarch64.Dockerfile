@@ -12,7 +12,7 @@
 FROM arm64v8/ubuntu:22.04
 ARG djl_version
 ARG djl_serving_version
-ARG torch_version=2.3.1
+ARG torch_version=2.5.1
 
 EXPOSE 8080
 
