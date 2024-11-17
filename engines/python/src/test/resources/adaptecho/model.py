@@ -23,8 +23,9 @@ def register_adapter(inputs: Input):
     global adapters
     name = inputs.get_property("name")
     if inputs.contains_key("error"):
-        return Output().error(f"error",
-                              message=f"Failed to register adapter: {name}")
+        raise ValueError(f"Failed to register adapter: {name}")
+    if inputs.contains_key("oom"):
+        raise MemoryError
     adapters[name] = inputs
     return Output(message=f"Adapter {name} registered")
 
@@ -33,11 +34,11 @@ def update_adapter(inputs: Input):
     global adapters
     name = inputs.get_property("name")
     if name not in adapters:
-        return Output().error(f"error",
-                              message=f"Adapter {name} not registered.")
+        raise ValueError(f"Adapter {name} not registered.")
     if inputs.contains_key("error"):
-        return Output().error(f"error",
-                              message=f"Failed to update adapter: {name}")
+        raise ValueError(f"Failed to update adapter: {name}")
+    if inputs.contains_key("oom"):
+        raise MemoryError
     adapters[name] = inputs
     return Output(message=f"Adapter {name} updated")
 
@@ -46,8 +47,7 @@ def unregister_adapter(inputs: Input):
     global adapters
     name = inputs.get_property("name")
     if name not in adapters:
-        return Output().error(f"error",
-                              message=f"Adapter {name} not registered.")
+        raise ValueError(f"Adapter {name} not registered.")
     del adapters[name]
     return Output(message=f"Adapter {name} unregistered")
 

@@ -297,9 +297,11 @@ public class ModelServerTest {
             testRegisterAdapterConflict();
             testRegisterAdapterModelNotFound();
             testRegisterAdapterHandlerError();
+            testRegisterAdapterOom();
             testUpdateAdapterModelNotFound();
             testUpdateAdapterNotFound();
             testUpdateAdapterHandlerError();
+            testUpdateAdapterOom();
             testListAdapterModelNotFound();
             testDescribeAdapterModelNotFound();
             testDescribeAdapterNotFound();
@@ -1080,6 +1082,32 @@ public class ModelServerTest {
         assertFalse(resp.getAdapters().stream().anyMatch(a -> "adaptable2".equals(a.getName())));
     }
 
+    private void testRegisterAdapterOom() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String modelName = "adaptecho";
+        String adapterName = "adaptable2";
+        String strModelPrefix = "/models/" + modelName;
+        String url = strModelPrefix + "/adapters?name=" + adapterName + "&src=src&oom=true";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+        assertHttpCode(HttpResponseStatus.INSUFFICIENT_STORAGE.code());
+
+        // Assert adapter not added
+        channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        url = strModelPrefix + "/adapters";
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
+        assertFalse(resp.getAdapters().stream().anyMatch(a -> "adaptable2".equals(a.getName())));
+    }
+
     private void testUpdateAdapter(Channel channel, boolean modelPrefix)
             throws InterruptedException {
         logTestFunction();
@@ -1149,6 +1177,40 @@ public class ModelServerTest {
         channel.closeFuture().sync();
         channel.close().sync();
         assertHttpCode(HttpResponseStatus.FAILED_DEPENDENCY.code());
+
+        // Assert adapter not updated
+        channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        url = strModelPrefix + "/adapters/" + adapterName;
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+
+        DescribeAdapterResponse resp =
+                JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
+        assertEquals(resp.getName(), adapterName);
+        assertEquals(resp.getSrc(), "src");
+        assertTrue(resp.isLoad());
+        assertFalse(resp.isPin());
+    }
+
+    private void testUpdateAdapterOom() throws InterruptedException {
+        logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        String modelName = "adaptecho";
+        String adapterName = "adaptable";
+        String strModelPrefix = "/models/" + modelName;
+        String url =
+                strModelPrefix
+                        + "/adapters/"
+                        + adapterName
+                        + "/update?src=src1&load=false&oom=true";
+        request(channel, HttpMethod.POST, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+        assertHttpCode(HttpResponseStatus.INSUFFICIENT_STORAGE.code());
 
         // Assert adapter not updated
         channel = connect(Connector.ConnectorType.MANAGEMENT);
