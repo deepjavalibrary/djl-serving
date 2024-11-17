@@ -53,6 +53,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -1172,7 +1173,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     private void runS3cmd(String src, String dest) throws ModelException {
         try {
-            String[] commands;
+            List<String> commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
                 if (!src.endsWith("*")) {
                     if (src.endsWith("/")) {
@@ -1182,31 +1183,19 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     }
                 }
                 commands =
-                        new String[] {
-                            "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync", src, dest
-                        };
+                        Arrays.asList(
+                                "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync", src, dest);
             } else {
                 logger.info("s5cmd is not installed, using aws cli");
                 if (Boolean.parseBoolean(
                         Utils.getEnvOrSystemProperty("DJL_TEST_S3_NO_CREDENTIALS"))) {
                     logger.info("Skipping s3 credentials");
-                    commands = new String[] {"aws", "s3", "sync", "--no-sign-request", src, dest};
+                    commands = Arrays.asList("aws", "s3", "sync", "--no-sign-request", src, dest);
                 } else {
-                    commands = new String[] {"aws", "s3", "sync", src, dest};
+                    commands = Arrays.asList("aws", "s3", "sync", src, dest);
                 }
             }
-            Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-                logger.error("Download error: {}", logOutput);
-                throw new EngineException("Download model failed.");
-            } else {
-                logger.debug(logOutput);
-            }
+            LmiUtils.exec(commands);
         } catch (IOException | InterruptedException e) {
             throw new ModelNotFoundException("Model failed to download from s3", e);
         }

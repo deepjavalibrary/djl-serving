@@ -27,17 +27,15 @@ import com.google.gson.annotations.SerializedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +51,21 @@ public final class LmiUtils {
     private static final Logger logger = LoggerFactory.getLogger(LmiUtils.class);
 
     private LmiUtils() {}
+
+    static void exec(List<String> cmd) throws IOException, InterruptedException {
+        Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        String logOutput;
+        try (InputStream is = exec.getInputStream()) {
+            logOutput = Utils.toString(is);
+        }
+        int exitCode = exec.waitFor();
+        if (0 != exitCode || logOutput.startsWith("ERROR ")) {
+            logger.info("{}", logOutput);
+            throw new EngineException("Failed to execute: [" + String.join(" ", cmd) + "]");
+        } else {
+            logger.debug("{}", logOutput);
+        }
+    }
 
     static void configureLmiModel(ModelInfo<?, ?> modelInfo) throws ModelException {
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
@@ -201,20 +214,7 @@ public final class LmiUtils {
         boolean success = false;
         try {
             logger.info("Converting model to onnx artifacts: {}", (Object) cmd);
-
-            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            try (BufferedReader reader =
-                    new BufferedReader(
-                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    logger.debug("convert: {}", line);
-                }
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode) {
-                throw new EngineException("Model conversion process failed!");
-            }
+            exec(cmd);
             success = true;
             logger.info("Onnx artifacts built successfully");
             return repoDir;
@@ -266,20 +266,7 @@ public final class LmiUtils {
         boolean success = false;
         try {
             logger.info("Converting model to rust artifacts: {}", (Object) cmd);
-
-            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            try (BufferedReader reader =
-                    new BufferedReader(
-                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    logger.debug("convert: {}", line);
-                }
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode) {
-                throw new EngineException("Model conversion process failed!");
-            }
+            exec(cmd);
             success = true;
             logger.info("Rust artifacts built successfully");
             info.resolvedModelUrl = repoDir.toUri().toURL().toString();
@@ -409,35 +396,24 @@ public final class LmiUtils {
             prop.store(os, "");
         }
 
-        String[] cmd = {
-            "python",
-            "/opt/djl/partition/trt_llm_partition.py",
-            "--properties_dir",
-            tempDir.toAbsolutePath().toString(),
-            "--trt_llm_model_repo",
-            trtLlmRepoDir.toString(),
-            "--tensor_parallel_degree",
-            tpDegree,
-            "--pipeline_parallel_degree",
-            ppDegree,
-            "--model_path",
-            modelId
-        };
+        List<String> cmd =
+                Arrays.asList(
+                        "python",
+                        "/opt/djl/partition/trt_llm_partition.py",
+                        "--properties_dir",
+                        tempDir.toAbsolutePath().toString(),
+                        "--trt_llm_model_repo",
+                        trtLlmRepoDir.toString(),
+                        "--tensor_parallel_degree",
+                        tpDegree,
+                        "--pipeline_parallel_degree",
+                        ppDegree,
+                        "--model_path",
+                        modelId);
         boolean success = false;
         try {
-            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            try (BufferedReader reader =
-                    new BufferedReader(
-                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    logger.info("convert_py: {}", line);
-                }
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode) {
-                throw new EngineException("Model conversion process failed!");
-            }
+            logger.info("Converting model to TensorRT-LLM artifacts: {}", (Object) cmd);
+            exec(cmd);
             success = true;
             logger.info("TensorRT-LLM artifacts built successfully");
             return trtLlmRepoDir;
