@@ -1244,7 +1244,7 @@ public class ModelServerTest {
         channel.close().sync();
 
         if (!System.getProperty("os.name").startsWith("Win")) {
-            assertHttpCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+            assertHttpCode(HttpResponseStatus.FAILED_DEPENDENCY.code());
         }
     }
 
