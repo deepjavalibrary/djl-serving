@@ -16,8 +16,8 @@ FROM nvidia/cuda:$version as base
 ARG djl_version
 ARG djl_serving_version
 ARG cuda_version=cu124
-ARG torch_version=2.4.0
-ARG torch_vision_version=0.19.0
+ARG torch_version=2.5.1
+ARG torch_vision_version=0.20.1
 ARG onnx_version=1.19.0
 ARG python_version=3.10
 ARG numpy_version=1.26.4
