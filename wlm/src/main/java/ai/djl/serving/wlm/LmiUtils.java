@@ -60,7 +60,7 @@ public final class LmiUtils {
         }
         int exitCode = exec.waitFor();
         if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-            logger.info("{}", logOutput);
+            logger.error("{}", logOutput);
             throw new EngineException("Failed to execute: [" + String.join(" ", cmd) + "]");
         } else {
             logger.debug("{}", logOutput);
