@@ -14,6 +14,8 @@
 import unittest
 import json
 import os
+import subprocess
+import glob
 
 try:
     import transformers_neuronx
@@ -34,6 +36,21 @@ expected_text_30 = {
         "The future of AI is bright, and it's already here. With the help of AI, we can create more personalized experiences, automate repetitive tasks, and even predict the future.",
     }
 }
+
+
+def download_model_from_s3(s3_url, model_name, download_dir=None):
+    if download_dir is None:
+        download_dir = f"/tmp/download/{model_name}"
+
+    commands = ["aws", "s3", "sync", s3_url, download_dir]
+
+    subprocess.run(commands)
+
+    # check if any file was downloaded.
+    if not glob.glob(os.path.join(download_dir, '*')):
+        raise Exception('Model download from s3url failed')
+
+    return download_dir
 
 
 @unittest.skipIf(SKIP_TEST, "Neuron dependencies are not available")
@@ -113,14 +130,16 @@ class TestNeuronRollingBatch(unittest.TestCase):
         }
 
         # === Test ===
-        for model_id in model_name_vs_artifacts.keys():
+        for model_name in model_name_vs_artifacts.keys():
+            s3_url = model_name_vs_artifacts[model_name]
+            model_dir = download_model_from_s3(s3_url, model_name)
             properties = {
                 "tensor_parallel_degree": 2,
                 "n_positions": "128",
                 "rolling_batch": "tnx",
                 "max_rolling_batch_size": 4,
                 "model_loading_timeout": 3600,
-                "model_id": model_name_vs_artifacts[model_id]
+                "model_id": model_dir
             }
 
             # ===================== neuron-tnx ============================
