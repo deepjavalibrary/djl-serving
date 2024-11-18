@@ -138,12 +138,16 @@ class TransformersNeuronXService(object):
                     f"VllmModelLoader does not support this config: {self.config}"
                 )
 
-    def set_configs(self, properties: dict) -> None:
+    def set_configs(self,
+                    properties: dict,
+                    is_partition: bool = False) -> None:
         """
         Sets the model configuration properties and performs necessary setup for model loading.
 
         Args:
             properties (dict): A dictionary containing model configuration properties.
+            is_partition (bool): indicates whether we are saving pre-sharded checkpoints or not.
+                                 We set some smart defaults for it.
 
         Returns:
             None
@@ -155,7 +159,8 @@ class TransformersNeuronXService(object):
 
         utils = NeuronSmartDefaultUtils()
         utils.apply_smart_defaults(properties,
-                                   copy.deepcopy(self.model_config.__dict__))
+                                   copy.deepcopy(self.model_config.__dict__),
+                                   is_partition=is_partition)
 
         self.config = TransformerNeuronXProperties(**properties)
         if self.config.rolling_batch != "disable":
@@ -365,7 +370,7 @@ class TransformersNeuronXService(object):
             None
         """
         self.pre_model_load(properties)
-        self.set_configs(properties)
+        self.set_configs(properties, is_partition=True)
         self.set_tokenizer()
         self.set_model_loader()
         self.model = self.model_loader.partition(
