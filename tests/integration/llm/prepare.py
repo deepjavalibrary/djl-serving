@@ -1171,6 +1171,8 @@ trtllm_handler_list = {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
         "option.dtype": "bf16",
         "option.max_rolling_batch_size": 128,
+        # This is needed in v12, but we don't know exactly why the default max_utilization does not work
+        "option.batch_scheduler_policy": "guaranteed_no_evict",
     },
     "llama-3-1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
