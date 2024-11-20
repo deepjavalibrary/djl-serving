@@ -266,6 +266,16 @@ def parse_lmi_default_request_rolling_batch(payload):
             f"Invalid request payload. Request payload should be a json object specifying the 'inputs' field. Received payload {payload}"
         )
 
+    if not isinstance(inputs, str):
+        raise ValueError(
+            f"Invalid request payload. The 'inputs' field must be a string. Received type {type(inputs)}"
+        )
+
+    if len(inputs) == 0:
+        raise ValueError(
+            f"Invalid request payload. The 'inputs' field does not contain any content. Received payload {payload}"
+        )
+
     parameters = payload.get("parameters", {})
     if not isinstance(parameters, dict):
         raise ValueError(

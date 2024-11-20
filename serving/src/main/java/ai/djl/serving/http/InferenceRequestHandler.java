@@ -420,7 +420,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                     // This allows inference update HTTP code.
                     // If this is the first and last chunk, we're in a non-streaming case and can
                     // use default response without chunked transfer encoding
+                    // Note, we have to read the code and message from output AGAIN here.
+                    // They get changed to different values from when we read them at the start of
+                    // this method
                     if (first && !supplier.hasNext()) {
+                        status = new HttpResponseStatus(output.getCode(), output.getMessage());
                         FullHttpResponse resp =
                                 new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
                         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
@@ -433,8 +437,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                         return;
                     }
                     if (first) {
-                        code = output.getCode();
-                        status = new HttpResponseStatus(code, output.getMessage());
+                        status = new HttpResponseStatus(output.getCode(), output.getMessage());
                         HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
                         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
                             resp.headers().set(entry.getKey(), entry.getValue());
