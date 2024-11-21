@@ -11,7 +11,6 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-import os
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Callable
 
@@ -244,6 +243,7 @@ def _fetch_adapters_from_input(input_map: dict, input_item: Input):
     if not isinstance(adapters_per_item, list):
         adapters_per_item = [adapters_per_item]
 
+    logging.debug(f"Using adapter {adapters_per_item}")
     return adapters_per_item
 
 
