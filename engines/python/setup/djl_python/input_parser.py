@@ -217,7 +217,7 @@ def parse_adapters(request_input: TextInput, input_item: Input,
                 f"Number of adapters is not equal to the number of inputs")
         # lookup the adapter registry to get the adapter details of the registered adapter.
         adapters_data = [
-            kwargs.get("adapter_registry").get(adapter, None)
+            kwargs.get("adapter_registry").get(adapter[0], None)
             for adapter in adapters_per_item
         ]
         if len(adapters_data) == 1:
