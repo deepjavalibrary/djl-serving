@@ -81,7 +81,7 @@ benchmarks:
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-8b-instruct.json"
         dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        action: yes 
   - model: "Llama-3.1-8b-instruct-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
@@ -95,7 +95,7 @@ benchmarks:
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-70b.json"
         dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        action: yes 
   - model: "Llama-3.1-70b-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
@@ -109,7 +109,7 @@ benchmarks:
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-70b-instruct.json"
         dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        action: yes 
   - model: "Llama-3.1-70b-instruct-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
