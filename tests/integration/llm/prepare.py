@@ -823,10 +823,10 @@ vllm_model_list = {
         "option.adapters":
         "adapters",
         "adapter_ids": [
-            "UnderstandLing/llama-2-7b-chat-es",
-            "UnderstandLing/llama-2-7b-chat-ru"
+            "UnderstandLing/llama-2-13b-chat-fr",
+            "UnderstandLing/llama-2-13b-chat-es"
         ],
-        "adapter_names": ["spanish", "russian"],
+        "adapter_names": ["french", "spanish"],
         "option.gpu_memory_utilization":
         "0.8",
     },
