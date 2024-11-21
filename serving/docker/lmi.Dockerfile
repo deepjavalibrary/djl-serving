@@ -61,34 +61,33 @@ RUN mkdir -p /opt/djl/conf \
     && mkdir -p /opt/djl/deps \
     && mkdir -p /opt/djl/partition \
     && mkdir -p /opt/ml/model \
-    && mkdir -p /opt/djl/bin
+    && mkdir -p /opt/djl/bin \
+    && echo "${djl_serving_version} lmi" > /opt/djl/bin/telemetry
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 COPY scripts/telemetry.sh /opt/djl/bin
-RUN echo "${djl_serving_version} lmi" > /opt/djl/bin/telemetry
 
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip
-RUN scripts/install_openssh.sh
-RUN scripts/install_python.sh ${python_version}
-RUN scripts/install_s5cmd.sh x64
-RUN pip3 cache purge
-# Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-4 \
+    && scripts/install_openssh.sh \
+    && scripts/install_python.sh ${python_version} \
+    && scripts/install_s5cmd.sh x64 \
+    && pip3 cache purge \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-lmi.txt ./requirements.txt
-RUN pip3 install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
-RUN pip3 install -r requirements.txt
-RUN git clone https://github.com/neuralmagic/AutoFP8.git \
+RUN pip3 install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124 && pip3 cache purge
+RUN pip3 install -r requirements.txt \
+    && git clone https://github.com/neuralmagic/AutoFP8.git \
     && cd AutoFP8 \
     && git reset --hard 4b2092c \
     && pip3 install . \
     && cd .. \
     && rm -rf AutoFP8 \
-RUN pip3 cache purge
+    && pip3 cache purge
 
 RUN scripts/patch_oss_dlc.sh python \
     && scripts/security_patch.sh lmi \
@@ -96,9 +95,10 @@ RUN scripts/patch_oss_dlc.sh python \
     && chown -R djl:djl /opt/djl \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} && rm -rf scripts
-RUN djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version
-RUN djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$djl_onnx_version
+RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
+    && rm -rf scripts \
+    && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
+    && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$djl_onnx_version
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
