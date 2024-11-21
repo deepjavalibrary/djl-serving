@@ -75,21 +75,21 @@ benchmarks:
         image: "TRTLLM-v12-8192-sample"
         config: "benchmark_config_Llama-3-1-8b-instruct.json"
         dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        action: yes 
   - model: "Llama-3.1-70b"
     endpoints: 
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-70b.json"
         dataset: "s3://ddjl-benchmark-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
-        action: no  
+        action: yes  
   - model: "Llama-3.1-70b-instruct"
     endpoints:  
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-70b-instruct.json"
         dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
-        action: no   
+        action: yes   
   - model: "Llama-3.1-405b-fp8"
     endpoints: 
       - endpoint: "sagemaker"
