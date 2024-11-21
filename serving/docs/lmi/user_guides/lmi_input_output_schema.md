@@ -251,7 +251,7 @@ When using dynamic batching, errors are returned with HTTP response code 424 and
 ``` 
 {
     "code": 424,
-    "message": "prediction failure",
+    "message": "invoke handler failure",
     "error": "<error details"
 }
 ```

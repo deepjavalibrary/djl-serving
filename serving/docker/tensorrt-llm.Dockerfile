@@ -118,7 +118,7 @@ RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y &&
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.tensorrtllm="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.tensorrtllm="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-32-0.tensorrtllm="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

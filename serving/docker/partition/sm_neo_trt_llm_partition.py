@@ -63,7 +63,7 @@ class NeoTRTLLMPartitionService():
                              "serving.properties"), "w") as f:
             f.write("engine=MPI\n")
             for key, value in self.properties.items():
-                if key != "option.model_id" and key != "option.model_dir":
+                if key != "option.model_id":
                     f.write(f"{key}={value}\n")
 
     def neo_partition(self):

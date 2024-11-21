@@ -78,7 +78,7 @@ class Output(object):
         self.message = message
         return self
 
-    def error(self, error: str, code=424, message="prediction failure"):
+    def error(self, error: str, code=424, message="invoke handler failure"):
         self.code = code
         self.message = message
         body = {"code": self.code, "message": self.message, "error": error}

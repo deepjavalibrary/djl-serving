@@ -12,7 +12,7 @@
 FROM arm64v8/ubuntu:22.04
 ARG djl_version
 ARG djl_serving_version
-ARG torch_version=2.3.1
+ARG torch_version=2.5.1
 
 EXPOSE 8080
 
@@ -58,7 +58,7 @@ RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.aarch64="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-32-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

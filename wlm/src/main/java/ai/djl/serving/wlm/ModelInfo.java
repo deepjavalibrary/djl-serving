@@ -1275,7 +1275,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         if (!dynamicAdapters && !adapters.containsKey(adapter)) {
                             String failMessage =
                                     "The adapter " + adapter + " has not been registered";
-                            Job.setFailOutput((Job<Input, Output>) job, 503, failMessage);
+                            Job.setFailOutput((Job<Input, Output>) job, 424, failMessage);
                             continue;
                         }
                     }

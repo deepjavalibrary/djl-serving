@@ -10,25 +10,13 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import ast
 from enum import Enum
-from typing import Optional, Mapping
+from typing import Optional, Mapping, Tuple, Dict
 
 from pydantic import model_validator, field_validator
 
 from djl_python.properties_manager.properties import Properties
-
-
-class LmiDistQuantizeMethods(str, Enum):
-    awq = 'awq'
-    deepspeedfp = 'deepspeedfp'
-    fp8 = 'fp8'
-    fbgemm_fp8 = 'fbgemm_fp8'
-    gptq = 'gptq'
-    gptq_marlin = 'gptq_marlin'
-    gptq_marlin_24 = 'gptq_marlin_24'
-    awq_marlin = 'awq_marlin'
-    marlin = 'marlin'
-    squeezellm = 'squeezellm'
 
 
 class LmiDistLoadFormats(str, Enum):
@@ -39,7 +27,7 @@ class LmiDistRbProperties(Properties):
     engine: Optional[str] = None
     dtype: Optional[str] = "auto"
     load_format: Optional[str] = "auto"
-    quantize: Optional[LmiDistQuantizeMethods] = None
+    quantize: Optional[str] = None
     tensor_parallel_degree: int = 1
     pipeline_parallel_degree: int = 1
     max_rolling_batch_prefill_tokens: Optional[int] = None
@@ -60,7 +48,10 @@ class LmiDistRbProperties(Properties):
     enable_lora: Optional[bool] = False
     max_loras: Optional[int] = 4
     max_lora_rank: Optional[int] = 16
+    fully_sharded_loras: bool = False
     lora_extra_vocab_size: Optional[int] = 256
+    long_lora_scaling_factors: Optional[Tuple[float, ...]] = None
+    lora_dtype: Optional[str] = 'auto'
     max_cpu_loras: Optional[int] = None
     max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = None
@@ -93,6 +84,23 @@ class LmiDistRbProperties(Properties):
                 f"Cannot enable sagemaker_fast_model_loader and speculative decoding at the same time"
             )
         return self
+
+    @field_validator('long_lora_scaling_factors', mode='before')
+    def validate_long_lora_scaling_factors(cls, val):
+        if isinstance(val, str):
+            val = ast.literal_eval(val)
+        if not isinstance(val, tuple):
+            if isinstance(val, list):
+                val = tuple(float(v) for v in val)
+            elif isinstance(val, float):
+                val = (val, )
+            elif isinstance(val, int):
+                val = (float(val), )
+            else:
+                raise ValueError(
+                    "long_lora_scaling_factors must be convertible to a tuple of floats."
+                )
+        return val
 
     @field_validator('limit_mm_per_prompt', mode="before")
     def validate_limit_mm_per_prompt(cls, val) -> Mapping[str, int]:

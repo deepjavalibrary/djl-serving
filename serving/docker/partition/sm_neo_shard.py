@@ -16,7 +16,7 @@ import shutil
 import sys
 import logging
 from importlib.metadata import version
-from typing import Final
+from typing import Final, Optional
 
 from sm_neo_utils import (OptimizationFatalError, write_error_to_file,
                           get_neo_env_vars)
@@ -29,6 +29,7 @@ from mpi4py import MPI
 from lmi_dist.init_engine import engine_from_args
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.comms import comms
+from lmi_dist.vllm_engine import load_model_for_sharding
 
 CHUNK_MB = 8
 
@@ -92,24 +93,77 @@ class NeoShardingService():
                 elif os.path.isdir(item_path):
                     shutil.copytree(item_path, os.path.join(output_dir, item))
 
+    def generate_properties_file(self):
+        with open(
+                os.path.join(self.OUTPUT_MODEL_DIRECTORY,
+                             "serving.properties"), "w") as f:
+            for key, value in self.properties.items():
+                f.write(f"{key}={value}\n")
+
     def shard_lmi_dist_model(self, input_dir: str, output_dir: str,
                              pp_degree: int, tp_degree: int,
                              chunk_mb: int) -> None:
+        # For engine args which can affect GPU memory utilization, use LMI defaults
+        # unless specified otherwise by the customer
+        gpu_memory_utilization = float(
+            self.properties.get("option.gpu_memory_utilization", 0.9))
+        enforce_eager: bool = self.properties.get("option.enforce_eager",
+                                                  "true").lower() == "true"
+        max_rolling_batch_size = int(
+            self.properties.get("option.max_rolling_batch_size", 256))
+        max_model_len = self.properties.get("option.max_model_len", None)
+        if max_model_len is not None:
+            max_model_len = int(max_model_len)
+
+        # LoraConfigs
+        lora_kwargs = {}
+        if enable_lora := self.properties.get("option.enable_lora"):
+            enable_lora_bool = enable_lora.lower() == "true"
+
+            if enable_lora_bool:
+                max_loras: int = int(
+                    self.properties.get("option.max_loras", "4"))
+                max_lora_rank: int = int(
+                    self.properties.get("option.max_lora_rank", "16"))
+                fully_sharded_loras: bool = str(
+                    self.properties.get("option.fully_sharded_loras",
+                                        "false")).lower() == "true"
+                lora_extra_vocab_size: int = int(
+                    self.properties.get("option.lora_extra_vocab_size", "256"))
+                lora_dtype: str = self.properties.get("option.lora_dtype",
+                                                      "auto")
+                max_cpu_loras: Optional[int] = None
+                if cpu_loras := self.properties.get("option.max_cpu_loras"):
+                    max_cpu_loras = int(cpu_loras)
+
+                lora_kwargs["enable_lora"] = enable_lora_bool
+                lora_kwargs["fully_sharded_loras"] = fully_sharded_loras
+                lora_kwargs["max_loras"] = max_loras
+                lora_kwargs["max_lora_rank"] = max_lora_rank
+                lora_kwargs["lora_extra_vocab_size"] = lora_extra_vocab_size
+                lora_kwargs["lora_dtype"] = lora_dtype
+                lora_kwargs["max_cpu_loras"] = max_cpu_loras
 
         engine_args = VllmEngineArgs(
             model=input_dir,
             pipeline_parallel_size=pp_degree,
             tensor_parallel_size=tp_degree,
-            enforce_eager=True,
             disable_custom_all_reduce=True,
             distributed_executor_backend="mp",
+            gpu_memory_utilization=gpu_memory_utilization,
+            enforce_eager=enforce_eager,
+            max_num_seqs=max_rolling_batch_size,
+            max_model_len=max_model_len,
+            **lora_kwargs,
         )
-        engine = engine_from_args(engine_args)
+
+        engine_configs = engine_args.create_engine_configs()
+        engine_worker = load_model_for_sharding(engine_configs)
 
         model_dir = os.path.join(output_dir, sm_fml.MODEL_DIR_NAME)
         os.makedirs(model_dir, exist_ok=True)
 
-        config_for_current_rank = engine.model_runner.vllm_worker.save_chunked_shard(
+        config_for_current_rank = engine_worker.save_chunked_shard(
             output_dir=model_dir, chunk_mb=chunk_mb)
 
         # Gather results from all ranks to driver process
@@ -125,7 +179,6 @@ class NeoShardingService():
                 configs=configs,
             )
 
-        del engine
         torch.cuda.empty_cache()
 
     def run_sharding(self):
@@ -153,6 +206,7 @@ def main():
     try:
         neo_sharding_service = NeoShardingService()
         neo_sharding_service.run_sharding()
+        neo_sharding_service.generate_properties_file()
 
     except Exception as exc:
         MPI.COMM_WORLD.Barrier()

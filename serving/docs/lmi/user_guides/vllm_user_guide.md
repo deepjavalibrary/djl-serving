@@ -6,40 +6,48 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 ## Supported Model architecture
 
-LMI is shipping vLLM 0.6.2 with 0.30.0 containers, 
-so technically we support all LLM that [vLLM 0.6.2 support](https://github.com/vllm-project/vllm/tree/v0.6.2?tab=readme-ov-file#about).
+**Text Generation Models**
 
-The model architecture that we carefully tested for vLLM (in CI):
+Here is the list of text generation models supported in [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
 
-- DBRX
-- Falcon
-- Gemma
-- GPT-NeoX
-- Llama3.1 (un-quantized and with GPTQ)
-- Mistral (un-quantized and with AWQ)
-- Mixtral
-- MPT
-- Octocoder
-- Phi
-- Starcoder
-- T5
-- LlaVA-NeXT
-- Phi-3-Vision
-- Pixtral
+**Multi Modal Models**
 
-### Complete model set
+Here is the list of multi-modal models supported in [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
 
-The vLLM list of supported models in 0.6.2 can be found [here](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html).
+### Model Coverage in CI
 
-We will add more model support for the future versions to have them tested. Please feel free to [file us an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) for more model coverage in CI.
+The following set of models are tested in our nightly tests
 
-### Quantization
+- GPT NeoX 20b
+- Mistral 7b
+- Phi2
+- Starcoder2 7b
+- Gemma 2b
+- Llama2 7b
+- Qwen2 7b - fp8
+- Llama3 8b
+- Falcon 11b
+- Llava-v1.6-mistral (multi modal)
+- Phi3v (multi modal)
+- Pixtral 12b (multi modal)
+- Llama3.2 11b (multi modal)
 
-If the model artifacts are pre-quantized, vLLM will be able to detect the quantization technique used and load the model in that format.
+## Quantization Support
 
-If you want to explicitly set the quantization technique, you can set:
+The quantization techniques supported in vLLM 0.6.2 are listed [here](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
 
-  * `option.quantize=<quant_format>` in serving.properties, or `OPTION_QUANTIZE=<quant_format>` environment variable.
+We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
+Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.
+
+The following quantization techniques are supported for runtime quantization:
+
+- fp8
+- bitsandbytes
+
+You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
+
+Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
 
 ## Quick Start Configurations 
 

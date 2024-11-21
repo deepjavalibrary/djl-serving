@@ -424,22 +424,22 @@ lmi_dist_model_list = {
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
         "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
         "option.enable_lora": "true",
+        "option.max_loras": 2,
+        "option.max_lora_rank": 16,
+        "option.long_lora_scaling_factors": "4.0",
+        "option.adapters": "adapters",
         "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
         "option.gpu_memory_utilization": "0.8",
     },
     "llama-7b-unmerged-lora-overflow": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
-        "option.tensor_parallel_degree": 1,
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
+        "option.tensor_parallel_degree": "max",
         "option.enable_lora": "true",
+        "option.max_loras": 6,
         "option.max_cpu_loras": 8,
+        "option.adapters": "adapters",
         "adapter_ids": ["tloen/alpaca-lora-7b"] * 20,
         "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
         "option.gpu_memory_utilization": "0.8",
@@ -455,16 +455,18 @@ lmi_dist_model_list = {
         "s3://djl-llm/TheBloke-Llama-2-13b-Chat-AWQ/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
+        "option.quantize":
+        "awq",
         "option.enable_lora":
         "true",
+        "option.max_loras":
+        2,
         "option.max_lora_rank":
         64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/llama-2-13b-chat-fr",
             "UnderstandLing/llama-2-13b-chat-es"
@@ -478,18 +480,16 @@ lmi_dist_model_list = {
         "s3://djl-llm/mistral-7b-instruct-v02/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
         "option.enable_lora":
         "true",
-        "option.max_lora_rank":
-        64,
         "option.max_loras":
         2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
             "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
@@ -503,18 +503,49 @@ lmi_dist_model_list = {
         "s3://djl-llm/mistral-7b-instruct-v02-awq/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
+        "option.quantize":
+        "awq",
         "option.enable_lora":
         "true",
-        "option.max_lora_rank":
-        64,
         "option.max_loras":
         2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.lora_dtype":
+        "float16",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
+        ],
+        "adapter_names": ["spanish", "german"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
+    "mistral-7b-gptq-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/mistral-7b-instruct-v02-gptq/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.quantize":
+        "gptq",
+        "option.dtype":
+        "fp16",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.lora_dtype":
+        "float16",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
             "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
@@ -528,21 +559,67 @@ lmi_dist_model_list = {
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
         "option.enable_lora":
         "true",
+        "option.max_loras":
+        2,
         "option.max_lora_rank":
         64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/Llama-3-8B-Instruct-fr",
             "UnderstandLing/Llama-3-8B-Instruct-es",
         ],
         "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
+    "gemma-7b-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/gemma-7b/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        1,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "Chuanming/Alpaca-Gemma-7b-lora",
+            "girtcius/gemma-7b-dante-lora",
+        ],
+        "adapter_names": ["alpaca", "dante"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
+    "phi2-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/phi-2/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        1,
+        "option.max_lora_rank":
+        128,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "isotr0py/phi-2-test-sql-lora",
+            "BAAI/bunny-phi-2-siglip-lora",
+        ],
+        "adapter_names": ["sql", "bunny"],
         "option.gpu_memory_utilization":
         "0.8",
     },
@@ -708,12 +785,24 @@ vllm_model_list = {
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
         "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
         "option.enable_lora": "true",
+        "option.max_loras": 2,
+        "option.max_lora_rank": 16,
+        "option.long_lora_scaling_factors": "4.0",
+        "option.adapters": "adapters",
         "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
+        "option.gpu_memory_utilization": "0.8",
+    },
+    "llama-7b-unmerged-lora-overflow": {
+        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
+        "option.tensor_parallel_degree": "max",
+        "option.enable_lora": "true",
+        "option.max_loras": 6,
+        "option.max_cpu_loras": 8,
+        "option.adapters": "adapters",
+        "adapter_ids": ["tloen/alpaca-lora-7b"] * 20,
+        "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
         "option.gpu_memory_utilization": "0.8",
     },
     "llama2-13b-awq-unmerged-lora": {
@@ -721,16 +810,18 @@ vllm_model_list = {
         "s3://djl-llm/TheBloke-Llama-2-13b-Chat-AWQ/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
+        "option.quantize":
+        "awq",
         "option.enable_lora":
         "true",
+        "option.max_loras":
+        2,
         "option.max_lora_rank":
         64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/llama-2-7b-chat-es",
             "UnderstandLing/llama-2-7b-chat-ru"
@@ -744,18 +835,16 @@ vllm_model_list = {
         "s3://djl-llm/mistral-7b-instruct-v02/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
         "option.enable_lora":
         "true",
-        "option.max_lora_rank":
-        64,
         "option.max_loras":
         2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
             "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
@@ -769,18 +858,20 @@ vllm_model_list = {
         "s3://djl-llm/mistral-7b-instruct-v02-awq/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
+        "option.quantize":
+        "awq",
         "option.enable_lora":
         "true",
-        "option.max_lora_rank":
-        64,
         "option.max_loras":
         2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.lora_dtype":
+        "float16",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
             "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
@@ -789,38 +880,101 @@ vllm_model_list = {
         "option.gpu_memory_utilization":
         "0.8",
     },
-    "llama-7b-unmerged-lora-overflow": {
-        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
-        "option.tensor_parallel_degree": 1,
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_cpu_loras": 8,
-        "adapter_ids": ["tloen/alpaca-lora-7b"] * 20,
-        "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
-        "option.gpu_memory_utilization": "0.8",
+    "mistral-7b-gptq-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/mistral-7b-instruct-v02-gptq/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.quantize":
+        "gptq",
+        "option.dtype":
+        "fp16",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.lora_dtype":
+        "float16",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
+        ],
+        "adapter_names": ["spanish", "german"],
+        "option.gpu_memory_utilization":
+        "0.8",
     },
     "llama3-8b-unmerged-lora": {
         "option.model_id":
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         "max",
-        "option.task":
-        "text-generation",
-        "option.dtype":
-        "fp16",
-        "option.adapters":
-        "adapters",
         "option.enable_lora":
         "true",
+        "option.max_loras":
+        2,
         "option.max_lora_rank":
         64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
         "adapter_ids": [
             "UnderstandLing/Llama-3-8B-Instruct-fr",
             "UnderstandLing/Llama-3-8B-Instruct-es",
         ],
         "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
+    "gemma-7b-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/gemma-7b/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        1,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "Chuanming/Alpaca-Gemma-7b-lora",
+            "girtcius/gemma-7b-dante-lora",
+        ],
+        "adapter_names": ["alpaca", "dante"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
+    "phi2-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/phi-2/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        1,
+        "option.max_lora_rank":
+        128,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "isotr0py/phi-2-test-sql-lora",
+            "BAAI/bunny-phi-2-siglip-lora",
+        ],
+        "adapter_names": ["sql", "bunny"],
         "option.gpu_memory_utilization":
         "0.8",
     },
@@ -888,7 +1042,17 @@ vllm_neo_model_list = {
     "tiny-llama-fml": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.tensor_parallel_degree": 2,
-        "option.load_format": 'sagemaker_fast_model_loader',
+        "option.load_format": "sagemaker_fast_model_loader",
+    },
+    "tiny-llama-lora-fml": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.load_format": "sagemaker_fast_model_loader",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "option.max_lora_rank": "64",
+        "adapter_ids": ["barissglc/tinyllama-tarot-v1"],
+        "adapter_names": ["tarot"],
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
@@ -1007,6 +1171,8 @@ trtllm_handler_list = {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
         "option.dtype": "bf16",
         "option.max_rolling_batch_size": 128,
+        # This is needed in v12, but we don't know exactly why the default max_utilization does not work
+        "option.batch_scheduler_policy": "guaranteed_no_evict",
     },
     "llama-3-1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
@@ -1329,6 +1495,28 @@ def create_neo_input_model(properties):
     else:
         cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
     subprocess.check_call(cmd)
+
+    adapter_ids = properties.pop("adapter_ids", [])
+    adapter_names = properties.pop("adapter_names", [])
+    # Copy Adapters if any
+    if adapter_ids:
+        print("copying adapter models")
+        adapters_path = os.path.join(model_download_path, "adapters")
+        os.makedirs(adapters_path, exist_ok=True)
+        ## install huggingface_hub in your workflow file to use this
+        from huggingface_hub import snapshot_download
+        adapter_cache = {}
+        for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
+            print(f"copying adapter models {adapter_id} {adapter_name}")
+            dir = os.path.join(adapters_path, adapter_name)
+            if adapter_id in adapter_cache:
+                shutil.copytree(adapter_cache[adapter_id], dir)
+            else:
+                os.makedirs(dir, exist_ok=True)
+                snapshot_download(adapter_id,
+                                  local_dir_use_symlinks=False,
+                                  local_dir=dir)
+                adapter_cache[adapter_id] = dir
 
 
 def build_hf_handler_model(model):

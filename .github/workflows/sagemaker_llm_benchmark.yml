@@ -4,6 +4,10 @@ on:
    schedule:
      - cron: '0 17 * * 5' # Run every Friday at 5pm
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   create-runners:
     runs-on: [self-hosted, scheduler]
@@ -83,4 +87,3 @@ jobs:
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners.outputs.cpu_instance_id1 }}
           ./stop_instance.sh $instance_id
-         

@@ -16,8 +16,8 @@ FROM nvidia/cuda:$version as base
 ARG djl_version
 ARG djl_serving_version
 ARG cuda_version=cu124
-ARG torch_version=2.4.0
-ARG torch_vision_version=0.19.0
+ARG torch_version=2.5.1
+ARG torch_vision_version=0.20.1
 ARG onnx_version=1.19.0
 ARG python_version=3.10
 ARG numpy_version=1.26.4
@@ -80,7 +80,7 @@ CMD ["serve"]
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-gpu="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.pytorch-cu124="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-32-0.pytorch-cu124="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

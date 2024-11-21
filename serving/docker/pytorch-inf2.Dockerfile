@@ -15,12 +15,12 @@ ARG djl_serving_version
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
-ARG neuronsdk_version=2.20.0
-ARG torch_neuronx_version=2.1.2.2.3.0
+ARG neuronsdk_version=2.20.1
+ARG torch_neuronx_version=2.1.2.2.3.1
 ARG transformers_neuronx_version=0.12.313
 ARG neuronx_distributed_version=0.9.0
-ARG neuronx_cc_version=2.15.128.0
-ARG neuronx_cc_stubs_version=2.15.128.0
+ARG neuronx_cc_version=2.15.141.0
+ARG neuronx_cc_stubs_version=2.15.141.0
 ARG torch_xla_version=2.1.4
 ARG transformers_version=4.45.2
 ARG accelerate_version=0.29.2
@@ -94,7 +94,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.inf2="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.inf2="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-32-0.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

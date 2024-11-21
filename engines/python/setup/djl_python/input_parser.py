@@ -11,7 +11,6 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-import os
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Callable
 
@@ -217,7 +216,7 @@ def parse_adapters(request_input: TextInput, input_item: Input,
                 f"Number of adapters is not equal to the number of inputs")
         # lookup the adapter registry to get the adapter details of the registered adapter.
         adapters_data = [
-            kwargs.get("adapter_registry").get(adapter, None)
+            kwargs.get("adapter_registry").get(adapter[0], None)
             for adapter in adapters_per_item
         ]
         if len(adapters_data) == 1:
@@ -244,6 +243,7 @@ def _fetch_adapters_from_input(input_map: dict, input_item: Input):
     if not isinstance(adapters_per_item, list):
         adapters_per_item = [adapters_per_item]
 
+    logging.debug(f"Using adapter {adapters_per_item}")
     return adapters_per_item
 
 
@@ -264,6 +264,16 @@ def parse_lmi_default_request_rolling_batch(payload):
     if inputs is None:
         raise ValueError(
             f"Invalid request payload. Request payload should be a json object specifying the 'inputs' field. Received payload {payload}"
+        )
+
+    if not isinstance(inputs, str):
+        raise ValueError(
+            f"Invalid request payload. The 'inputs' field must be a string. Received type {type(inputs)}"
+        )
+
+    if len(inputs) == 0:
+        raise ValueError(
+            f"Invalid request payload. The 'inputs' field does not contain any content. Received payload {payload}"
         )
 
     parameters = payload.get("parameters", {})

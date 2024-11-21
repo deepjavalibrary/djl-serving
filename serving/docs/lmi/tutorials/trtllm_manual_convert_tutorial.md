@@ -24,13 +24,13 @@ Refer [here](https://github.com/aws/deep-learning-containers/blob/master/availab
 For example:
 
 ```
-docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-tensorrtllm0.7.1-cu122
+docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125
 ```
 
 You can also pull the container from DockerHub:
 
 ```
-docker pull deepjavalibrary/djl-serving:0.26.0-tensorrt-llm
+docker pull deepjavalibrary/djl-serving:0.30.0-tensorrt-llm
 ```
 
 ### Step 3: Login the container and prepare the environment
@@ -40,7 +40,7 @@ You need to manually login into the container to proceed for conversion
 ```
 docker run -it --runtime=nvidia --gpus all \
 --shm-size 12g \
-deepjavalibrary/djl-serving:0.26.0-tensorrt-llm \
+deepjavalibrary/djl-serving:0.30.0-tensorrt-llm \
 /bin/bash
 ```
 
@@ -53,20 +53,20 @@ You can check it with
 pip show tensorrt-llm
 # Output
 # Name: tensorrt-llm
-# Version: 0.7.1
+# Version: 0.12.0
 ```
 
-Then just clone the TensorRT-LLM Triton backend for model preparation. If the version is 0.5.0, then you need to checkout the tag for that version (v0.5.0).
+Then just clone the TensorRT-LLM Triton backend for model preparation. If the version is 0.12.0, then you need to checkout the tag for that version (v0.12.0).
 ```
-git clone https://github.com/triton-inference-server/tensorrtllm_backend -b v0.5.0
+git clone https://github.com/triton-inference-server/tensorrtllm_backend -b v0.12.0
 cd tensorrtllm_backend && rm -rf tensorrt_llm
-git clone https://github.com/NVIDIA/TensorRT-LLM -b v0.5.0 tensorrt_llm
+git clone https://github.com/NVIDIA/TensorRT-LLM -b v0.12.0 tensorrt_llm
 ```
 
 
 ### Step 4: Build TensorRT-LLM compatible model
 
-The following work we do is very similar to Triton Server model preparation. You can find more information on the [official preparation doc](https://github.com/triton-inference-server/tensorrtllm_backend/tree/release/0.5.0?tab=readme-ov-file#prepare-tensorrt-llm-engines).
+The following work we do is very similar to Triton Server model preparation. You can find more information on the [official preparation doc](https://github.com/triton-inference-server/tensorrtllm_backend/tree/release/0.12.0?tab=readme-ov-file#prepare-tensorrt-llm-engines).
 Our environment is pre-configured all necessary packages, so we don't need to pip install anything.
 
 Here we just need to
@@ -143,31 +143,7 @@ parameters: {
 }
 ```
 
-Here is a table contains TRTLLM supported parameters with our suggestions. (up to 0.6.1)
-
-| Name                           | Settings                | Meaning                                                                                                                                                                        |
-|--------------------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| enable _trt_overlap            | False                   | Allow TRT to overlap calculation, this helped model perform better when using higher concurrency. But during our test, we found that setting this to False helped performance. |
-| max_tokens_in_paged_kv_cache   | Remove this             | For PagedAttention, TensorRT LLM will calculate this value based on batch size and model compilation settings.                                                                 |
-| batch_scheduler_policy         | max_utilization         | max GPU utlization for most of the case                                                                                                                                        |
-| kv_cache_free_gpu_mem_fraction | 0.95                    | The percentage of GPU memory the model can us for KV Cache management. Here we are setting an agressive number to 0.95 to max out GPU                                          |
-| max_num_sequences              | 64                      | The maximum concurrent batch size you can send as inputs                                                                                                                       |
-| max_beam_width                 | 1                       | use beam size 1 for generation. Beam size > 1 is not supported currently for LMI                                                                                               |
-| gpt_model_type                 | inflight_fused_batching | Used continuous batching mechanism                                                                                                                                             |
-| gpt_model_path                 | /tmp                    | LMI will change this value in runtime to correct the model path after download. Just leave it there and not remove it                                                          |
-| max_kv_cache_length            | Remove this             | For PagedAttention, TensorRT LLM will calculate this value based on batch size and model compilation settings.                                                                 |
-| exclude_input_in_output        | True                    | This will helps to follow the same way LMI generating as the result. Remove the prefix (input)     
-
-
-(0.6.1) Also need to remove some configs that are used for dynamic batching:
-
-```
-dynamic_batching {
-    preferred_batch_size: [ ${triton_max_batch_size} ]
-    max_queue_delay_microseconds: ${max_queue_delay_microseconds}
-}
-```
-
+The triton tensorrt-llm-backend [docs](https://github.com/triton-inference-server/tensorrtllm_backend/tree/v0.12.0/docs) contain further instructions for converting a model to the required format, and setting configurations depending on the model architecture.
 
 ### Step 5: Prepare HuggingFace configs and tokenizers
 
@@ -213,7 +189,7 @@ ls triton_model_repo/tensorrt_llm/1/
 Prepare necessary credentials for your models and do upload:
 
 ```
-aws s3 sync triton_model_repo/tensorrt_llm/ s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/baichuan-13b-chat/
+aws s3 sync triton_model_repo/tensorrt_llm/ s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/baichuan-13b-chat/
 ```
 
 Note: We always need to create two folders here to load the model. Saying if you store like the followings:
@@ -230,13 +206,13 @@ s3://<some-bucket>/...<some_folders>../folder1/
 and in our case is:
 
 ```
-s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/
 ```
 
 Check the file is there
 
 ```
-aws s3 ls s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/baichuan-13b-chat/
+aws s3 ls s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/baichuan-13b-chat/
                            PRE 1/
 2023-12-19 01:58:03        733 config.json
 2023-12-19 01:58:03       4425 config.pbtxt
@@ -254,7 +230,7 @@ Finally, you can use one of the following configuration to load your model on Sa
 
  ### 1. Environment variables:
 ```
-HF_MODEL_ID=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+HF_MODEL_ID=s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/
 OPTION_TENSOR_PARALLEL_DEGREE=2
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
@@ -264,7 +240,7 @@ OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 engine=Python
 option.mpi_mode=true
-option.model_id=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+option.model_id=s3://lmi-llm/trtllm/0.12.0/baichuan-13b-tp2/
 option.tensor_parallel_degree=2
 option.max_rolling_batch_size=64
 ```
