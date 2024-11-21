@@ -32,7 +32,7 @@ dpkg -i djl-serving_all.deb
 rm djl-serving_all.deb
 
 mkdir -p /opt/djl/plugins
-if [ -n "$PYTORCH_JNI"]; then
+if [ -n "$PYTORCH_JNI" ]; then
   djl-serving -i "ai.djl.pytorch:pytorch-jni:${PYTORCH_JNI}-${DJL_VERSION}"
   rm -rf /opt/djl/logs
 fi
