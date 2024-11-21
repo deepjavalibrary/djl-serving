@@ -28,8 +28,8 @@ public abstract class Adapter<I, O> {
 
     protected ModelInfo<I, O> modelInfo;
     protected String name;
+    protected String alias;
     protected String src;
-    protected boolean pin;
     protected Map<String, String> options;
 
     /**
@@ -37,19 +37,18 @@ public abstract class Adapter<I, O> {
      *
      * @param name the adapter name
      * @param src the adapter source
-     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
     protected Adapter(
             ModelInfo<I, O> modelInfo,
             String name,
+            String alias,
             String src,
-            boolean pin,
             Map<String, String> options) {
         this.modelInfo = modelInfo;
         this.name = name;
+        this.alias = alias;
         this.src = src;
-        this.pin = pin;
         this.options = options;
     }
 
@@ -62,7 +61,6 @@ public abstract class Adapter<I, O> {
      * @param modelInfo the base model for the new adapter
      * @param name the adapter name
      * @param src the adapter source
-     * @param pin whether to pin the adapter
      * @param options additional adapter options
      * @return the new adapter
      */
@@ -70,8 +68,8 @@ public abstract class Adapter<I, O> {
     public static <I, O> Adapter<I, O> newInstance(
             ModelInfo<I, O> modelInfo,
             String name,
+            String alias,
             String src,
-            boolean pin,
             Map<String, String> options) {
         // TODO Allow URL support
         try {
@@ -86,7 +84,7 @@ public abstract class Adapter<I, O> {
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
             return (Adapter<I, O>)
-                    new PyAdapter((ModelInfo<Input, Output>) modelInfo, name, src, pin, options);
+                    new PyAdapter((ModelInfo<Input, Output>) modelInfo, name, alias, src, options);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");
@@ -94,36 +92,18 @@ public abstract class Adapter<I, O> {
     }
 
     /**
-     * Constructs a new {@link Adapter}.
-     *
-     * <p>After registration, you should call {@link #register(WorkLoadManager)}. This doesn't
-     * affect the worker pool itself.
-     *
-     * @param modelInfo the base model for the new adapter
-     * @param name the adapter name
-     * @param src the adapter source
-     * @param options additional adapter options
-     * @return the new adapter
-     */
-    public static <I, O> Adapter<I, O> newInstance(
-            ModelInfo<I, O> modelInfo, String name, String src, Map<String, String> options) {
-        return newInstance(modelInfo, name, src, false, options);
-    }
-
-    /**
      * Unregisters an adapter in a worker pool.
      *
      * <p>This unregisters it in the wpc for new threads and all existing threads.
      *
+     * @param adapter the adapter to unregister
+     * @param modelInfo the base model for the adapter
      * @param wlm the workflow manager to remove the adapter from
      * @param <I> the input type
      * @param <O> the output type
-     * @param adapterName the adapter name
      */
     public static <I, O> CompletableFuture<O> unregister(
-            String adapterName, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
-        Adapter<I, O> adapter = modelInfo.unregisterAdapter(adapterName);
-
+            Adapter<I, O> adapter, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
         // Add the unregister adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add unregister adapter job once.
@@ -159,6 +139,24 @@ public abstract class Adapter<I, O> {
     }
 
     /**
+     * Returns the adapter alias.
+     *
+     * @return the adapter alias
+     */
+    public String getAlias() {
+        return alias == null ? name : alias;
+    }
+
+    /**
+     * Sets the adapter alias.
+     *
+     * @param alias the adapter alias
+     */
+    public void setAlias(String alias) {
+        this.alias = alias;
+    }
+
+    /**
      * Returns the adapter src.
      *
      * @return the adapter src
@@ -174,24 +172,6 @@ public abstract class Adapter<I, O> {
      */
     public void setSrc(String src) {
         this.src = src;
-    }
-
-    /**
-     * Returns whether to pin the adapter.
-     *
-     * @return whether to pin the adapter
-     */
-    public boolean isPin() {
-        return pin;
-    }
-
-    /**
-     * Sets whether to pin the adapter.
-     *
-     * @param pin whether to pin the adapter
-     */
-    public void setPin(boolean pin) {
-        this.pin = pin;
     }
 
     /**
@@ -213,6 +193,24 @@ public abstract class Adapter<I, O> {
     }
 
     /**
+     * Returns whether to load the adapter weights.
+     *
+     * @return whether to load the adapter weights
+     */
+    public boolean isLoad() {
+        return Boolean.parseBoolean(options.getOrDefault("load", "true"));
+    }
+
+    /**
+     * Returns whether to pin the adapter.
+     *
+     * @return whether to pin the adapter
+     */
+    public boolean isPin() {
+        return Boolean.parseBoolean(options.getOrDefault("pin", "false"));
+    }
+
+    /**
      * Registers this adapter in a worker pool.
      *
      * <p>This registers it in the wpc for new threads and all existing threads.
@@ -220,8 +218,6 @@ public abstract class Adapter<I, O> {
      * @param wlm the workload manager
      */
     public CompletableFuture<O> register(WorkLoadManager wlm) {
-        modelInfo.registerAdapter(this);
-
         // Add the register adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add register adapter job once.
@@ -237,8 +233,6 @@ public abstract class Adapter<I, O> {
      * @param wlm the workload manager to register this adapter in
      */
     public CompletableFuture<O> update(WorkLoadManager wlm) {
-        modelInfo.updateAdapter(this);
-
         // Add the update adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add update adapter job once.

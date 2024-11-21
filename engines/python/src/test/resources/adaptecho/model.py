@@ -13,11 +13,6 @@
 """
 Test Python model example.
 """
-
-import logging
-import sys
-import time
-
 from djl_python import Input
 from djl_python import Output
 
@@ -26,25 +21,35 @@ adapters = dict()
 
 def register_adapter(inputs: Input):
     global adapters
-    name = inputs.get_properties()["name"]
+    name = inputs.get_property("name")
+    if inputs.contains_key("error"):
+        return Output().error(f"error",
+                              message=f"Failed to register adapter: {name}")
     adapters[name] = inputs
-    return Output().add("Successfully registered adapter")
+    return Output(message=f"Adapter {name} registered")
 
 
 def update_adapter(inputs: Input):
     global adapters
-    name = inputs.get_properties()["name"]
+    name = inputs.get_property("name")
     if name not in adapters:
-        raise ValueError(f"Adapter {name} not registered.")
+        return Output().error(f"error",
+                              message=f"Adapter {name} not registered.")
+    if inputs.contains_key("error"):
+        return Output().error(f"error",
+                              message=f"Failed to update adapter: {name}")
     adapters[name] = inputs
-    return Output().add("Successfully updated adapter")
+    return Output(message=f"Adapter {name} updated")
 
 
 def unregister_adapter(inputs: Input):
     global adapters
-    name = inputs.get_properties()["name"]
+    name = inputs.get_property("name")
+    if name not in adapters:
+        return Output().error(f"error",
+                              message=f"Adapter {name} not registered.")
     del adapters[name]
-    return Output().add("Successfully unregistered adapter")
+    return Output(message=f"Adapter {name} unregistered")
 
 
 def handle(inputs: Input):

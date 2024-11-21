@@ -15,11 +15,12 @@ ARG cuda_version=cu124
 ARG djl_version
 ARG djl_serving_version
 # Base Deps
-ARG python_version=3.10
-ARG torch_version=2.4.0
-ARG torch_vision_version=0.19.0
+ARG python_version=3.11
+ARG torch_version=2.5.1
+ARG torch_vision_version=0.20.1
+ARG djl_torch_version=2.4.0
 ARG onnx_version=1.19.0
-ARG pydantic_version=2.8.2
+ARG pydantic_version=2.9.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
@@ -32,13 +33,14 @@ ARG datasets_version=3.0.1
 ARG autoawq_version=0.2.5
 ARG tokenizers_version=0.20.1
 # LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt240/vllm-0.6.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
-ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt251/vllm-0.6.3.post1%2Bcu124-cp311-cp311-linux_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0%2Bnightly-py3-none-any.whl"
+ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0-cp311-cp311-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_version=0.13.2
+
+ARG sagemaker_fast_model_loader_wheel="https://publish.djl.ai/fast-model-loader/sagemaker_fast_model_loader-0.1.0-cp311-cp311-linux_x86_64.whl"
 
 EXPOSE 8080
 
@@ -53,10 +55,10 @@ ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 # set cudnn9 library path
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
+ENV LD_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/nvidia/cudnn/lib/
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
-ENV PYTORCH_VERSION=${torch_version}
+ENV PYTORCH_VERSION=${djl_torch_version}
 ENV PYTORCH_FLAVOR=cu124-precxx11
 ENV VLLM_NO_USAGE_STATS=1
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
@@ -93,7 +95,7 @@ RUN mv *.deb djl-serving_all.deb || true
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ \
     && scripts/install_openssh.sh \
     && scripts/install_djl_serving.sh $djl_version $djl_serving_version \
-    && scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} \
+    && scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version \
     && scripts/install_python.sh ${python_version} \
@@ -104,18 +106,44 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --index-url https://download.pytorch.org/whl/cu124
-RUN pip3 install ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
-    transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
-    mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
-    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers onnxruntime autoawq==${autoawq_version} \
-    tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
-    # TODO: installing optimum here due to version conflict.
-    && pip3 install ${djl_converter_wheel} optimum==${optimum_version} --no-deps \
+RUN pip3 install \
+    ${seq_scheduler_wheel} \
+    peft==${peft_version} \
+    protobuf==${protobuf_version} \
+    transformers==${transformers_version} \
+    hf-transfer \
+    zstandard \
+    datasets==${datasets_version} \
+    mpi4py \
+    sentencepiece \
+    tiktoken \
+    blobfile \
+    einops \
+    accelerate==${accelerate_version} \
+    bitsandbytes==${bitsandbytes_version} \
+    auto-gptq==${auto_gptq_version} \
+    pandas \
+    pyarrow \
+    jinja2 \
+    retrying \
+    opencv-contrib-python-headless \
+    safetensors \
+    scipy \
+    onnx \
+    sentence_transformers \
+    onnxruntime \
+    autoawq==${autoawq_version} \
+    tokenizers==${tokenizers_version} \
+    pydantic==${pydantic_version} \
+    ${djl_converter_wheel} \
+    optimum==${optimum_version} \
+    ${flash_infer_wheel} \
+    ${vllm_wheel} \
+    ${lmi_dist_wheel} \
+    torch==${torch_version} \
+    torchvision==${torch_vision_version} \
+    ${sagemaker_fast_model_loader_wheel} \
     && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
-    && pip3 cache purge
-
-RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} \
     && pip3 cache purge
 
 # Add CUDA-Compat

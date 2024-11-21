@@ -302,6 +302,38 @@ class HuggingFaceService(object):
                                  self.hf_configs.device, **parameters))
         return outputs
 
+    def add_lora(self, lora_name: str, lora_alias: str, lora_path: str):
+        if not is_rolling_batch_enabled(self.hf_configs.rolling_batch):
+            raise NotImplementedError(
+                "LoRA adapter API is only supported for rolling batch.")
+
+        loaded = self.rolling_batch.add_lora(lora_name, lora_path)
+        if not loaded:
+            raise RuntimeError(f"Failed to load LoRA adapter {lora_alias}")
+        return loaded
+
+    def remove_lora(self, lora_name: str, lora_alias: str):
+        if not is_rolling_batch_enabled(self.hf_configs.rolling_batch):
+            raise NotImplementedError(
+                "LoRA adapter API is only supported for rolling batch.")
+
+        removed = self.rolling_batch.remove_lora(lora_name)
+        if not removed:
+            logging.info(
+                f"Remove LoRA adapter {lora_alias} returned false, the adapter may have already been evicted."
+            )
+        return removed
+
+    def pin_lora(self, lora_name: str, lora_alias: str):
+        if not is_rolling_batch_enabled(self.hf_configs.rolling_batch):
+            raise NotImplementedError(
+                "LoRA adapter API is only supported for rolling batch.")
+
+        pinned = self.rolling_batch.pin_lora(lora_name)
+        if not pinned:
+            raise RuntimeError(f"Failed to pin LoRA adapter {lora_alias}")
+        return pinned
+
     def get_pipeline(self, task: str, model_id_or_path: str, kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
         if task in {
@@ -496,39 +528,38 @@ def register_adapter(inputs: Input):
     """
     Registers lora adapter with the model.
     """
-    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
-        raise NotImplementedError(
-            "LoRA adapter API is only supported for rolling batch.")
-
     adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
-    adapter_pin = inputs.get_property(
-        "pin").lower() == "true" if inputs.get_property("pin") else False
+    adapter_load = inputs.get_as_string(
+        "load").lower() == "true" if inputs.contains_key("load") else True
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
 
-    if not os.path.exists(adapter_path):
-        raise ValueError(
-            f"Only local LoRA models are supported. {adapter_path} is not a valid path"
-        )
-    _service.adapter_registry[adapter_name] = inputs
-
-    added = False
+    loaded = False
     try:
-        added = _service.rolling_batch.add_lora(adapter_name, adapter_path)
-        if not added:
-            raise RuntimeError(
-                f"Failed to register LoRA adapter {adapter_name}")
+        if not os.path.exists(adapter_path):
+            raise ValueError(
+                f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+            )
+
+        if not adapter_load and adapter_pin:
+            raise ValueError("Can not set load to false and pin to true")
+
+        if adapter_load:
+            loaded = _service.add_lora(adapter_name, adapter_alias,
+                                       adapter_path)
 
         if adapter_pin:
-            pinned = _service.rolling_batch.pin_lora(adapter_name)
-            if not pinned:
-                raise RuntimeError(
-                    f"Failed to pin LoRA adapter {adapter_name}")
+            _service.pin_lora(adapter_name, adapter_alias)
+        _service.adapter_registry[adapter_name] = inputs
     except Exception as e:
-        if added:
+        logging.debug(f"Failed to register adapter: {e}", exc_info=True)
+        if loaded:
             logging.info(
-                f"LoRA adapter {adapter_name} was successfully added, but failed to pin, removing ..."
+                f"LoRA adapter {adapter_alias} was successfully loaded, but failed to pin, unloading ..."
             )
-            _service.rolling_batch.remove_lora(adapter_name)
+            _service.remove_lora(adapter_name, adapter_alias)
         if any(msg in str(e)
                for msg in ("No free lora slots",
                            "greater than the number of GPU LoRA slots")):
@@ -536,80 +567,82 @@ def register_adapter(inputs: Input):
         return Output().error(f"register_adapter_error", message=str(e))
 
     logging.info(
-        f"Registered adapter {adapter_name} from {adapter_path} successfully")
-    return Output(message=f"Adapter {adapter_name} registered")
+        f"Registered adapter {adapter_alias} from {adapter_path} successfully")
+    return Output(message=f"Adapter {adapter_alias} registered")
 
 
 def update_adapter(inputs: Input):
     """
     Updates lora adapter with the model.
     """
-    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
-        raise NotImplementedError(
-            "LoRA adapter API is only supported for rolling batch.")
-
     adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
-    adapter_pin = inputs.get_property(
-        "pin").lower() == "true" if inputs.get_property("pin") else False
+    adapter_load = inputs.get_as_string(
+        "load").lower() == "true" if inputs.contains_key("load") else True
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
 
     if adapter_name not in _service.adapter_registry:
-        raise ValueError(f"Adapter {adapter_name} not registered.")
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
 
     try:
-        adapter_old = _service.adapter_registry[adapter_name]
-        if adapter_old.get_property("src") and adapter_old.get_property(
-                "src") != adapter_path:
+        if not adapter_load and adapter_pin:
+            raise ValueError("Can not set load to false and pin to true")
+
+        old_adapter = _service.adapter_registry[adapter_name]
+        old_adapter_path = old_adapter.get_property("src")
+        if adapter_path != old_adapter_path:
             raise NotImplementedError(
                 f"Updating adapter path is not supported.")
 
-        if adapter_old.get_property("pin") and adapter_old.get_property(
-                "pin").lower() == "true" and not adapter_pin:
-            raise NotImplementedError(f"Unpin adapter is not supported.")
+        old_adapter_load = old_adapter.get_as_string("load").lower(
+        ) == "true" if old_adapter.contains_key("load") else True
+        if adapter_load != old_adapter_load:
+            if adapter_load:
+                _service.add_lora(adapter_name, adapter_alias, adapter_path)
+            else:
+                _service.remove_lora(adapter_name, adapter_alias)
 
+        old_adapter_pin = old_adapter.get_as_string("pin").lower(
+        ) == "true" if old_adapter.contains_key("pin") else False
+        if adapter_pin != old_adapter_pin:
+            if adapter_pin:
+                _service.pin_lora(adapter_name, adapter_alias)
+            else:
+                raise NotImplementedError(f"Unpin adapter is not supported.")
         _service.adapter_registry[adapter_name] = inputs
-
-        if adapter_pin:
-            pinned = _service.rolling_batch.pin_lora(adapter_name)
-            if not pinned:
-                raise RuntimeError(
-                    f"Failed to pin LoRA adapter {adapter_name}")
     except Exception as e:
+        logging.debug(f"Failed to update adapter: {e}", exc_info=True)
         if any(msg in str(e)
                for msg in ("No free lora slots",
                            "greater than the number of GPU LoRA slots")):
             raise MemoryError(str(e))
         return Output().error("update_adapter_error", message=str(e))
 
-    logging.info(f"Updated adapter {adapter_name} successfully")
-    return Output(message=f"Adapter {adapter_name} updated")
+    logging.info(f"Updated adapter {adapter_alias} successfully")
+    return Output(message=f"Adapter {adapter_alias} updated")
 
 
 def unregister_adapter(inputs: Input):
     """
     Unregisters lora adapter from the model.
     """
-    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
-        raise NotImplementedError(
-            "LoRA adapter API is only supported for rolling batch.")
-
     adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
 
     if adapter_name not in _service.adapter_registry:
-        raise ValueError(f"Adapter {adapter_name} not registered.")
-    del _service.adapter_registry[adapter_name]
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
 
     try:
-        removed = _service.rolling_batch.remove_lora(adapter_name)
-        if not removed:
-            logging.info(
-                f"Remove LoRA adapter {adapter_name} returned false, the adapter may have already been evicted."
-            )
+        _service.remove_lora(adapter_name, adapter_alias)
+        del _service.adapter_registry[adapter_name]
     except Exception as e:
+        logging.debug(f"Failed to unregister adapter: {e}", exc_info=True)
         return Output().error("remove_adapter_error", message=str(e))
 
-    logging.info(f"Unregistered adapter {adapter_name} successfully")
-    return Output(message=f"Adapter {adapter_name} unregistered")
+    logging.info(f"Unregistered adapter {adapter_alias} successfully")
+    return Output(message=f"Adapter {adapter_alias} unregistered")
 
 
 def handle(inputs: Input):

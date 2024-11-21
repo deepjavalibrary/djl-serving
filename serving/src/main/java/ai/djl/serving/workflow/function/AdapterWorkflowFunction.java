@@ -71,7 +71,6 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 String modelName = (String) config.get("model");
                 String adapterName = entry.getKey();
                 String src = (String) config.get("src");
-                boolean pin = Boolean.parseBoolean((String) config.getOrDefault("pin", "false"));
 
                 Map<String, String> options = new ConcurrentHashMap<>();
                 if (config.containsKey("options") && config.get("options") instanceof Map) {
@@ -86,14 +85,20 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
                 ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
                 Adapter<Input, Output> adapter =
-                        Adapter.newInstance(modelInfo, adapterName, src, pin, options);
-                adapters.put(adapterName, new AdapterReference(modelName, adapter));
-            }
-        }
+                        Adapter.newInstance(modelInfo, adapterName, adapterName, src, options);
 
-        // Register adapters
-        for (AdapterReference adapter : adapters.values()) {
-            adapter.adapter.register(wlm);
+                // Register adapter
+                adapter.register(wlm)
+                        .whenCompleteAsync(
+                                (o, t) -> {
+                                    if (o != null && o.getCode() < 300) {
+                                        modelInfo.registerAdapter(adapter);
+                                        adapters.put(
+                                                adapterName,
+                                                new AdapterReference(modelName, adapter));
+                                    }
+                                });
+            }
         }
     }
 
@@ -104,7 +109,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
             WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(adapter.modelName);
             if (wp != null) {
                 ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
-                Adapter.unregister(adapter.adapter.getName(), modelInfo, wlm);
+                Adapter.unregister(adapter.adapter, modelInfo, wlm);
             }
         }
     }
