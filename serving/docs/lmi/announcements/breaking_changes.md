@@ -71,3 +71,12 @@ When this is combined with in-flight batching (the default), it leads to inferen
 #### Guidance
 We recommend users that are deploying t5 model variants to specify `option.batch_scheduler_policy=guaranteed_no_evict`
 to ensure proper inference execution.
+
+## LMI-NeuronX v12 (0.30.0)
+
+### Legacy partition is removed
+
+Before Neuron SDK version 2.18, it was necessary to load a safetensors model using Hugging Face on the CPU, save it as a pre-sharded version, and then load the model using NeuronAutoModel. Starting with Neuron SDK version 2.18, this step is no longer needed. In our code, although we have been loading the safetensors format on the CPU and loading them, the split_model_path is not used anywhere when using the safetensors format. Since we moved to Neuron SDK version 2.20.1, legacy partition is no longer needed.
+
+### Guidance
+You no longer need to specify a partition schema, as the LMI container can deduce it for you using our auto-detection partition schema. If you don't use option.partition_schema, this change does not affect you. If you do, consider making use of our auto-detection partition schema, safetensors, or Optimum.

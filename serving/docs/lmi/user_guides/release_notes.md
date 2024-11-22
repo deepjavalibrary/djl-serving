@@ -34,8 +34,11 @@ For details on any other previous releases, please refer our [github release pag
 * Please make note of specific behavior changes documented in the [breaking changes](../announcements/breaking_changes.md) section.
 
 
-#### Transformers NeuronX Container
-* _Coming Soon_
+#### Transformers NeuronX Container - Release 11-20-2024
+* Neuron artifacts are updated to 2.20.1 
+* Transformers neuronx is updated to 0.12.313
+* Vllm is updated to 0.6.2
+* Compilation time improvement. HF model can directly be loaded into NeuronAutoModel, so split and save step is no longer needed.
 
 
 #### Text Embedding (using the LMI container)
