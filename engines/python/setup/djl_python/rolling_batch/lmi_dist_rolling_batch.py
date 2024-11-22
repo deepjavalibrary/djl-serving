@@ -188,7 +188,7 @@ class LmiDistRollingBatch(RollingBatch):
         new_lmi_dist_requests = []
         for request in new_requests:
             request_id = str(request.id)
-            llm_input = get_prompt_inputs(request)
+            prompt_inputs = get_prompt_inputs(request)
             params = self.translate_lmi_dist_params(request.parameters)
             request_params = RequestParams(**params)
             lora_request_params = dict()
@@ -199,9 +199,7 @@ class LmiDistRollingBatch(RollingBatch):
             # Constructing Request in lmi-dist library
             lmi_dist_request = Request(
                 id=request_id,
-                prompt=llm_input.get("prompt"),
-                prompt_token_ids=llm_input.get("prompt_token_ids"),
-                multi_modal_input=llm_input.get("multi_modal_data"),
+                prompt=prompt_inputs,
                 params=request_params,
                 **lora_request_params)
             new_lmi_dist_requests.append(lmi_dist_request)
