@@ -328,6 +328,7 @@ class TestConfigManager(unittest.TestCase):
             "low_cpu_mem_usage": "true",
             "disable_flash_attn": "false",
             "mpi_mode": "true",
+            "rolling_batch": "disable"
         }
 
         hf_configs = HuggingFaceProperties(**properties)
@@ -395,7 +396,8 @@ class TestConfigManager(unittest.TestCase):
         hf_configs = HuggingFaceProperties(**properties, rolling_batch="auto")
         self.assertEqual(hf_configs.kwargs.get("device_map"), "auto")
 
-        hf_configs = HuggingFaceProperties(**properties)
+        hf_configs = HuggingFaceProperties(**properties,
+                                           rolling_batch="disable")
         self.assertIsNone(hf_configs.kwargs.get("device_map"))
 
     def test_hf_quantize(self):

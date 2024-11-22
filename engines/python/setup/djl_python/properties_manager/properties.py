@@ -48,7 +48,7 @@ class Properties(BaseModel):
     # Optional configurations with default values
     model_dir: Optional[str] = None
     # Make the default to auto, after java front end changes and test cases are changed.
-    rolling_batch: RollingBatchEnum = RollingBatchEnum.disable
+    rolling_batch: RollingBatchEnum = RollingBatchEnum.auto
     tensor_parallel_degree: int = 1
     cluster_size: int = 1
     trust_remote_code: bool = False
