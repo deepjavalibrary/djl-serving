@@ -137,7 +137,7 @@ You can also specify the base model for an element in the batch by using the emp
 curl -X POST http://127.0.0.1:8080/invocations \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -d '{"inputs": ["How is the weather"], "adapters": ["adapter_1"], "parameters": {"max_new_tokens": 25}}'
+    -d '{"inputs": "How is the weather", "adapters": "adapter_1", "parameters": {"max_new_tokens": 25}}'
 ```
 
 ### Input Content (and query parameter)
@@ -150,7 +150,7 @@ This will not work in Amazon SageMaker.
 curl -X POST http://127.0.0.1:8080/invocations?adapter=adapter_1 \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -d '{"inputs": ["How is the weather"], "parameters": {"max_new_tokens": 25}}'
+    -d '{"inputs": "How is the weather", "parameters": {"max_new_tokens": 25}}'
 ```
 
 ### SageMaker Header
@@ -163,8 +163,8 @@ This option will work in Amazon SageMaker.
 curl -X POST http://127.0.0.1:8080/invocations \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -H "X-Amzn-SageMaker-Adapter-Identifier: adapter_1"
-    -d '{"inputs": ["How is the weather"], "parameters": {"max_new_tokens": 25}}'
+    -H "X-Amzn-SageMaker-Adapter-Identifier: adapter_1" \
+    -d '{"inputs": "How is the weather", "parameters": {"max_new_tokens": 25}}'
 ```
 
 ## Models with Adapters
