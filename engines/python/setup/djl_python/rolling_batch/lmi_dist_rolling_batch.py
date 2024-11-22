@@ -197,11 +197,10 @@ class LmiDistRollingBatch(RollingBatch):
                 lora_request_params["lora_request"] = get_lora_request(
                     adapter_name, self.lora_requests)
             # Constructing Request in lmi-dist library
-            lmi_dist_request = Request(
-                id=request_id,
-                prompt=prompt_inputs,
-                params=request_params,
-                **lora_request_params)
+            lmi_dist_request = Request(id=request_id,
+                                       prompt=prompt_inputs,
+                                       params=request_params,
+                                       **lora_request_params)
             new_lmi_dist_requests.append(lmi_dist_request)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
