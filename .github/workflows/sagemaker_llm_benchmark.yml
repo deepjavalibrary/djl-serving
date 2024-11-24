@@ -1,6 +1,7 @@
 name: SageMaker LLM Benchmark
 
 on:
+   workflow_dispatch:
    schedule:
      - cron: '0 17 * * 5' # Run every Friday at 5pm
 
@@ -21,12 +22,22 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
     outputs:
       cpu_instance_id1: ${{ steps.create_cpu1.outputs.action_cpu_instance_id }}
+      cpu_instance_id2: ${{ steps.create_cpu2.outputs.action_cpu_instance_id }}
       
   endpoint-tests:
     runs-on: [ self-hosted, cpu ]
-    timeout-minutes: 120
+    timeout-minutes: 720  
     needs: create-runners
     strategy:
       fail-fast: false
@@ -39,37 +50,39 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install -U boto3 awscli
+        run: pip3 install -U boto3 awscli IPython
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-west-2
+          role-duration-seconds: 43200 
       - name: Install IR-LLM
         working-directory: tests/integration/benchmark/ir-llm
         run: |
-          aws s3 cp s3://sagemaker-python-sdk-ir-llm/sagemaker-latest.dev0-py3-none-any.whl .
-          aws s3 cp s3://sagemaker-python-sdk-ir-llm/sagemaker.normal.json .
-          aws s3 cp s3://djl-accounts/hf_token .
+          aws s3 cp s3://sagemaker-python-sdk-ir-llm/sagemaker-2.227.1.dev0-py3-none-any.whl . --source-region us-east-1
+          aws s3 cp s3://sagemaker-python-sdk-ir-llm/sagemaker-2017-07-24.normal.json . --source-region us-east-1
+          aws s3 cp s3://djl-accounts/hf_token . --source-region us-east-1
           export HF_TOKEN=$(head -n1 hf_token|cut -d '=' -f2)
-          pip3 install --quiet sagemaker-latest.dev0-py3-none-any.whl
-          aws configure add-model --service-model file://sagemaker.normal.json  --service-name sagemaker
+          pip3 install --quiet sagemaker-2.227.1.dev0-py3-none-any.whl
+          aws configure add-model --service-model file://sagemaker-2017-07-24.normal.json --service-name sagemaker
       - name: Prepare dir to store metrics
         working-directory: tests/integration/benchmark/ir-llm
         run: |
-          METRICS_DIR = "metrics_${{ matrix.engine}}"
-          if [ ! -d "${METRICS_DIR}" ]; then
-            mkdir -p "${METRICS_DIR}"
-            echo "Directory ${METRICS_DIR} created."
+          METRICS_DIR="metrics_${{ matrix.engine }}"
+          if [ ! -d "$METRICS_DIR" ]; then
+            mkdir -p "$METRICS_DIR"
+            echo "Directory '$METRICS_DIR' created."
           else
-            echo "Directory ${METRICS_DIR} already exists."
+            echo "Directory '$METRICS_DIR' already exists."
           fi
       - name: Run IR-LLM
+        working-directory: tests/integration/benchmark/ir-llm
         run: |
-          METRICS_DIR = "metrics_${{ matrix.engine}}"
-          CONFIG_DIR = "config/${{ matrix.engine}}"
+          METRICS_DIR="metrics_${{ matrix.engine }}"
+          CONFIG_DIR="config/${{ matrix.engine }}"
 
-          python3 scripts/cw_metrics.py -j $CONFIG_DIR}/config.yml -c ${CONFIG_DIR}/config_ir_job -m  ${METRICS_DIR}
+          python3 scripts/cw_metrics.py -j ${CONFIG_DIR}/config.yml -c ${CONFIG_DIR}/config_ir_job -m ${METRICS_DIR}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
 

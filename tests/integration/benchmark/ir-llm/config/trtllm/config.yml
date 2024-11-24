@@ -4,7 +4,7 @@ cloudwatch:
   metrics_namespace: "SageMaker_LLM_Benchmark"
 
 s3:
-  bucket_name: "djl-benchmark"
+  bucket_name: "djl-benchmark-llm"
   folder: "sm-trtllm"
 
 metrics:
@@ -67,40 +67,40 @@ benchmarks:
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-8b.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
         action: yes 
   - model: "Llama-3.1-8b-instruct"
     endpoints: 
       - endpoint: "sagemaker"
         image: "TRTLLM-v12-8192-sample"
         config: "benchmark_config_Llama-3-1-8b-instruct.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
         action: yes 
   - model: "Llama-3.1-70b"
     endpoints: 
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-70b.json"
-        dataset: "s3://ddjl-benchmark-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://ddjl-benchmark-llm-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
         action: yes  
   - model: "Llama-3.1-70b-instruct"
     endpoints:  
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-70b-instruct.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
         action: yes   
   - model: "Llama-3.1-405b-fp8"
     endpoints: 
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-405b-fp8.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_trtllm_base_sample_payload_en_500-1000.tar.gz"
         action: no
   - model: "Llama-3.1-405b-instruct-fp8"
     endpoints: 
       - endpoint: "sagemaker"
         image: "TRTLLM"
         config: "benchmark_config_Llama-3-1-405b-instruct-fp8.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_trtllm_instruct_sample_payload_en_500-1000.tar.gz"
         action: no 
