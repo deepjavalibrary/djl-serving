@@ -123,11 +123,11 @@ benchmarks:
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-405b-fp8.json"
         dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        action: yes 
   - model: "Llama-3.1-405b-instruct-fp8"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-405b-instruct-fp8.json"
         dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        action: yes 
