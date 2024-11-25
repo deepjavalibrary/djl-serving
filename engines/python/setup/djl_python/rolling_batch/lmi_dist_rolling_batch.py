@@ -30,8 +30,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
-LMI_DIST_GENERATION_PARAMS = set(RequestParams().__dict__.keys()).union(
-    set(SamplingParams().__struct_fields__)) - {"sampling_params"}
+LMI_DIST_GENERATION_PARAMS = set(RequestParams().__struct_fields__)
 
 
 class LmiDistRollingBatch(RollingBatch):
