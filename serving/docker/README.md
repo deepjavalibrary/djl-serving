@@ -3,11 +3,24 @@
 This module contains docker file to build djl-serving docker image. This docker image
 is compatible with SageMaker hosting.
 
+## Dependencies
+* Install [Amazon Corretto 17](https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/generic-linux-install.html#rpm-linux-install-instruct) 
+* Install Docker and [Docker Compose Plugin](https://docs.docker.com/compose/install/linux/#install-the-plugin-manually)
+```
+# example for AL2023
+sudo yum install -y docker
+sudo mkdir -p /usr/local/lib/docker/cli-plugins/
+sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+```
+
+
 ## Build docker image
 
 Currently, we created docker compose to simplify the building experience. Just run
 
 ```shell
+./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
 cd serving/docker
 export DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
 export SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
