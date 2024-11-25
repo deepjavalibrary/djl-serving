@@ -4,7 +4,7 @@ cloudwatch:
   metrics_namespace: "SageMaker_LLM_Benchmark"
 
 s3:
-  bucket_name: "djl-benchmark"
+  bucket_name: "djl-benchmark-llm"
   folder: "sm-lmi-dist"
 
 metrics:
@@ -66,68 +66,68 @@ benchmarks:
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-8b.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
         action: yes 
   - model: "Llama-3.1-8b-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_LMI_V12_Llama-3-1-8b-suzuka.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_base_payload_en_500-1000.tar.gz"
         action: no 
   - model: "Llama-3.1-8b-instruct"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-8b-instruct.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
         action: yes 
   - model: "Llama-3.1-8b-instruct-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_LMI_V12_Llama-3-1-8b-instruct-suzuka.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_instruct_payload_en_500-1000.tar.gz"
         action: no 
   - model: "Llama-3.1-70b"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-70b.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
         action: yes 
   - model: "Llama-3.1-70b-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_LMI_V12_Llama-3-1-70b-suzuka.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_base_payload_en_500-1000.tar.gz"
         action: no 
   - model: "Llama-3.1-70b-instruct"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-70b-instruct.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
         action: yes 
   - model: "Llama-3.1-70b-instruct-suzuka"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_LMI_V12_Llama-3-1-70b-instruct-suzuka.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_payload_en_500-1000.tar.gz"
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_instruct_payload_en_500-1000.tar.gz"
         action: no 
   - model: "Llama-3.1-405b-fp8"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-405b-fp8.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_base_sample_payload_en_500-1000.tar.gz"
+        action: yes 
   - model: "Llama-3.1-405b-instruct-fp8"
     endpoints: 
       - endpoint: "sagemaker"
         image: "LMI-dist"
         config: "benchmark_config_passive_Llama-3-1-405b-instruct-fp8.json"
-        dataset: "s3://djl-benchmark-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
-        action: no 
+        dataset: "s3://djl-benchmark-llm-datasets/openorca/openorca_instruct_sample_payload_en_500-1000.tar.gz"
+        action: yes 
