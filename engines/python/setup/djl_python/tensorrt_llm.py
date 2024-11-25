@@ -15,10 +15,8 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
-from djl_python.tensorrt_llm_python import TRTLLMPythonService
 from djl_python.utils import rolling_batch_inference
 from djl_python.input_parser import parse_input_with_formatter
-from typing import List, Tuple
 
 
 class TRTLLMService(object):
@@ -91,9 +89,6 @@ def handle(inputs: Input) -> Output:
     """
     global _service
     if not _service.initialized:
-        properties = inputs.get_properties()
-        if properties.get("rolling_batch", "disable") == "disable":
-            _service = TRTLLMPythonService()
         # stateful model
         _service.initialize(inputs.get_properties())
 

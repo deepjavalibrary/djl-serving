@@ -138,7 +138,6 @@ public final class LmiUtils {
             ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
         }
 
-        // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
         info.prop.put("option.rolling_batch", "trtllm");
         if (!isValidTrtLlmModelRepo(trtRepo)) {
             info.downloadDir = buildTrtLlmArtifacts(info.prop, modelId, tpDegree, ppDegree);
