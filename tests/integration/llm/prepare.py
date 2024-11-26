@@ -629,6 +629,12 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.device_map": "auto"
     },
+    "llama-3.1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
         "option.limit_mm_per_prompt": "image=4",
@@ -643,12 +649,6 @@ lmi_dist_model_list = {
         "option.trust_remote_code": True,
         "option.max_model_len": 8192,
     },
-    "llama-3.1-8b": {
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
-        "option.task": "text-generation",
-        "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 4
-    },
     "pixtral-12b": {
         "option.model_id": "s3://djl-llm/pixtral-12b/",
         "option.max_model_len": 8192,
@@ -656,6 +656,12 @@ lmi_dist_model_list = {
         "option.tokenizer_mode": "mistral",
         "option.limit_mm_per_prompt": "image=4",
         "option.entryPoint": "djl_python.huggingface"
+    },
+    "llama32-11b-multimodal": {
+        "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.enforce_eager": True,
     },
     "llama32-3b-multi-worker-tp1-pp1": {
         "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",

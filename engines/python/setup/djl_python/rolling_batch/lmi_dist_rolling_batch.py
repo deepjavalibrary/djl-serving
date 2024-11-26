@@ -30,8 +30,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
-LMI_DIST_GENERATION_PARAMS = set(RequestParams().__dict__.keys()).union(
-    set(SamplingParams().__struct_fields__)) - {"sampling_params"}
+LMI_DIST_GENERATION_PARAMS = set(RequestParams().__struct_fields__)
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -188,7 +187,7 @@ class LmiDistRollingBatch(RollingBatch):
         new_lmi_dist_requests = []
         for request in new_requests:
             request_id = str(request.id)
-            llm_input = get_prompt_inputs(request)
+            prompt_inputs = get_prompt_inputs(request)
             params = self.translate_lmi_dist_params(request.parameters)
             request_params = RequestParams(**params)
             lora_request_params = dict()
@@ -197,13 +196,10 @@ class LmiDistRollingBatch(RollingBatch):
                 lora_request_params["lora_request"] = get_lora_request(
                     adapter_name, self.lora_requests)
             # Constructing Request in lmi-dist library
-            lmi_dist_request = Request(
-                id=request_id,
-                prompt=llm_input.get("prompt"),
-                prompt_token_ids=llm_input.get("prompt_token_ids"),
-                multi_modal_input=llm_input.get("multi_modal_data"),
-                params=request_params,
-                **lora_request_params)
+            lmi_dist_request = Request(id=request_id,
+                                       prompt=prompt_inputs,
+                                       params=request_params,
+                                       **lora_request_params)
             new_lmi_dist_requests.append(lmi_dist_request)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
