@@ -1821,8 +1821,14 @@ def test_transformers_neuronx_handler(model, model_spec):
     if "worker" in spec:
         check_worker_number(spec["worker"])
     for batch_size in spec["batch_size"]:
+        inputs = batch_generation(batch_size)
+        if batch_size == 1:
+            # for rolling batch, inputs should be a str not list.
+            # i.e, client side batching is not enabled when rolling batch is enabled.
+            # if batch_size is just 1, then we assume it is for rolling batch here.
+            inputs = inputs[0]
         for seq_length in spec["seq_length"]:
-            req = {"inputs": batch_generation(batch_size)}
+            req = {"inputs": inputs}
             params = {"max_length": seq_length}
             if "use_sample" in spec:
                 params["use_sample"] = True

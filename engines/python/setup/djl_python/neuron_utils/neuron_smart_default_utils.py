@@ -16,6 +16,8 @@ import logging
 from typing import List, Dict, Any
 import subprocess as sp
 
+from djl_python.properties_manager.properties import RollingBatchEnum
+
 logger = logging.getLogger(__name__)
 
 BILLION = 1_000_000_000.0
@@ -69,6 +71,10 @@ class NeuronSmartDefaultUtils:
         :param is_partition: Indicates whether we are saving pre-sharded checkpoints or not.
                              We set some smart defaults for it.
         """
+
+        if "rolling_batch" not in properties:
+            properties["rolling_batch"] = RollingBatchEnum.auto.value
+
         if "n_positions" not in properties:
             if self.get_model_parameters(
                     model_config) <= 0 or self.available_cores == 0:
