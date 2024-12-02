@@ -108,7 +108,7 @@ class NeoShardingService():
         gpu_memory_utilization = float(
             self.properties.get("option.gpu_memory_utilization", 0.9))
         enforce_eager: bool = self.properties.get("option.enforce_eager",
-                                                  "true").lower() == "true"
+                                                  "false").lower() == "true"
         max_rolling_batch_size = int(
             self.properties.get("option.max_rolling_batch_size", 256))
         max_model_len = self.properties.get("option.max_model_len", None)
