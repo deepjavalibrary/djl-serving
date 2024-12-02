@@ -16,7 +16,7 @@ ARG djl_version
 ARG djl_serving_version
 ARG python_version=3.11
 ARG djl_torch_version=2.5.1
-ARG djl_onnx_version=1.19.0
+ARG djl_onnx_version=1.20.0
 
 EXPOSE 8080
 
@@ -81,6 +81,7 @@ RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cu
 COPY requirements-lmi.txt ./requirements.txt
 RUN pip3 install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124 && pip3 cache purge
 RUN pip3 install -r requirements.txt \
+    && pip3 install onnxruntime-gpu==$djl_onnx_version \
     && git clone https://github.com/neuralmagic/AutoFP8.git \
     && cd AutoFP8 \
     && git reset --hard 4b2092c \

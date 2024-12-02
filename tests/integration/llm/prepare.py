@@ -1355,54 +1355,69 @@ transformers_neuronx_neo_list = {
 }
 
 text_embedding_model_list = {
-    "bge-base": {
+    "bge-base-rust": {
+        "engine": "Rust",
         "option.model_id": "BAAI/bge-base-en-v1.5",
         "batch_size": 8,
     },
-    "e5-base-v2": {
+    "e5-base-v2-rust": {
+        "engine": "Rust",
         "option.model_id": "intfloat/e5-base-v2",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "sentence-camembert-large": {
+    "sentence-camembert-large-rust": {
+        "engine": "Rust",
         "option.model_id": "dangvantuan/sentence-camembert-large",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "roberta-base": {
+    "roberta-base-rust": {
+        "engine": "Rust",
         "option.model_id": "relbert/relbert-roberta-base-nce-conceptnet",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "msmarco-distilbert-base-v4": {
+    "msmarco-distilbert-base-v4-rust": {
+        "engine": "Rust",
         "option.model_id": "sentence-transformers/msmarco-distilbert-base-v4",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "bge-reranker": {
+    "bge-reranker-rust": {
+        "engine": "Rust",
         "option.model_id": "BAAI/bge-reranker-base",
         "reranking": True,
         "batch_size": 8,
     },
-    "e5-mistral-7b": {
+    "e5-mistral-7b-rust": {
+        "engine": "Rust",
         "option.model_id": "intfloat/e5-mistral-7b-instruct",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "gte-qwen2-7b": {
+    "gte-qwen2-7b-rust": {
+        "engine": "Rust",
         "option.model_id": "Alibaba-NLP/gte-Qwen2-7B-instruct",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "gte-large": {
+    "gte-large-rust": {
+        "engine": "Rust",
         "option.model_id": "Alibaba-NLP/gte-large-en-v1.5",
         "option.trust_remote_code": "true",
         "pooling": "cls",
         "batch_size": 8,
     },
-    "bge-multilingual-gemma2": {
+    "bge-multilingual-gemma2-rust": {
+        "engine": "Rust",
         "option.model_id": "BAAI/bge-multilingual-gemma2",
         "pooling": "cls",
+        "batch_size": 8,
+    },
+    "bge-base-onnx": {
+        "engine": "OnnxRuntime",
+        "option.model_id": "BAAI/bge-base-en-v1.5",
         "batch_size": 8,
     }
 }
@@ -1693,7 +1708,6 @@ def build_text_embedding_model(model):
             f"{model} is not one of the supporting handler {list(onnx_list.keys())}"
         )
     options = text_embedding_model_list[model]
-    options["engine"] = "Rust"
     options["option.task"] = "text_embedding"
     options["normalize"] = False
     write_model_artifacts(options)
