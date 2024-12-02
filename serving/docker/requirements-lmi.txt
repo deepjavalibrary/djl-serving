@@ -21,7 +21,7 @@ safetensors
 scipy
 onnx
 sentence_transformers
-onnxruntime
+onnxruntime-gpu=1.20.0
 autoawq==0.2.5
 tokenizers==0.20.3
 pydantic==2.9.2
@@ -30,8 +30,6 @@ torch==2.5.1
 torchvision==0.20.1
 # sequence scheduler wheel for hf accelerate rolling batch
 https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl
-# djl converter wheel for text-embedding use case
-https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl
 # flash infer kernels for vllm/lmi-dist
 https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl
 # vllm wheel built with pt2.5.1
