@@ -20,7 +20,7 @@ import ai.djl.serving.wlm.Adapter;
 public class DescribeAdapterResponse {
     private String name;
     private String src;
-    private boolean load;
+    private boolean preload;
     private boolean pin;
 
     /**
@@ -31,7 +31,7 @@ public class DescribeAdapterResponse {
     public DescribeAdapterResponse(Adapter<Input, Output> adapter) {
         this.name = adapter.getName();
         this.src = adapter.getSrc();
-        this.load = adapter.isLoad();
+        this.preload = adapter.isPreload();
         this.pin = adapter.isPin();
     }
 
@@ -54,12 +54,12 @@ public class DescribeAdapterResponse {
     }
 
     /**
-     * Returns whether to load the adapter weights.
+     * Returns whether to preload the adapter during initialization.
      *
-     * @return whether to load the adapter weights
+     * @return whether to preload the adapter during initialization
      */
-    public boolean isLoad() {
-        return load;
+    public boolean isPreload() {
+        return preload;
     }
 
     /**
