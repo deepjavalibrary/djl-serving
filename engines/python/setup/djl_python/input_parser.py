@@ -198,7 +198,8 @@ def add_server_maintained_params(request_input: RequestInput,
 
 def parse_adapters(request_input: TextInput, input_item: Input,
                    input_map: Dict, **kwargs):
-    if kwargs.get("configs").enable_lora:
+    configs = kwargs.get("configs")
+    if hasattr(configs, "enable_lora") and configs.enable_lora:
         adapter_registry = kwargs.get("adapter_registry")
         input_len = len(request_input.input_text) if isinstance(
             request_input.input_text, list) else 1
