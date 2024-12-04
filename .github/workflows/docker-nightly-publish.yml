@@ -88,7 +88,7 @@ jobs:
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
-          repo="243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp:latest"
+          repo="243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
