@@ -1021,7 +1021,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), adapterName);
         assertEquals(resp.getSrc(), "src");
-        assertTrue(resp.isLoad());
+        assertTrue(resp.isPreload());
         assertFalse(resp.isPin());
     }
 
@@ -1130,7 +1130,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), adapterName);
         assertEquals(resp.getSrc(), "src");
-        assertTrue(resp.isLoad());
+        assertTrue(resp.isPreload());
         assertTrue(resp.isPin());
     }
 
@@ -1190,7 +1190,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), adapterName);
         assertEquals(resp.getSrc(), "src");
-        assertTrue(resp.isLoad());
+        assertTrue(resp.isPreload());
         assertFalse(resp.isPin());
     }
 
@@ -1224,7 +1224,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), adapterName);
         assertEquals(resp.getSrc(), "src");
-        assertTrue(resp.isLoad());
+        assertTrue(resp.isPreload());
         assertFalse(resp.isPin());
     }
 
@@ -1381,7 +1381,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), "adaptable");
         assertEquals(resp.getSrc(), "src");
-        assertTrue(resp.isLoad());
+        assertTrue(resp.isPreload());
         assertTrue(resp.isPin());
     }
 

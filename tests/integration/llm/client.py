@@ -985,45 +985,49 @@ multi_modal_spec = {
 }
 
 text_embedding_model_spec = {
-    "bge-base": {
+    "bge-base-rust": {
         "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
-    "e5-base-v2": {
+    "e5-base-v2-rust": {
         "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
-    "sentence-camembert-large": {
+    "sentence-camembert-large-rust": {
         "max_memory_per_gpu": [3.0, 3.0],
         "batch_size": [1, 8],
     },
-    "roberta-base": {
+    "roberta-base-rust": {
         "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
-    "msmarco-distilbert-base-v4": {
+    "msmarco-distilbert-base-v4-rust": {
         "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
-    "bge-reranker": {
+    "bge-reranker-rust": {
         "max_memory_per_gpu": [3.0, 3.0],
         "batch_size": [1, 8],
         "reranking": True,
     },
-    "e5-mistral-7b": {
+    "e5-mistral-7b-rust": {
         "max_memory_per_gpu": [18.0, 18.0],
         "batch_size": [1, 8],
     },
-    "gte-qwen2-7b": {
+    "gte-qwen2-7b-rust": {
         "max_memory_per_gpu": [18.0, 18.0],
         "batch_size": [1, 8],
     },
-    "gte-large": {
+    "gte-large-rust": {
         "max_memory_per_gpu": [3.0, 3.0],
         "batch_size": [1, 8],
     },
-    "bge-multilingual-gemma2": {
+    "bge-multilingual-gemma2-rust": {
         "max_memory_per_gpu": [20.0, 20.0],
+        "batch_size": [1, 8],
+    },
+    "bge-base-onnx": {
+        "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     }
 }
@@ -1955,7 +1959,6 @@ def test_text_embedding_model(model, model_spec):
             req = {"inputs": batch_generation(batch_size)}
         logging.info(f"req {req}")
         res = send_json(req).json()
-        logging.info(f"res: {res}")
         assert len(res) == batch_size
         if "max_memory_per_gpu" in spec:
             validate_memory_usage(spec["max_memory_per_gpu"][i])
