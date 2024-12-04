@@ -32,7 +32,7 @@ Here are the settings that are available when using LoRA Adapter.
 | Item                             | Environment Variable             | LMI Version | Configuration Type | Description                                                                                                                                                                                                                                                                          | Example value                        |
 |----------------------------------|----------------------------------|-------------|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------|
 | option.enable_lora               | OPTION_ENABLE_LORA               | \>= 0.27.0  | Pass Through       | This config enables support for LoRA adapters.                                                                                                                                                                                                                                       | Default: `false`                     |
-| option.max_loras                 | OPTION_MAX_LORAS                 | \>= 0.27.0  | Pass Through       | This config determines the maximum number of LoRA adapters that can be run at once. Allocates GPU memory for those number adapters.                                                                                                                                                  | Default: `4`                         |
+| option.max_loras                 | OPTION_MAX_LORAS                 | \>= 0.27.0  | Pass Through       | This config determines the maximum number of unique LoRA adapters that can be run in a single batch.                                                                                                                                                                                 | Default: `4`                         |
 | option.max_lora_rank             | OPTION_MAX_LORA_RANK             | \>= 0.27.0  | Pass Through       | This config determines the maximum rank allowed for a LoRA adapter. Set this value to maximum rank of your adapters. Setting a larger value will enable more adapters at a greater memory usage cost.                                                                                | Default: `16`                        |
 | option.max_cpu_loras             | OPTION_MAX_CPU_LORAS             | \>= 0.27.0  | Pass Through       | Maximum number of LoRAs to store in CPU memory. Must be >= than max_loras. Defaults to max_loras.                                                                                                                                                                                    | Default: `None`                      |
 | option.fully_sharded_loras       | OPTION_FULLY_SHARDED_LORAS       | \>= 0.31.0  | Pass Through       | By default, only half of the LoRA computation is sharded with tensor parallelism. Enabling this will use the fully sharded layers. At high sequence length, max rank or tensor parallel size, this is likely faster.                                                                 | Default: `true`                      |
@@ -137,7 +137,7 @@ You can also specify the base model for an element in the batch by using the emp
 curl -X POST http://127.0.0.1:8080/invocations \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -d '{"inputs": ["How is the weather"], "adapters": ["adapter_1"], "parameters": {"max_new_tokens": 25}}'
+    -d '{"inputs": "How is the weather", "adapters": "adapter_1", "parameters": {"max_new_tokens": 25}}'
 ```
 
 ### Input Content (and query parameter)
@@ -150,7 +150,7 @@ This will not work in Amazon SageMaker.
 curl -X POST http://127.0.0.1:8080/invocations?adapter=adapter_1 \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -d '{"inputs": ["How is the weather"], "parameters": {"max_new_tokens": 25}}'
+    -d '{"inputs": "How is the weather", "parameters": {"max_new_tokens": 25}}'
 ```
 
 ### SageMaker Header
@@ -163,8 +163,8 @@ This option will work in Amazon SageMaker.
 curl -X POST http://127.0.0.1:8080/invocations \
     -H "Content-Type: application/json" \
     -H "X-Amzn-SageMaker-Target-Model: base-1.tar.gz" \
-    -H "X-Amzn-SageMaker-Adapter-Identifier: adapter_1"
-    -d '{"inputs": ["How is the weather"], "parameters": {"max_new_tokens": 25}}'
+    -H "X-Amzn-SageMaker-Adapter-Identifier: adapter_1" \
+    -d '{"inputs": "How is the weather", "parameters": {"max_new_tokens": 25}}'
 ```
 
 ## Models with Adapters
