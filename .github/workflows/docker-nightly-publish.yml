@@ -47,7 +47,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          role-to-assume: arn:aws:iam::243947502783:role/github_action_happy_amazonian
           aws-region: us-east-1
       - name: Set up JDK 17
         uses: actions/setup-java@v4
