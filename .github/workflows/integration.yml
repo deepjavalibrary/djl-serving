@@ -7,6 +7,18 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        type: string
+        default: ''
+      override_image_uri:
+        description: 'Override the default docker image URI'
+        required: false
+        type: string
+        default: ''
   schedule:
     - cron: '0 15 * * *'
 
@@ -205,7 +217,14 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow wheel
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+        run: |
+          ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+          # Set docker image URI based on override or default value
+          if [ ! -z "${{ inputs.override_image_uri }}" ]; then
+            DOCKER_IMAGE_URI="${{ inputs.override_image_uri }}"
+          else
+            DOCKER_IMAGE_URI="deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG"
+          fi
       - name: Download models and dockers
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
