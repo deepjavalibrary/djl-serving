@@ -70,7 +70,6 @@ jobs:
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           export NIGHTLY="-nightly"
@@ -79,15 +78,9 @@ jobs:
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
-      - name: Build and push temp image
-        if: ${{ inputs.mode == 'temp' }}
+      - name: Tag and push temp image to ECR repo
         working-directory: serving/docker
         run: |
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{ matrix.arch }}
           repo="243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
