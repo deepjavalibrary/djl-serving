@@ -193,12 +193,12 @@ public abstract class Adapter<I, O> {
     }
 
     /**
-     * Returns whether to load the adapter weights.
+     * Returns whether to preload the adapter during initialization.
      *
-     * @return whether to load the adapter weights
+     * @return whether to preload the adapter during initialization
      */
-    public boolean isLoad() {
-        return Boolean.parseBoolean(options.getOrDefault("load", "true"));
+    public boolean isPreload() {
+        return Boolean.parseBoolean(options.getOrDefault("preload", "true"));
     }
 
     /**

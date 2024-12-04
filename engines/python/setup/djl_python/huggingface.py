@@ -531,8 +531,8 @@ def register_adapter(inputs: Input):
     adapter_name = inputs.get_property("name")
     adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
-    adapter_load = inputs.get_as_string(
-        "load").lower() == "true" if inputs.contains_key("load") else True
+    adapter_preload = inputs.get_as_string("preload").lower(
+    ) == "true" if inputs.contains_key("preload") else True
     adapter_pin = inputs.get_as_string(
         "pin").lower() == "true" if inputs.contains_key("pin") else False
 
@@ -543,10 +543,10 @@ def register_adapter(inputs: Input):
                 f"Only local LoRA models are supported. {adapter_path} is not a valid path"
             )
 
-        if not adapter_load and adapter_pin:
-            raise ValueError("Can not set load to false and pin to true")
+        if not adapter_preload and adapter_pin:
+            raise ValueError("Can not set preload to false and pin to true")
 
-        if adapter_load:
+        if adapter_preload:
             loaded = _service.add_lora(adapter_name, adapter_alias,
                                        adapter_path)
 
@@ -578,8 +578,8 @@ def update_adapter(inputs: Input):
     adapter_name = inputs.get_property("name")
     adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
-    adapter_load = inputs.get_as_string(
-        "load").lower() == "true" if inputs.contains_key("load") else True
+    adapter_preload = inputs.get_as_string("preload").lower(
+    ) == "true" if inputs.contains_key("preload") else True
     adapter_pin = inputs.get_as_string(
         "pin").lower() == "true" if inputs.contains_key("pin") else False
 
@@ -587,7 +587,7 @@ def update_adapter(inputs: Input):
         raise ValueError(f"Adapter {adapter_alias} not registered.")
 
     try:
-        if not adapter_load and adapter_pin:
+        if not adapter_preload and adapter_pin:
             raise ValueError("Can not set load to false and pin to true")
 
         old_adapter = _service.adapter_registry[adapter_name]
@@ -596,10 +596,10 @@ def update_adapter(inputs: Input):
             raise NotImplementedError(
                 f"Updating adapter path is not supported.")
 
-        old_adapter_load = old_adapter.get_as_string("load").lower(
-        ) == "true" if old_adapter.contains_key("load") else True
-        if adapter_load != old_adapter_load:
-            if adapter_load:
+        old_adapter_preload = old_adapter.get_as_string("preload").lower(
+        ) == "true" if old_adapter.contains_key("preload") else True
+        if adapter_preload != old_adapter_preload:
+            if adapter_preload:
                 _service.add_lora(adapter_name, adapter_alias, adapter_path)
             else:
                 _service.remove_lora(adapter_name, adapter_alias)
