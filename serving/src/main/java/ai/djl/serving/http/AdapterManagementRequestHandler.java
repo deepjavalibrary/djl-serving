@@ -168,7 +168,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         for (int i = pagination.getPageToken(); i < pagination.getLast(); ++i) {
             String adapterName = keys.get(i);
             Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
-            list.addAdapter(adapter.getName(), adapter.getSrc(), adapter.isLoad(), adapter.isPin());
+            list.addAdapter(
+                    adapter.getName(), adapter.getSrc(), adapter.isPreload(), adapter.isPin());
         }
 
         NettyUtils.sendJsonResponse(ctx, list);
