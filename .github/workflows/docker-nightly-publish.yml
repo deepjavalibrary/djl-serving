@@ -77,7 +77,10 @@ jobs:
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
+
+          if [[ "${{ inputs.mode }}" == "nightly" || -z "${{ inputs.mode }}" ]]; then
+            docker compose push ${{ matrix.arch }}
+          fi
       - name: Tag and push temp image to ECR repo
         working-directory: serving/docker
         run: |
