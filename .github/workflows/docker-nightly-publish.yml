@@ -83,7 +83,7 @@ jobs:
         run: |
           repo="243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
+          tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}-${{inputs.mode}}"
           docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
           docker push $tempTag
       - name: Build and push release docker image
