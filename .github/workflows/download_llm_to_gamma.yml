@@ -35,7 +35,12 @@ jobs:
       action_cpu_instance_id: ${{ steps.create_cpu.outputs.action_cpu_instance_id }}
 
   download_job:
-    runs-on: [ self-hosted, cpu ]
+    runs-on:
+      - self-hosted
+      - cpu
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 60
     needs: create-cpu-runner
     steps:

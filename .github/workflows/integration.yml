@@ -79,7 +79,9 @@ jobs:
 
 
   test:
-    runs-on: [ "${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}", "${{ matrix.test.instance }}" ]
+    runs-on:
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('self-hosted,RUN_ID-{0},RUN_NUMBER-{1},SHA-{2}', github.run_id, github.run_number, github.sha) }}
+      - ${{ matrix.test.instance }}
     timeout-minutes: 90
     needs: create-runners
     strategy:
@@ -187,7 +189,12 @@ jobs:
           path: tests/integration/all_logs/
 
   transformers-neuronx-container-unit-tests:
-    runs-on: [ self-hosted, inf2 ]
+    runs-on:
+      - self-hosted
+      - inf2
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 15
     needs: create-runners
     steps:

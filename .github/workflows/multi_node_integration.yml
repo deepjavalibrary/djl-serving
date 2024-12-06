@@ -28,7 +28,9 @@ jobs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
 
   multi-node-test:
-    runs-on: [ "${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}", "${{ matrix.test.instance }}" ]
+    runs-on:
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('self-hosted,RUN_ID-{0},RUN_NUMBER-{1},SHA-{2}', github.run_id, github.run_number, github.sha) }}
+      - ${{ matrix.test.instance }}
     timeout-minutes: 60
     needs: create-runners
     strategy:
