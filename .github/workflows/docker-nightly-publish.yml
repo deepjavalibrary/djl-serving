@@ -90,7 +90,7 @@ jobs:
         if: ${{ !inputs.skip_nightly_integ_test && inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           tempTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-${GITHUB_SHA}"
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly $tempTag
           docker push $tempTag
