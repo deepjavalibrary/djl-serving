@@ -11,7 +11,6 @@ import test_client
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
 
-
 def is_applicable_cuda_capability(arch: int) -> bool:
     import torch
     if not torch.cuda.is_available():

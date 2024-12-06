@@ -7,6 +7,11 @@ on:
         description: 'release/nightly/temp, default is nightly'
         required: true
         default: 'nightly'
+      skip_nightly_integ_test:
+        description: 'buld and push the nightly without running integ test'
+        required: false
+        default: false
+        type: boolean
   workflow_call:
     inputs:
       mode:
@@ -20,6 +25,10 @@ on:
 permissions:
   id-token: write
   contents: read
+
+env:
+  AWS_ECR_REPO: "243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
+  DOCKER_HUB_REPO: "deepjavalibrary/djl-serving"
 
 jobs:
   nightly-build:
@@ -81,13 +90,17 @@ jobs:
             docker compose push ${{ matrix.arch }}
           fi
       - name: Tag and push temp image to ECR repo
+        if: ${{ !inputs.skip_nightly_integ_test }}
         working-directory: serving/docker
         run: |
-          repo="243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}-${{inputs.mode}}"
-          docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
+          tempTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-${GITHUB_SHA}"
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly $tempTag
           docker push $tempTag
+      - name: Push nightly to dockerhub
+        if: ${{ inputs.skip_nightly_integ_test }}
+        run: |
+          docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
       - name: Build and push release docker image
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
@@ -105,6 +118,33 @@ jobs:
         run: |
           docker tag deepjavalibrary/djl-serving:${{ env.SERVING_VERSION }} deepjavalibrary/djl-serving:latest
           docker push deepjavalibrary/djl-serving:latest
+
+  run-integration-tests:
+    if: ${{ inputs.mode == 'nightly' && !inputs.skip_integ_test }}
+    needs: [nightly-build]
+    uses: ./.github/workflows/integration.yml
+    secrets: inherit
+    with:
+      djl-version: temp
+
+  push-to-dockerhub:
+    runs-on: ubuntu-latest
+    needs: [run-integration-tests]
+    strategy:
+      matrix:
+        arch: [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi ]
+    steps:
+      - name: Login to Docker
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Pull Image from ECR and Push it to Dockerhub
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          tempTag=" ${{env.AWS_ECR_REPO}}:${{ matrix.arch }}-${GITHUB_SHA}"
+          docker pull $tempTag
+          docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
 
   # create-runner:
   #   runs-on: [ self-hosted, scheduler ]

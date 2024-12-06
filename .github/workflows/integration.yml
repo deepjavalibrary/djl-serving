@@ -14,14 +14,6 @@ on:
         required: false
         type: string
         default: ''
-      override_image_uri:
-        description: 'Override the default docker image URI'
-        required: false
-        type: string
-        default: ''
-  schedule:
-    - cron: '0 15 * * *'
-
 
 jobs:
   create-runners:
