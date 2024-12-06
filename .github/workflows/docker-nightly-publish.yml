@@ -27,7 +27,8 @@ permissions:
   contents: read
 
 env:
-  AWS_ECR_REPO: "243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
+  # AWS_ECR_REPO: "243947502783.dkr.ecr.us-east-1.amazonaws.com/djl-tmp"
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
   DOCKER_HUB_REPO: "deepjavalibrary/djl-serving"
 
 jobs:
@@ -87,7 +88,7 @@ jobs:
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
       - name: Tag and push temp image to ECR repo
-        if: ${{ !inputs.skip_nightly_integ_test && inputs.mode == 'nightly' }}
+        if: ${{ !inputs.skip_nightly_integ_test && inputs.mode == 'nightly' ||  inputs.mode == 'temp'}}
         working-directory: serving/docker
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
