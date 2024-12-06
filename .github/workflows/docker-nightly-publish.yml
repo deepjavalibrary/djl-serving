@@ -86,11 +86,8 @@ jobs:
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
-          if [[ "${{ inputs.mode }}" == "nightly" || -z "${{ inputs.mode }}" ]]; then
-            docker compose push ${{ matrix.arch }}
-          fi
       - name: Tag and push temp image to ECR repo
-        if: ${{ !inputs.skip_nightly_integ_test }}
+        if: ${{ !inputs.skip_nightly_integ_test && inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
@@ -98,9 +95,9 @@ jobs:
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly $tempTag
           docker push $tempTag
       - name: Push nightly to dockerhub
-        if: ${{ inputs.skip_nightly_integ_test }}
+        if: ${{ inputs.skip_nightly_integ_test && inputs.mode == 'nightly' }}
         run: |
-          docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
+            docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
       - name: Build and push release docker image
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
