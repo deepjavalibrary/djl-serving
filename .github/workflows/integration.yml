@@ -230,11 +230,14 @@ jobs:
           else
             DOCKER_IMAGE_URI="deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG"
           fi
+          echo $DOCKER_IMAGE_URI
           echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >> $GITHUB_ENV
       - name: Download models and dockers
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          docker pull $DOCKER_IMAGE_URI
+          echo ${{ env.DOCKER_IMAGE_URI }}
+          echo $DOCKER_IMAGE_URI
+          docker pull ${{ env.DOCKER_IMAGE_URI }}
       - name: Run djl_python unit/integration tests on container
         working-directory: engines/python/setup
         run: |
@@ -247,7 +250,7 @@ jobs:
           -v $PWD/:/opt/ml/model/ \
           -w /opt/ml/model \
           --device=/dev/neuron0:/dev/neuron0 \
-          $DOCKER_IMAGE_URI \
+          ${{ env.DOCKER_IMAGE_URI }} \
           /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
           pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
           
