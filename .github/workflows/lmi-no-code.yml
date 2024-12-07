@@ -87,7 +87,12 @@ jobs:
       inf2_24x_instance_id: ${{ steps.create_inf2_24x.outputs.action_inf2_instance_id }}
 
   p4d-no-code-tests:
-    runs-on: [self-hosted, p4d]
+    runs-on:
+      - self-hosted
+      - p4d
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 240
     needs: create-runners-p4d
     strategy:
@@ -173,7 +178,12 @@ jobs:
           path: tests/integration/logs/
 
   g-series-no-code-tests:
-    runs-on: [self-hosted, "${{ matrix.machine }}"]
+    runs-on:
+      - self-hosted
+      - ${{ matrix.machine }}
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 240
     needs: create-runners
     strategy:
@@ -310,7 +320,12 @@ jobs:
           path: tests/integration/logs/
           
   inf2-series-no-code-tests:
-    runs-on: [self-hosted, "${{ matrix.machine }}"]
+    runs-on:
+      - self-hosted
+      - ${{ matrix.machine }}
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 240
     needs: create-runners
     strategy:

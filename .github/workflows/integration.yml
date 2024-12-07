@@ -42,6 +42,15 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
+        id: create_gpu4
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
       - name: Create new Graviton instance
         id: create_aarch64
         run: |
@@ -73,13 +82,19 @@ jobs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
       gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g6_instance_id }}
+      gpu_instance_id_4: ${{ steps.create_gpu4.outputs.action_g6_instance_id }}
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
       inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
       inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
 
 
   test:
-    runs-on: [ "${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}", "${{ matrix.test.instance }}" ]
+    runs-on:
+      - ${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_NUMBER-{0}', github.run_number) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('SHA-{0}', github.sha) }}
+      - ${{ matrix.test.instance }}
     timeout-minutes: 90
     needs: create-runners
     strategy:
@@ -187,7 +202,12 @@ jobs:
           path: tests/integration/all_logs/
 
   transformers-neuronx-container-unit-tests:
-    runs-on: [ self-hosted, inf2 ]
+    runs-on:
+      - self-hosted
+      - inf2
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 15
     needs: create-runners
     steps:
@@ -254,6 +274,8 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_4 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
           ./stop_instance.sh $instance_id
