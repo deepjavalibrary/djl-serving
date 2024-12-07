@@ -80,7 +80,10 @@ jobs:
 
   test:
     runs-on:
-      - ${{ matrix.test.gh-runner && matrix.test.instance || format('self-hosted,RUN_ID-{0},RUN_NUMBER-{1},SHA-{2}', github.run_id, github.run_number, github.sha) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_NUMBER-{0}', github.run_number) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('SHA-{0}', github.sha) }}
       - ${{ matrix.test.instance }}
     timeout-minutes: 90
     needs: create-runners
