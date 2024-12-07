@@ -14,6 +14,8 @@ on:
         required: false
         type: string
         default: ''
+env:
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
   create-runners:
@@ -164,11 +166,17 @@ jobs:
           wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Test
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
@@ -208,6 +216,11 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow wheel
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
         run: |
           ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
@@ -217,8 +230,10 @@ jobs:
           else
             DOCKER_IMAGE_URI="deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG"
           fi
+          echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >> $GITHUB_ENV
       - name: Download models and dockers
         run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           docker pull $DOCKER_IMAGE_URI
       - name: Run djl_python unit/integration tests on container
         working-directory: engines/python/setup
