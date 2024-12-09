@@ -43,7 +43,12 @@ jobs:
       gpu_instance_id: ${{ steps.create_instance.outputs.action_ib_instance_id }}
 
   run-max-num-tokens:
-    runs-on: [ self-hosted, "${{ inputs.instance }}" ]
+    runs-on:
+      - self-hosted
+      - "${{ inputs.instance }}"
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     container:
       image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
       options: --gpus all --runtime=nvidia --shm-size 20g -v /opt/dlami/nvme:/tmp
