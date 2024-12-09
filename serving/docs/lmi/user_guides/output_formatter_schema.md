@@ -85,7 +85,8 @@ It's crucial to understand how your custom output formatter will be called befor
 ## Example
 Here is an example of a custom output formatter:
 ```python
-from djl_python.output_formatter import TextGenerationOutput, output_formatter
+from djl_python.request_io import TextGenerationOutput
+from djl_python.output_formatter import output_formatter
 import json
 
 @output_formatter
@@ -102,7 +103,9 @@ def custom_output_formatter(request_output: TextGenerationOutput) -> str:
     """
     best_sequence = request_output.sequences[request_output.best_sequence_index]
     next_token, is_first_token, is_last_token = best_sequence.get_next_token()
-    result = {"token_id": next_token.id, "token_text": next_token.text, "token_log_prob": next_token.log_prob}
+    result = {}
+    if next_token:
+        result = {"token_id": next_token.id, "token_text": next_token.text, "token_log_prob": next_token.log_prob}
     if is_last_token:
         result["finish_reason"] = best_sequence.finish_reason
     return json.dumps(result) + "\n"
