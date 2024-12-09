@@ -24,7 +24,12 @@ jobs:
       p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
 
   lmi-deps-build:
-    runs-on: [ self-hosted, p4d ]
+    runs-on:
+      - self-hosted
+      - p4d
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     container:
       image: nvidia/cuda:12.4.1-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 20g
@@ -76,7 +81,12 @@ jobs:
           path: build_artifacts/
 
   lmi-deps-upload:
-    runs-on: [ self-hosted, p4d ]
+    runs-on:
+      - self-hosted
+      - p4d
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     needs: lmi-deps-build
     steps:
       - name: Set up Python3

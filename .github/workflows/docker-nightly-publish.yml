@@ -160,7 +160,12 @@ jobs:
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
 
   nightly-aarch64:
-    runs-on: [ self-hosted, aarch64 ]
+    runs-on:
+      - self-hosted
+      - aarch64
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 60
     needs: create-runner
     steps:

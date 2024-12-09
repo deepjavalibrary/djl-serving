@@ -17,6 +17,7 @@ Please delete options that are not relevant.
 ## Checklist:
 
 - [ ] Have you [manually built the docker image](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docker/README.md#build-docker-image) and verify the change?
+- [ ] Have you run related tests? Check [how to set up the test environment here](https://github.com/deepjavalibrary/djl-serving/blob/master/.github/workflows/integration_execute.yml#L72); One example would be `pytest tests.py -k "TestCorrectnessLmiDist"  -m "lmi_dist"`
 - [ ] Have you added tests that prove your fix is effective or that this feature works? 
 - [ ] Has code been commented, particularly in hard-to-understand areas?
 - [ ] Have you made corresponding changes to the documentation?
@@ -31,4 +32,3 @@ Logs for Test A
 
 - [ ] Test B
 Logs for Test B
-
