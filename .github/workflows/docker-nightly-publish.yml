@@ -141,6 +141,7 @@ jobs:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           tempTag=" ${{env.AWS_ECR_REPO}}:${{ matrix.arch }}-${GITHUB_SHA}"
           docker pull $tempTag
+          docker tag $tempTag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
           docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
 
   create-runner:
