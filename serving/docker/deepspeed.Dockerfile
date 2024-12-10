@@ -28,6 +28,7 @@ ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
 ARG datasets_version=2.17.1
+ARG huggingface_hub_version=0.25.1
 # DeepSpeed Deps
 ARG deepspeed_version=0.12.6
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
@@ -90,7 +91,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
+    optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 huggingface-hub==${huggingface_hub_version} \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     pip3 cache purge
 

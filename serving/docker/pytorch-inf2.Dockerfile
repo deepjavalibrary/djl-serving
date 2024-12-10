@@ -26,6 +26,7 @@ ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.20
 ARG numpy_version=1.26.4
+ARG huggingface_hub_version=0.25.1
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -76,7 +77,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile \
-    torchvision==${torchvision_version} && \
+    torchvision==${torchvision_version} huggingface-hub==${huggingface_hub_version} && \
     pip install numpy==${numpy_version} && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
