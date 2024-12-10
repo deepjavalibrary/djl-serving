@@ -7,9 +7,15 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
-  schedule:
-    - cron: '0 15 * * *'
-
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        type: string
+        default: ''
+env:
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
   create-runners:
@@ -175,12 +181,18 @@ jobs:
           wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Test
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
-          python -m pytest -k ${{ matrix.test.test }} tests.py
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
         run: |
@@ -224,11 +236,25 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow wheel
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+        run: |
+          ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          if [ ${{ github.event.inputs.djl-version }} == "temp"  ]; then
+            DOCKER_IMAGE_URI="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp:pytorch-inf2-${GITHUB_SHA}"
+          else
+            DOCKER_IMAGE_URI="deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG"
+          fi
+          echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          echo $DOCKER_IMAGE_URI
+          docker pull $DOCKER_IMAGE_URI
       - name: Run djl_python unit/integration tests on container
         working-directory: engines/python/setup
         run: |
@@ -241,7 +267,7 @@ jobs:
           -v $PWD/:/opt/ml/model/ \
           -w /opt/ml/model \
           --device=/dev/neuron0:/dev/neuron0 \
-          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          $DOCKER_IMAGE_URI \
           /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
           pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
           
