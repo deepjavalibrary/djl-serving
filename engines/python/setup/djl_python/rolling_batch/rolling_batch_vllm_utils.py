@@ -326,3 +326,4 @@ def get_prompt_inputs(request: Request):
 
     if multi_modal_data is not None:
         prompt["multi_modal_data"] = multi_modal_data
+    return prompt
