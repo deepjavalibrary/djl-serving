@@ -11,66 +11,43 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import ast
-from enum import Enum
+import dataclasses
 from typing import Optional, Any, Mapping, Tuple, Dict
 
-from pydantic import field_validator, model_validator
+from pydantic import field_validator, model_validator, ConfigDict
+from vllm import EngineArgs
 
 from djl_python.properties_manager.properties import Properties
+
+DTYPE_MAPPER = {
+    "fp32": "float32",
+    "fp16": "float16",
+    "bf16": "bfloat16",
+    "auto": "auto"
+}
 
 
 class VllmRbProperties(Properties):
     engine: Optional[str] = None
-    dtype: Optional[str] = "auto"
-    load_format: Optional[str] = "auto"
+    # The following configs have different names in DJL compared to vLLM
     quantize: Optional[str] = None
     tensor_parallel_degree: int = 1
     pipeline_parallel_degree: int = 1
     max_rolling_batch_prefill_tokens: Optional[int] = None
-    # Adjustable prefix model length for certain 32k or longer model
-    max_model_len: Optional[int] = None
-    enforce_eager: Optional[bool] = False
-    # TODO: this default may change with different vLLM versions
-    # TODO: try to get good default from vLLM to prevent revisiting
-    # TODO: last time check: vllm 0.3.1
-    gpu_memory_utilization: Optional[float] = 0.9
-    enable_lora: Optional[bool] = False
+    cpu_offload_gb_per_gpu: Optional[int] = 0
+    # The following configs have different defaults, or additional processing in DJL compared to vLLM
+    dtype: str = "auto"
     max_loras: Optional[int] = 4
-    max_lora_rank: Optional[int] = 16
-    fully_sharded_loras: bool = False
-    lora_extra_vocab_size: int = 256
     long_lora_scaling_factors: Optional[Tuple[float, ...]] = None
-    lora_dtype: Optional[str] = 'auto'
-    max_cpu_loras: Optional[int] = None
+    limit_mm_per_prompt: Optional[Mapping[str, int]] = None
 
     # Neuron vLLM properties
     device: Optional[str] = None
     preloaded_model: Optional[Any] = None
     generation_config: Optional[Any] = None
 
-    max_logprobs: Optional[int] = 20
-    enable_chunked_prefill: Optional[bool] = None
-    cpu_offload_gb_per_gpu: Optional[int] = 0
-    enable_prefix_caching: Optional[bool] = False
-    disable_sliding_window: Optional[bool] = False
-    limit_mm_per_prompt: Optional[Mapping[str, int]] = None
-    use_v2_block_manager: bool = False
-    tokenizer_mode: str = 'auto'
-
-    # Speculative decoding configuration.
-    speculative_model: Optional[str] = None
-    speculative_model_quantization: Optional[str] = None
-    speculative_draft_tensor_parallel_size: Optional[int] = None
-    num_speculative_tokens: Optional[int] = None
-    speculative_max_model_len: Optional[int] = None
-    speculative_disable_by_batch_size: Optional[int] = None
-    ngram_prompt_lookup_max: Optional[int] = None
-    ngram_prompt_lookup_min: Optional[int] = None
-    spec_decoding_acceptance_method: str = 'rejection_sampler'
-    typical_acceptance_sampler_posterior_threshold: Optional[float] = None
-    typical_acceptance_sampler_posterior_alpha: Optional[float] = None
-    qlora_adapter_name_or_path: Optional[str] = None
-    disable_logprobs_during_spec_decoding: Optional[bool] = None
+    # This allows generic vllm engine args to be passed in and set with vllm
+    model_config = ConfigDict(extra='allow')
 
     @field_validator('engine')
     def validate_engine(cls, engine):
@@ -118,17 +95,90 @@ class VllmRbProperties(Properties):
         return out_dict
 
     @model_validator(mode='after')
-    def validate_speculative_model(self):
-        if self.speculative_model is not None and not self.use_v2_block_manager:
-            raise ValueError(
-                "Speculative decoding requires usage of the V2 block manager. Enable it with option.use_v2_block_manager=true."
-            )
-        return self
-
-    @model_validator(mode='after')
     def validate_pipeline_parallel(self):
         if self.pipeline_parallel_degree != 1:
             raise ValueError(
                 "Pipeline parallelism is not supported in vLLM's LLMEngine used in rolling_batch implementation"
             )
         return self
+
+    def handle_lmi_vllm_config_conflicts(self, additional_vllm_engine_args):
+
+        def djl_config_conflicts_with_vllm_config(lmi_config_name,
+                                                  vllm_config_name) -> bool:
+            # TODO: We may be able to refactor this to throw the ValueError directly from this method.
+            # The errors are slightly different depending on the specific configs, so for now we keep
+            # the exception separate in favor of better, more specific client errors
+            lmi_config_val = self.__getattribute__(lmi_config_name)
+            vllm_config_val = additional_vllm_engine_args.get(vllm_config_name)
+            if vllm_config_val is not None and lmi_config_val is not None:
+                return lmi_config_val != vllm_config_val
+            return False
+
+        if djl_config_conflicts_with_vllm_config("quantize", "quantization"):
+            raise ValueError(
+                "Both the DJL quantize config, and vllm quantization configs have been set with conflicting values."
+                "Only set the DJL quantize config")
+        if djl_config_conflicts_with_vllm_config("tensor_parallel_degree",
+                                                 "tensor_parallel_size"):
+            raise ValueError(
+                "Both the DJL tensor_parallel_degree and vllm tensor_parallel_size configs have been set with conflicting values."
+                "Only set the DJL tensor_parallel_degree config")
+        if djl_config_conflicts_with_vllm_config("pipeline_parallel_degree",
+                                                 "pipeline_parallel_size"):
+            raise ValueError(
+                "Both the DJL pipeline_parallel_degree and vllm pipeline_parallel_size configs have been set with conflicting values."
+                "Only set the DJL pipeline_parallel_degree config")
+        if djl_config_conflicts_with_vllm_config(
+                "max_rolling_batch_prefill_tokens", "max_num_batched_tokens"):
+            raise ValueError(
+                "Both the DJL max_rolling_batch_prefill_tokens and vllm max_num_batched_tokens configs have been set with conflicting values."
+                "Only set one of these configurations")
+        if djl_config_conflicts_with_vllm_config("cpu_offload_gb_per_gpu",
+                                                 "cpu_offload_gb"):
+            raise ValueError(
+                "Both the DJL cpu_offload_gb_per_gpu and vllm cpu_offload_gb configs have been set with conflicting values."
+                "Only set one of these configurations")
+
+    def get_engine_args(self) -> EngineArgs:
+        additional_vllm_engine_args = self.get_additional_vllm_engine_args()
+        self.handle_lmi_vllm_config_conflicts(additional_vllm_engine_args)
+        max_model_len = additional_vllm_engine_args.pop("max_model_len", None)
+        if self.device == 'neuron':
+            return EngineArgs(
+                model=self.model_id_or_path,
+                preloaded_model=self.preloaded_model,
+                tensor_parallel_size=self.tensor_parallel_degree,
+                pipeline_parallel_size=self.pipeline_parallel_degree,
+                dtype=DTYPE_MAPPER[self.dtype],
+                max_num_seqs=self.max_rolling_batch_size,
+                block_size=max_model_len,
+                max_model_len=max_model_len,
+                trust_remote_code=self.trust_remote_code,
+                revision=self.revision,
+                device=self.device,
+                generation_config=self.generation_config,
+                **additional_vllm_engine_args,
+            )
+        return EngineArgs(
+            model=self.model_id_or_path,
+            tensor_parallel_size=self.tensor_parallel_degree,
+            pipeline_parallel_size=self.pipeline_parallel_degree,
+            dtype=DTYPE_MAPPER[self.dtype],
+            max_model_len=max_model_len,
+            quantization=self.quantize,
+            max_num_batched_tokens=self.max_rolling_batch_prefill_tokens,
+            max_loras=self.max_loras,
+            long_lora_scaling_factors=self.long_lora_scaling_factors,
+            cpu_offload_gb=self.cpu_offload_gb_per_gpu,
+            limit_mm_per_prompt=self.limit_mm_per_prompt,
+            **additional_vllm_engine_args,
+        )
+
+    def get_additional_vllm_engine_args(self) -> Dict[str, Any]:
+        all_engine_args = EngineArgs.__annotations__
+        return {
+            arg: val
+            for arg, val in self.__pydantic_extra__.items()
+            if arg in all_engine_args
+        }
