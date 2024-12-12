@@ -137,27 +137,28 @@ jobs:
     with:
       djl-version: temp
 
-  # push-to-dockerhub:
-  #   if: ${{ inputs.mode != 'temp' && !cancelled()}}
-  #   runs-on: ubuntu-latest
-  #   needs: [run-integration-tests]
-  #   strategy:
-  #     matrix:
-  #       arch: [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi ]
-  #   steps:
-  #     - name: Login to Docker
-  #       uses: docker/login-action@v3
-  #       with:
-  #         username: ${{ secrets.DOCKER_USERNAME }}
-  #         password: ${{ secrets.DOCKER_PASSWORD }}
-  #     - name: Pull Image from ECR and Push it to Dockerhub
-  #       run: |
-  #         ECR_REGION= $(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-  #         aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-  #         tempTag=" ${{env.AWS_ECR_REPO}}:${{ matrix.arch }}-${GITHUB_SHA}"
-  #         docker pull $tempTag
-  #         docker tag $tempTag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
-  #         docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
+  push-to-dockerhub:
+    if: ${{ inputs.mode != 'temp' && !cancelled() }}
+    runs-on: ubuntu-latest
+    needs: [run-integration-tests]
+    # strategy:
+    #   matrix:
+    #     arch: [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi ]
+    steps:
+      - name: Login to Docker
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Pull Image from ECR and Push it to Dockerhub
+        run: |
+          echo ${{needs.run-integration-tests.outputs.images-to-push}}
+          # ECR_REGION= $(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          # aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          # tempTag=" ${{env.AWS_ECR_REPO}}:${{ matrix.arch }}-${GITHUB_SHA}"
+          # docker pull $tempTag
+          # docker tag $tempTag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
+          # docker push ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}-nightly
 
   create-runner:
     runs-on: [ self-hosted, scheduler ]
