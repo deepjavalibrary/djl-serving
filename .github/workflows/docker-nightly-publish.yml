@@ -74,7 +74,7 @@ jobs:
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
           echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
-      - name: set condition env
+      - name: Set Condition env
         run: |
           BUILD_TEMP_DOCKER_IMAGE=${{ !inputs.skip_nightly_integ_test }}
           echo "BUILD_TEMP_DOCKER_IMAGE=$BUILD_TEMP_DOCKER_IMAGE" >> $GITHUB_ENV
@@ -110,7 +110,7 @@ jobs:
         if: ${{ env.BUILD_TEMP_DOCKER_IMAGE }}
         working-directory: serving/docker
         run: |
-          ECR_REGION= $(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           tempTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-${GITHUB_SHA}-${GITHUB_RUN_ID}"
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempTag
@@ -258,7 +258,7 @@ jobs:
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           aarch64
-          ECR_REGION= $(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           tempTag="${{env.AWS_ECR_REPO}}:aarch64-${GITHUB_SHA}-${GITHUB_RUN_ID}"
           docker tag deepjavalibrary/djl-serving:aarch64$NIGHTLY $tempTag

@@ -192,7 +192,7 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
-          ECR_REGION= $(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
@@ -249,7 +249,7 @@ jobs:
       - name: Download models and dockers
         run: |
           if [ ${{ github.event.inputs.djl-version }} == "temp"  ]; then
-            DOCKER_IMAGE_URI="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp:pytorch-inf2-${GITHUB_SHA}"
+            DOCKER_IMAGE_URI="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp:pytorch-inf2-${GITHUB_SHA}-${GITHUB_RUN_ID}"
           else
             DOCKER_IMAGE_URI="deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG"
           fi
