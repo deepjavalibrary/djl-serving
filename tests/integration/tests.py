@@ -36,7 +36,7 @@ class Runner:
         else:
             if djl_version == "temp":
                 repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
-                flavor = f"{container}-{os.environ['GITHUB_SHA']}"
+                flavor = f"{container}-{os.environ['GITHUB_SHA']}-{os.environ['GITHUB_RUN_ID']}"
             else:
                 if container == "cpu":
                     flavor = djl_version

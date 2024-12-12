@@ -14,6 +14,7 @@ on:
         required: false
         type: string
         default: ''
+
 env:
   AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
@@ -191,7 +192,8 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          ECR_REGION= $(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
