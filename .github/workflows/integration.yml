@@ -161,6 +161,10 @@ jobs:
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
       - name: Set up Python3
         if: ${{ matrix.test.instance != 'aarch64' }}
         uses: actions/setup-python@v5
@@ -221,6 +225,7 @@ jobs:
         if: ${{ always() }}
         id: test_status
         run: |
+          echo ${{ job.status }}
           if [[ ${{ job.status }} == "success" ]]; then
             echo "test_result_${{ matrix.test.test }}=true" >> \$GITHUB_OUTPUT
           else
@@ -250,6 +255,7 @@ jobs:
       test_result_sheteng_not_Exist: ${{ steps.test_status.outputs.not_existing }}
 
   test_results:
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [ test, transformers-neuronx-container-unit-tests ]
