@@ -268,17 +268,17 @@ jobs:
           echo needs.test.outputs.test_result_sheteng_not_Exist
           echo ${{needs.test.outputs.test_result_sheteng_not_Exist}}
 
-          if [ "${{ needs.test.outputs.test_result_TestCpuBoth }}" = "true" ] &&
+          if [ "${{ needs.test.outputs.test_result_TestCpuBoth }}" = "true" ] && \
             [ "${{ needs.test.outputs.test_result_TestCpuFull }}" = "true" ]; then
             image_list+=("cpu")
           fi
 
-          if [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" == "true"] &&
+          if [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" = "true" ] && \
             [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" = "true" ]; then
             push_neron_image=true
           fi
-          json_array=\$(printf '%s\n' "\${image_list[@]}" | jq -R . | jq -s .)
-          echo "image_list=$json_array" >> \$GITHUB_OUTPUT
+          json_array=$(printf '%s\n' "${image_list[@]}" | jq -R . | jq -s .)
+          echo "image_list=$json_array" >> $GITHUB_OUTPUT
     outputs: 
       images_to_push: ${{ steps.summarize_passing_image.outputs.image_list }}
 
