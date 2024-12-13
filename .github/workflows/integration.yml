@@ -268,17 +268,13 @@ jobs:
           echo needs.test.outputs.test_result_sheteng_not_Exist
           echo ${{needs.test.outputs.test_result_sheteng_not_Exist}}
 
-          if [[
-            ${{ needs.test.outputs.test_result_TestCpuBoth }} &&
-            ${{ needs.test.outputs.test_result_TestCpuFull }}
-          ]]; then
+          if [ "${{ needs.test.outputs.test_result_TestCpuBoth }}" = "true" ] &&
+            [ "${{ needs.test.outputs.test_result_TestCpuFull }}" = "true" ]; then
             image_list+=("cpu")
           fi
 
-          if [[
-            ${{ needs.test.outputs.test_result_TestNeuronx1 }} &&
-            ${{ needs.test.outputs.test_result_TestNeuronx2 }} 
-          ]]; then
+          if [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" == "true"] &&
+            [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" = "true" ]; then
             push_neron_image=true
           fi
           json_array=\$(printf '%s\n' "\${image_list[@]}" | jq -R . | jq -s .)
@@ -359,6 +355,18 @@ jobs:
         with:
           name: transformers-neuronx-${{ matrix.arch }}-logs
           path: engines/python/setup/logs/
+      - name: Set test status
+        if: ${{ always() }}
+        id: test_status
+        run: |
+          echo ${{ job.status }}
+          if [[ ${{ job.status }} == "success" ]]; then
+            echo "test_result_Transformer_Neuron_UnitTest=true" >> \$GITHUB_OUTPUT
+          else
+            echo "test_result_${{ matrix.test.test }}=false" >> \$GITHUB_OUTPUT
+          fi
+    outputs:
+      test_result_Transformer_Neuron_UnitTest: ${{ steps.test_status.outputs.test_result_Transformer_Neuron_UnitTest }}
 
   stop-runners:
     if: always()

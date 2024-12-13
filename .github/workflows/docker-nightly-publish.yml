@@ -114,7 +114,7 @@ jobs:
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           tempTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-${GITHUB_SHA}-${GITHUB_RUN_ID}"
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempTag
-          docker push $tempTag
+          time docker push $tempTag
       - name: push docker image to dockerhub
         working-directory: serving/docker
         if: ${{ env.PUSH_TO_DOCKERHUB_DIRECTLY }}
