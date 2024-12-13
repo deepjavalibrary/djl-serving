@@ -409,7 +409,7 @@ class HuggingFaceService(object):
         path_to_use = model_id_or_path if self.peft_config is None else self.peft_config.base_model_name_or_path
         self.tokenizer = AutoTokenizer.from_pretrained(
             path_to_use,
-            padding_size="left",
+            padding_side="left",
             trust_remote_code=self.hf_configs.trust_remote_code,
             revision=self.hf_configs.revision,
         )
