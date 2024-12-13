@@ -1,0 +1,146 @@
+name: LMI-Dist and VLLM Container Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  create-runners:
+    runs-on:
+      - self-hosted
+      - scheduler
+    steps:
+      - name: Create new g6.12xl instance
+        id: create_gpu_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new g6.12xl instance
+        id: create_gpu_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new g6.12xl instance
+        id: create_gpu_3
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+    outputs:
+      gpu_instance_id_1: ${{ steps.create_gpu_1.outputs.action_g6_instance_id }}
+      gpu_instance_id_2: ${{ steps.create_gpu_2.outputs.action_g6_instance_id }}
+      gpu_instance_id_3: ${{ steps.create_gpu_3.outputs.action_g6_instance_id }}
+
+  test:
+    needs: [ create-runners ]
+    runs-on:
+      - self-hosted
+      - g6
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
+      - WORKFLOW-${{ github.workflow }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name:
+          - TestHfHandler
+          - TestSchedulerSingleGPU
+          - TestSchedulerMultiGPU
+          - TestLmiDist1
+          - TestLmiDist2
+          - TestVllm1
+          - TestVllmLora
+          - TestLmiDistLora
+          - TestMultiModal
+          - TestTextEmbedding
+          - TestLmiDistPipelineParallel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
+      - name: Install torch
+        # Use torch to get cuda capability of current device to selectively run tests
+        # Torch version doesn't really matter that much
+        run: |
+          pip3 install torch
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          wget https://publish.djl.ai/awscurl/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Test
+        working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+        run: |
+          python -m pytest -k ${{ matrix.test_name }} tests.py
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf outputs
+          rm awscurl
+      - name: On Failure
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          sudo rm -rf outputs && sudo rm -rf models
+          rm awscurl
+          ./remove_container.sh
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.test_name }}-logs
+          path: tests/integration/all_logs/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
+          ./stop_instance.sh $instance_id

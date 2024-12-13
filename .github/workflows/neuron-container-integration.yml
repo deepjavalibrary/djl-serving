@@ -1,0 +1,186 @@
+name: Neuron Container Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  create-runners:
+    runs-on:
+      - self-hosted
+      - scheduler
+    steps:
+      - name: Create new Inf2.24xl instance
+        id: create_inf2_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf2 $token djl-serving
+      - name: Create new Inf2.24xl instance
+        id: create_inf2_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf2 $token djl-serving
+    outputs:
+      inf2_instance_id_1: ${{ steps.create_inf2_1.outputs.action_inf2_instance_id }}
+      inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
+
+  test:
+    needs: [ create-runners ]
+    runs-on:
+      - self-hosted
+      - inf2
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name:
+          - TestNeuronx1
+          - TestNeuronx2
+          - TestNeuronxRollingBatch
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
+      - name: Install torch
+        # Use torch to get cuda capability of current device to selectively run tests
+        # Torch version doesn't really matter that much
+        run: |
+          pip3 install torch
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          wget https://publish.djl.ai/awscurl/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Test
+        working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+        run: |
+          python -m pytest -k ${{ matrix.test_name }} tests.py
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf outputs
+          rm awscurl
+      - name: On Failure
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          sudo rm -rf outputs && sudo rm -rf models
+          rm awscurl
+          ./remove_container.sh
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.test_name }}-logs
+          path: tests/integration/all_logs/
+
+  transformers-neuronx-container-unit-tests:
+    runs-on:
+      - self-hosted
+      - inf2
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
+      - WORKFLOW-${{ github.workflow }}
+    timeout-minutes: 15
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy pillow wheel
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Run djl_python unit/integration tests on container
+        working-directory: engines/python/setup
+        run: |
+          # Setup
+          pip install setuptools
+          python3 -m setup bdist_wheel
+          mkdir logs
+          docker run -t --rm --network="host" \
+          --name neuron-test \
+          -v $PWD/:/opt/ml/model/ \
+          -w /opt/ml/model \
+          --device=/dev/neuron0:/dev/neuron0 \
+          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
+          pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
+          
+          # Cleanup
+          sudo rm -rf TinyLlama .pytest_cache djl_python
+          
+          # Fail on failed tests
+          if grep -F "failed" logs/results.log &>/dev/null; then exit 1; fi
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: engines/python/setup
+        run: |
+          cat logs/results.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: transformers-neuronx-${{ matrix.arch }}-logs
+          path: engines/python/setup/logs/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, test, transformers-neuronx-container-unit-tests ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
+          ./stop_instance.sh $instance_id
