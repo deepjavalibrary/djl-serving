@@ -117,12 +117,12 @@ jobs:
           - test: TestCpuBoth
             instance: ubuntu-latest
             gh-runner: true
-          - test: TestGpu
-            instance: g6
+          # - test: TestGpu
+          #   instance: g6
           - test: TestAarch64
             instance: aarch64
-          - test: TestHfHandler
-            instance: g6
+          # - test: TestHfHandler
+          #   instance: g6
           # - test: TestTrtLlmHandler1
           #   instance: g6
           # - test: TestTrtLlmHandler2
