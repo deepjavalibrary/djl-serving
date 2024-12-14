@@ -204,10 +204,10 @@ jobs:
           tempRunIdTag="${{ env.AWS_ECR_REPO }}aarch64-${{ inputs.mode }}-${GITHUB_RUN_ID}"
           tempCommitTag="${{ env.AWS_ECR_REPO }}:aarch64-${{ inputs.mode }}-${GITHUB_SHA}"
 
-          docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64}${{ env.NIGHTLY }} $tempRunIdTag
+          docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} $tempRunIdTag
           docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} $tempCommitTag
           if ${{ inputs.mode == 'nightly' }}; then
-            docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} $${{ env.AWS_ECR_REPO }}:aarch64-nightly
+            docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:aarch64-nightly
           fi
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
