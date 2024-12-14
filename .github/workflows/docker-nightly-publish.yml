@@ -111,7 +111,7 @@ jobs:
           if ${{ inputs.mode == 'nightly' }}; then
             docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
           fi
-          time docker push --all-tags  ${{ env.DOCKER_HUB_REPO }}
+          time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
   create-runner:
     runs-on: [ self-hosted, scheduler ]
@@ -209,7 +209,7 @@ jobs:
           if ${{ inputs.mode == 'nightly' }}; then
             docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} $${{ env.AWS_ECR_REPO }}:aarch64-nightly
           fi
-          time docker push --all-tags  ${{ env.DOCKER_HUB_REPO }}
+          time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
   stop-runner:
     if: always()
