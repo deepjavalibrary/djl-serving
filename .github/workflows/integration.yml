@@ -28,6 +28,10 @@ on:
       images-to-push:
         value: ${{ jobs.test_results.outputs.images_to_push }}
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
