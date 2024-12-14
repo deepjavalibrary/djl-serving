@@ -7,6 +7,11 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: 'nightly'
   workflow_call:
     inputs:
       djl-version:
@@ -14,6 +19,11 @@ on:
         required: false
         type: string
         default: ''
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: 'nightly'
     outputs:
       images-to-push:
         value: ${{ jobs.test_results.outputs.images_to_push }}
@@ -121,8 +131,8 @@ jobs:
           #   instance: g6
           - test: TestAarch64
             instance: aarch64
-          # - test: TestHfHandler
-          #   instance: g6
+          - test: TestHfHandler
+            instance: g6
           # - test: TestTrtLlmHandler1
           #   instance: g6
           # - test: TestTrtLlmHandler2
@@ -198,6 +208,8 @@ jobs:
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
         run: |
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
