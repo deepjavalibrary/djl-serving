@@ -74,7 +74,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
                 request_output.prompt_tokens_details.append(prompt_token)
 
     # sets the details of all sequences
-    update_multiple_sequences(cache, request_output, vllm_request_output)
+    update_multiple_sequences(request_output, vllm_request_output)
 
     # remove finished requests from cache
     if vllm_request_output.finished:
@@ -89,49 +89,28 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     return request_cache
 
 
-def update_multiple_sequences(cache, request_output, vllm_request_output):
+def update_multiple_sequences(request_output, vllm_request_output):
     for completion_output in vllm_request_output.outputs:
-
         sequence_index = completion_output.index
-        if f"sequence_index_{sequence_index}" not in cache:
-            cache[f"sequence_index_{sequence_index}"] = {
-                "curr_length": 0,
-                "num_generated_tokens": 0
-            }
 
         if sequence_index not in request_output.sequences:
             request_output.sequences[sequence_index] = Sequence()
 
-        # set token of the sequence
-        # previous length of token ids generated
-        prev_len = cache[f"sequence_index_{sequence_index}"][
-            'num_generated_tokens']
-        # curr length of the token ids generated so far
-        cur_len = len(completion_output.token_ids)
-        cache[f"sequence_index_{sequence_index}"][
-            "num_generated_tokens"] = cur_len
-
         # get the newly generated token_ids
-        new_token_ids = completion_output.token_ids[
-            prev_len:
-            cur_len] if prev_len < cur_len else completion_output.token_ids
+        new_token_ids = completion_output.token_ids
 
         # get the newly generated token texts for speculative decoding
         output_token_texts = []
         if hasattr(completion_output, "output_token_texts"):
-            output_token_texts = completion_output.output_token_texts[
-                prev_len:
-                cur_len] if prev_len < cur_len else completion_output.output_token_texts
+            output_token_texts = completion_output.output_token_texts
 
         top_tokens = []
         token_texts = []
         # calculate log probs and token_texts
         if completion_output.logprobs:
-            new_logprobs_list = completion_output.logprobs[
-                prev_len:
-                cur_len] if prev_len < cur_len else completion_output.logprobs
             new_logprobs = []
-            for token_id, logprobs in zip(new_token_ids, new_logprobs_list):
+            for token_id, logprobs in zip(new_token_ids,
+                                          completion_output.logprobs):
                 new_logprobs.append(logprobs[token_id].logprob)
                 decoded_token = logprobs[token_id].decoded_token if logprobs[
                     token_id].decoded_token else ""
@@ -141,13 +120,10 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
                         Token(id=token_id_key,
                               text=logprob.decoded_token,
                               log_prob=logprob.logprob))
-
         elif new_token_ids:
             # TODO: Test and remove this. logprobs is always set 1. This case should never happen.
             new_logprobs = [None] * len(new_token_ids)
-            curr_length = cache[f"sequence_index_{sequence_index}"][
-                "curr_length"]
-            token_texts.append(completion_output.text[curr_length:])
+            token_texts.append(completion_output.text)
 
         if not output_token_texts:
             if len(token_texts) != len(new_token_ids):
@@ -185,9 +161,6 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
 
         request_output.sequences[sequence_index].set_next_top_tokens(
             top_tokens)
-
-        cache[f"sequence_index_{sequence_index}"]["curr_length"] = len(
-            completion_output.text)
 
 
 def get_speculative_decoding_metrics_record(
