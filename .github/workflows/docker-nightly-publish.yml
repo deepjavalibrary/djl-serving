@@ -109,7 +109,7 @@ jobs:
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
           if ${{ inputs.mode == 'nightly' }}; then
-            docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
+            docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
           fi
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
