@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ${{ toJson(inputs.arch) }}
+        arch: ${{ fromJson(inputs.arch) }}
     steps:
       - name: Clean disk space
         run: |
