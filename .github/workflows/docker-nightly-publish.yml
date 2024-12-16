@@ -11,7 +11,7 @@ on:
         description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
         type: string
         required: false
-        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi"]'
+        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   workflow_call:
     inputs:
       mode:
@@ -23,7 +23,7 @@ on:
         description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
         type: string
         required: false
-        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi"]'
+        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   schedule:
     - cron: '0 13 * * *'
 
