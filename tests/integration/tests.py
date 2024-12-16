@@ -43,6 +43,8 @@ class Runner:
                     flavor = djl_version
                 else:
                     flavor = f"{djl_version}-{container}"
+        if override_image_tag_suffix:
+            flavor = f"{container}-{override_image_tag_suffix}"
 
         self.image = f"{repo}:{flavor}"
 
