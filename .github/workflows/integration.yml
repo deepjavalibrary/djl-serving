@@ -275,7 +275,8 @@ jobs:
             DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-nightly"
           fi
           echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           echo $DOCKER_IMAGE_URI
           docker pull $DOCKER_IMAGE_URI
       - name: Run djl_python unit/integration tests on container

@@ -89,7 +89,7 @@ jobs:
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build temp docker image
-        if: ${{ inputs.mode == 'temp' || inputs.mode == 'nightly'}}
+        if: ${{ inputs.mode == 'temp' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           export NIGHTLY="-nightly"
@@ -183,7 +183,7 @@ jobs:
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build temp docker image
-        if: ${{ inputs.mode == 'temp' || inputs.mode == 'nightly'}}
+        if: ${{ inputs.mode == 'temp' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           export NIGHTLY="-nightly"
