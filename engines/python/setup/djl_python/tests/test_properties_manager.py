@@ -442,32 +442,39 @@ class TestConfigManager(unittest.TestCase):
         def test_long_lora_scaling_factors(properties):
             properties['long_lora_scaling_factors'] = "3.0"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "3"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "3.0,4.0"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
             properties['long_lora_scaling_factors'] = "3.0, 4.0 "
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
             properties['long_lora_scaling_factors'] = "(3.0,)"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "(3.0,4.0)"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
         def test_invalid_long_lora_scaling_factors(properties):
             properties['long_lora_scaling_factors'] = "a,b"
+            vllm_props = VllmRbProperties(**properties)
             with self.assertRaises(ValueError):
-                VllmRbProperties(**properties)
+                vllm_props.get_engine_args()
 
         properties = {
             'model_id': 'sample_model_id',
