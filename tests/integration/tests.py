@@ -10,7 +10,8 @@ import rb_client as rb_client
 import test_client
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
-override_image_tag_suffix = os.environ.get('OVERRIDE_IMAGE_TAG_SUFFIX', '').strip()
+override_image_tag_suffix = os.environ.get('OVERRIDE_IMAGE_TAG_SUFFIX',
+                                           '').strip()
 image_repo = os.environ.get('IMAGE_REPO', '').strip()
 
 
