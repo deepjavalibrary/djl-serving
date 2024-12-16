@@ -24,9 +24,8 @@ on:
         required: false
         type: string
         default: 'nightly'
-    outputs:
-      images-to-push:
-        value: ${{ jobs.test_results.outputs.images_to_push }}
+  schedule:
+    - cron: '0 15 * * *'
 
 permissions:
   id-token: write
@@ -311,18 +310,6 @@ jobs:
         with:
           name: transformers-neuronx-${{ matrix.arch }}-logs
           path: engines/python/setup/logs/
-      - name: Set test status
-        if: ${{ always() }}
-        id: test_status
-        run: |
-          echo ${{ job.status }}
-          if [[ ${{ job.status }} == "success" ]]; then
-            echo "test_result_Transformer_Neuron_UnitTest=true" >> \$GITHUB_OUTPUT
-          else
-            echo "test_result_${{ matrix.test.test }}=false" >> \$GITHUB_OUTPUT
-          fi
-    outputs:
-      test_result_Transformer_Neuron_UnitTest: ${{ steps.test_status.outputs.test_result_Transformer_Neuron_UnitTest }}
 
   stop-runners:
     if: always()
