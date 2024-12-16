@@ -52,7 +52,7 @@ class VLLMRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
-        self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
+        self.is_mistral_tokenizer = args.tokenizer_mode == 'mistral'
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
