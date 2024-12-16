@@ -41,6 +41,8 @@ jobs:
     strategy:
       matrix:
         arch: ${{ fromJson(inputs.arch) }}
+        exclude:
+          - arch: aarch64
     steps:
       - name: Clean disk space
         run: |
@@ -74,7 +76,7 @@ jobs:
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
           echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
-      - name: Build release docker image
+      - name: Build release candidate docker image
         if: ${{ inputs.mode == 'release'}}
         working-directory: serving/docker
         run: |
@@ -84,14 +86,11 @@ jobs:
           --build-arg djl_version=${{ env.DJL_VERSION }} \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
           ${{ matrix.arch }}
-      - name: Build serving package for nightly
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        run: |
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build temp docker image
-        if: ${{ inputs.mode == 'temp' || inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
+          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
           export NIGHTLY="-nightly"
           echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
           docker compose build --no-cache \
@@ -103,8 +102,12 @@ jobs:
         run: |
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-${{ inputs.mode }}-${GITHUB_RUN_ID}"
-          tempCommitTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-${{ inputs.mode }}-${GITHUB_SHA}"
+          mode=${{ inputs.mode }}
+          if [ "${{ inputs.mode }}" == "release" ]; then
+            mode=${{ env.DJL_VERSION }}
+          fi
+          tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_RUN_ID}"
+          tempCommitTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_SHA}"
 
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
@@ -114,6 +117,7 @@ jobs:
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
   create-runner:
+    if: contains(fromJSON(inputs.arch), 'aarch64')
     runs-on: [ self-hosted, scheduler ]
     steps:
       - name: Create new Graviton instance
@@ -129,6 +133,7 @@ jobs:
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
 
   nightly-aarch64:
+    if: contains(fromJSON(inputs.arch), 'aarch64')
     runs-on:
       - self-hosted
       - aarch64
@@ -168,7 +173,7 @@ jobs:
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
           echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
-      - name: Build release docker image
+      - name: Build release candidate docker image
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
@@ -178,14 +183,11 @@ jobs:
           --build-arg djl_version=${{ env.DJL_VERSION }} \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
           aarch64
-      - name: Build serving package for nightly
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        run: |
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build temp docker image
-        if: ${{ inputs.mode == 'temp' || inputs.mode == 'nightly' }}
+        if: ${{  inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
+          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
           export NIGHTLY="-nightly"
           echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
           docker compose build --no-cache \
@@ -201,8 +203,12 @@ jobs:
           aarch64
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          tempRunIdTag="${{ env.AWS_ECR_REPO }}aarch64-${{ inputs.mode }}-${GITHUB_RUN_ID}"
-          tempCommitTag="${{ env.AWS_ECR_REPO }}:aarch64-${{ inputs.mode }}-${GITHUB_SHA}"
+          mode=${{ inputs.mode }}
+          if [ "${{ inputs.mode }}" == "release" ]; then
+            mode=${{ env.DJL_VERSION }}
+          fi
+          tempRunIdTag="${{ env.AWS_ECR_REPO }}aarch64-$mode-${GITHUB_RUN_ID}"
+          tempCommitTag="${{ env.AWS_ECR_REPO }}:aarch64-$mode-${GITHUB_SHA}"
 
           docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} $tempRunIdTag
           docker tag ${{ env.DOCKER_HUB_REPO }}:aarch64${{ env.NIGHTLY }} $tempCommitTag
