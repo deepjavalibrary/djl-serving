@@ -130,8 +130,8 @@ jobs:
           - test: TestCpuBoth
             instance: ubuntu-latest
             gh-runner: true
-          # - test: TestGpu
-          #   instance: g6
+          - test: TestGpu
+            instance: g6
           - test: TestAarch64
             instance: aarch64
           - test: TestHfHandler
@@ -265,15 +265,14 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
-      - name: Build container name
-        run: |
-          ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         run: |
           if [ ${{ github.event.inputs.djl-version }} == "temp"  ]; then
-            DOCKER_IMAGE_URI="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp:pytorch-inf2-${GITHUB_SHA}-${GITHUB_RUN_ID}"
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}/djl-ci-temp:pytorch-inf2-temp-${GITHUB_SHA}"
+          elif [ -n "${{ inputs.tag-suffix }}" ]; then
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}/djl-ci-temp:pytorch-inf2-${{ inputs.tag-suffix }}"
           else
-            DOCKER_IMAGE_URI="deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG"
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}/djl-ci-temp:pytorch-inf2-nightly"
           fi
           echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
