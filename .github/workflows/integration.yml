@@ -137,36 +137,36 @@ jobs:
             instance: aarch64
           - test: TestHfHandler
             instance: g6
-          # - test: TestTrtLlmHandler1
-          #   instance: g6
-          # - test: TestTrtLlmHandler2
-          #   instance: g6
-          # - test: TestSchedulerSingleGPU
-          #   instance: g6
-          # - test: TestSchedulerMultiGPU
-          #   instance: g6
-          # - test: TestLmiDist1
-          #   instance: g6
-          # - test: TestLmiDist2
-          #   instance: g6
-          # - test: TestVllm1
-          #   instance: g6
-          # - test: TestVllmLora
-          #   instance: g6
-          # - test: TestLmiDistLora
-          #   instance: g6
-          # - test: TestNeuronx1
-          #   instance: inf2
-          # - test: TestNeuronx2
-          #   instance: inf2
-          # - test: TestNeuronxRollingBatch
-          #   instance: inf2
-          # - test: TestMultiModal
-          #   instance: g6
-          # - test: TestTextEmbedding
-          #   instance: g6
-          # - test: TestLmiDistPipelineParallel
-          #   instance: g6
+          - test: TestTrtLlmHandler1
+            instance: g6
+          - test: TestTrtLlmHandler2
+            instance: g6
+          - test: TestSchedulerSingleGPU
+            instance: g6
+          - test: TestSchedulerMultiGPU
+            instance: g6
+          - test: TestLmiDist1
+            instance: g6
+          - test: TestLmiDist2
+            instance: g6
+          - test: TestVllm1
+            instance: g6
+          - test: TestVllmLora
+            instance: g6
+          - test: TestLmiDistLora
+            instance: g6
+          - test: TestNeuronx1
+            instance: inf2
+          - test: TestNeuronx2
+            instance: inf2
+          - test: TestNeuronxRollingBatch
+            instance: inf2
+          - test: TestMultiModal
+            instance: g6
+          - test: TestTextEmbedding
+            instance: g6
+          - test: TestLmiDistPipelineParallel
+            instance: g6
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -237,66 +237,6 @@ jobs:
         with:
           name: test-${{ matrix.test.test }}-logs
           path: tests/integration/all_logs/
-      - name: Set test status
-        if: ${{ always() }}
-        id: test_status
-        run: |
-          echo ${{ job.status }}
-          if [[ ${{ job.status }} == "success" ]]; then
-            echo "test_result_${{ matrix.test.test }}=true" >> \$GITHUB_OUTPUT
-          else
-            echo "test_result_${{ matrix.test.test }}=false" >> \$GITHUB_OUTPUT
-          fi
-    outputs:
-      test_result_TestCpuFull: ${{ steps.test_status.outputs.test_result_TestCpuFull }}
-      test_result_TestCpuBoth: ${{ steps.test_status.outputs.test_result_TestCpuBoth }}
-      test_result_TestGpu: ${{ steps.test_status.outputs.test_result_TestGpu }}
-      test_result_TestAarch64: ${{ steps.test_status.outputs.test_result_TestAarch64 }}
-      test_result_TestHfHandler: ${{ steps.test_status.outputs.test_result_TestHfHandler }}
-      test_result_TestTrtLlmHandler1: ${{ steps.test_status.outputs.test_result_TestTrtLlmHandler1 }}
-      test_result_TestTrtLlmHandler2: ${{ steps.test_status.outputs.test_result_TestTrtLlmHandler2 }}
-      test_result_TestSchedulerSingleGPU: ${{ steps.test_status.outputs.test_result_TestSchedulerSingleGPU }}
-      test_result_TestSchedulerMultiGPU: ${{ steps.test_status.outputs.test_result_TestSchedulerMultiGPU }}
-      test_result_TestLmiDist1: ${{ steps.test_status.outputs.test_result_TestLmiDist1 }}
-      test_result_TestLmiDist2: ${{ steps.test_status.outputs.test_result_TestLmiDist2 }}
-      test_result_TestVllm1: ${{ steps.test_status.outputs.test_result_TestVllm1 }}
-      test_result_TestVllmLora: ${{ steps.test_status.outputs.test_result_TestVllmLora }}
-      test_result_TestLmiDistLora: ${{ steps.test_status.outputs.test_result_TestLmiDistLora }}
-      test_result_TestNeuronx1: ${{ steps.test_status.outputs.test_result_TestNeuronx1 }}
-      test_result_TestNeuronx2: ${{ steps.test_status.outputs.test_result_TestNeuronx2 }}
-      test_result_TestNeuronxRollingBatch: ${{ steps.test_status.outputs.test_result_TestNeuronxRollingBatch }}
-      test_result_TestMultiModal: ${{ steps.test_status.outputs.test_result_TestMultiModal }}
-      test_result_TestTextEmbedding: ${{ steps.test_status.outputs.test_result_TestTextEmbedding }}
-      test_result_TestLmiDistPipelineParallel: ${{ steps.test_status.outputs.test_result_TestLmiDistPipelineParallel }}
-      test_result_sheteng_not_Exist: ${{ steps.test_status.outputs.not_existing }}
-
-  test_results:
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: [ test, transformers-neuronx-container-unit-tests ]
-    steps:
-      - name: summarize
-        id: summarize_passing_image
-        run: |
-          declare -a image_list=()
-
-          echo needs.test.outputs.test_result_sheteng_not_Exist
-          echo ${{needs.test.outputs.test_result_sheteng_not_Exist}}
-
-          if [ "${{ needs.test.outputs.test_result_TestCpuBoth }}" = "true" ] && \
-            [ "${{ needs.test.outputs.test_result_TestCpuFull }}" = "true" ]; then
-            image_list+=("cpu")
-          fi
-
-          if [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" = "true" ] && \
-            [ "${{ needs.test.outputs.test_result_TestNeuronx1 }}" = "true" ]; then
-            push_neron_image=true
-          fi
-          json_array=$(printf '%s\n' "${image_list[@]}" | jq -R . | jq -s .)
-          echo "image_list=$json_array" >> $GITHUB_OUTPUT
-    outputs: 
-      images_to_push: ${{ steps.summarize_passing_image.outputs.image_list }}
 
   transformers-neuronx-container-unit-tests:
     runs-on:
