@@ -3,6 +3,8 @@ import json
 import unittest
 from unittest import mock
 
+from vllm import EngineArgs
+
 from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
@@ -422,70 +424,92 @@ class TestConfigManager(unittest.TestCase):
 
     def test_vllm_properties(self):
         # test with valid vllm properties
+        def validate_vllm_config_and_engine_args_match(
+            vllm_config_value,
+            engine_arg_value,
+            expected_value,
+        ):
+            self.assertEqual(vllm_config_value, expected_value)
+            self.assertEqual(engine_arg_value, expected_value)
 
-        def test_vllm_valid(properties):
-            vllm_configs = VllmRbProperties(**properties)
+        def test_vllm_default_properties():
+            required_properties = {
+                "engine": "Python",
+                "model_id_or_path": "some_model",
+            }
+            vllm_configs = VllmRbProperties(**required_properties)
             engine_args = vllm_configs.get_engine_args()
-            self.assertEqual(vllm_configs.model_id_or_path, engine_args.model)
-            self.assertEqual(vllm_configs.max_rolling_batch_prefill_tokens,
-                             engine_args.max_num_batched_tokens)
-            self.assertEqual(vllm_configs.tensor_parallel_degree,
-                             engine_args.tensor_parallel_size)
-            self.assertEqual(vllm_configs.pipeline_parallel_degree,
-                             engine_args.pipeline_parallel_size)
-            self.assertEqual(vllm_configs.quantize, engine_args.quantization)
-            self.assertEqual(DTYPE_MAPPER[vllm_configs.dtype],
-                             engine_args.dtype)
-            self.assertEqual(vllm_configs.cpu_offload_gb_per_gpu,
-                             engine_args.cpu_offload_gb)
+            validate_vllm_config_and_engine_args_match(
+                vllm_configs.model_id_or_path, engine_args.model, "some_model")
+            validate_vllm_config_and_engine_args_match(
+                vllm_configs.tensor_parallel_degree,
+                engine_args.tensor_parallel_size, 1)
+            validate_vllm_config_and_engine_args_match(
+                vllm_configs.pipeline_parallel_degree,
+                engine_args.pipeline_parallel_size, 1)
+            validate_vllm_config_and_engine_args_match(
+                vllm_configs.quantize, engine_args.quantization, None)
+            validate_vllm_config_and_engine_args_match(
+                vllm_configs.max_rolling_batch_size, engine_args.max_num_seqs,
+                HuggingFaceProperties.max_rolling_batch_size)
+            validate_vllm_config_and_engine_args_match(vllm_configs.dtype,
+                                                       engine_args.dtype,
+                                                       'auto')
+            validate_vllm_config_and_engine_args_match(vllm_configs.max_loras,
+                                                       engine_args.max_loras,
+                                                       4)
+            self.assertEqual(vllm_configs.cpu_offload_gb_per_gpu, None)
+            self.assertEqual(
+                len(vllm_configs.get_additional_vllm_engine_args()), 0)
 
-        def test_long_lora_scaling_factors(properties):
-            properties['long_lora_scaling_factors'] = "3.0"
+        def test_long_lora_scaling_factors():
+            properties = {
+                "engine": "Python",
+                "model_id_or_path": "some_model",
+                'long_lora_scaling_factors': "3.0"
+            }
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "3"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "3.0,4.0"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
             properties['long_lora_scaling_factors'] = "3.0, 4.0 "
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
             properties['long_lora_scaling_factors'] = "(3.0,)"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "(3.0,4.0)"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
-        def test_invalid_long_lora_scaling_factors(properties):
-            properties['long_lora_scaling_factors'] = "a,b"
+        def test_invalid_long_lora_scaling_factors():
+            properties = {
+                "engine": "Python",
+                "model_id_or_path": "some_model",
+                'long_lora_scaling_factors': "a,b"
+            }
+            vllm_props = VllmRbProperties(**properties)
             with self.assertRaises(ValueError):
-                VllmRbProperties(**properties)
+                vllm_props.get_engine_args()
 
-        properties = {
-            'model_id': 'sample_model_id',
-            'engine': 'Python',
-            'max_rolling_batch_prefill_tokens': '12500',
-            'max_model_len': '12800',
-            'tensor_parallel_degree': '2',
-            'dtype': 'fp16',
-            'quantize': 'awq',
-            'enforce_eager': "True",
-            'enable_lora': "true",
-            "gpu_memory_utilization": "0.85",
-            'load_format': 'pt',
-            'cpu_offload_gb_per_gpu': '3',
-        }
-        test_vllm_valid(properties.copy())
-        test_long_lora_scaling_factors(properties.copy())
-        test_invalid_long_lora_scaling_factors(properties.copy())
+        test_vllm_default_properties()
+        test_long_lora_scaling_factors()
+        test_invalid_long_lora_scaling_factors()
 
     def test_sd_inf2_properties(self):
         properties = {
