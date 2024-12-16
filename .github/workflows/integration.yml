@@ -268,11 +268,11 @@ jobs:
       - name: Download models and dockers
         run: |
           if [ "${{ github.event.inputs.djl-version }}" == "temp"  ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}/djl-ci-temp:pytorch-inf2-temp-${GITHUB_SHA}"
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-temp-${GITHUB_SHA}"
           elif [ -n "${{ inputs.tag-suffix }}" ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}/djl-ci-temp:pytorch-inf2-${{ inputs.tag-suffix }}"
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-${{ inputs.tag-suffix }}"
           else
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}/djl-ci-temp:pytorch-inf2-nightly"
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-nightly"
           fi
           echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
