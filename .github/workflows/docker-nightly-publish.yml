@@ -1,4 +1,5 @@
-name: Build and push docker nightly
+name: OLD Build and push docker nightly
+# For use in building CVE patches for branches <= 0.28.0
 
 on:
   workflow_dispatch:
@@ -14,8 +15,6 @@ on:
         type: string
         required: true
         default: 'nightly'
-  schedule:
-    - cron: '0 13 * * *'
 
 permissions:
   id-token: write
