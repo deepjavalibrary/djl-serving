@@ -83,7 +83,7 @@ jobs:
           aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_STAGING_ECR_REPO }}
       - name: Get DJL Version
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ./gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
       - name: Pull and sync to docker hub
         working-directory: serving/docker
