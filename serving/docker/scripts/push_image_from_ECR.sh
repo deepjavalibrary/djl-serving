@@ -17,8 +17,8 @@ for image in $images; do
   else
     tag="$image-nightly"
   fi
-  echo docker pull $temprepo:$image-$mode-$GITHUB_RUN_ID
-  docker pull $temprepo:$image-$mode-$GITHUB_RUN_ID
-  echo docker tag $temprepo:$image-$mode-$GITHUB_RUN_ID $repo:$tag
+  echo docker pull $temprepo:$image-$mode-$GITHUB_SHA
+  docker pull $temprepo:$image-$mode-$GITHUB_SHA
+  echo docker tag $temprepo:$image-$mode-$GITHUB_SHA $repo:$tag
   echo docker push $repo:$tag
 done

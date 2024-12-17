@@ -92,9 +92,9 @@ jobs:
           ${{ matrix.arch }}
       - name: Build temp docker image
         if: ${{ inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
-        working-directory: serving/docker
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
+          cd serving/docker
           export NIGHTLY="-nightly"
           echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
           docker compose build --no-cache \
@@ -189,9 +189,9 @@ jobs:
           aarch64
       - name: Build temp docker image
         if: ${{  inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
-        working-directory: serving/docker
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
+          cd serving/docker
           export NIGHTLY="-nightly"
           echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
           docker compose build --no-cache \
