@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple, Union
 
 import torch
+from transformers import DynamicCache
 
 
 class LMBlock(ABC):
@@ -107,34 +108,17 @@ class BloomBlock(LMBlock):
 
         # Pre-process
         if past_key_values is not None:
-            _, num_head, seq_len, kv_dim = past_key_values[0][0].shape
-            new_kv_list = []
-            for k, v in past_key_values:
-                k_new = torch.permute(
-                    k.view(batch_size * num_head, seq_len, kv_dim), (0, 2, 1))
-                v_new = v.view(batch_size * num_head, seq_len, kv_dim)
-                new_kv_list.append((k_new, v_new))
-            past_key_values = tuple(new_kv_list)
+            cache = DynamicCache.from_legacy_cache(past_key_values)
+        else:
+            cache = DynamicCache()
 
         # Forward
         output = self.model.forward(input_ids=input_ids,
                                     position_ids=position_ids,
                                     attention_mask=attention_mask,
-                                    past_key_values=past_key_values,
+                                    past_key_values=cache,
                                     **self.config)
-        past_key_values = output.past_key_values
-
-        # Post-process
-        _, kv_dim, seq_len = past_key_values[0][0].shape
-        new_kv_list = []
-        for k, v in past_key_values:
-            k_new = torch.permute(k, (0, 2, 1)).view(batch_size, -1, seq_len,
-                                                     kv_dim)
-            v_new = v.view(batch_size, -1, seq_len, kv_dim)
-            new_kv_list.append((k_new, v_new))
-        past_key_values = tuple(new_kv_list)
-        output.past_key_values = past_key_values
-
+        output.past_key_values = output.past_key_values.to_legacy_cache()
         return output
 
 

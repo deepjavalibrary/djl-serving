@@ -56,8 +56,8 @@ if __name__ == '__main__':
     requirements = ['psutil', 'packaging', 'wheel']
 
     test_requirements = [
-        'numpy<2', 'requests', 'Pillow', 'transformers==4.43.4', 'torch',
-        'einops', 'accelerate', 'sentencepiece', 'protobuf', "peft", 'yapf',
+        'numpy<2', 'requests', 'Pillow', 'transformers', 'torch', 'einops',
+        'accelerate', 'sentencepiece', 'protobuf', "peft", 'yapf',
         'pydantic>=2.0', "objgraph"
     ]
 
