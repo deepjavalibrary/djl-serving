@@ -7,6 +7,11 @@ if [ $# -lt 3 ]; then
     echo "Usage: $0 <version> <to_repo> <mode> [commit_sha]" >&2
     exit 1
 fi
+# Validate required environment variables
+if [ -z "$AWS_TMP_ECR_REPO" ]; then
+    echo "ERROR: AWS_TMP_ECR_REPO environment variable is not set" >&2
+    exit 1
+fi
 
 version=$1
 to_repo=$2
