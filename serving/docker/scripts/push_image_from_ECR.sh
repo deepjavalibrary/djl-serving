@@ -17,7 +17,7 @@ images=(cpu aarch64 cpu-full pytorch-inf2 pytorch-gpu lmi tensorrt-llm)
 
 from_repo=$AWS_TMP_ECR_REPO
 
-for image in $images; do
+for image in "${images[@]}"; do
 
   if [[ "$mode" == "release" ]]; then
     if [[ "$image" == "cpu" ]]; then
