@@ -11,6 +11,10 @@ on:
         options:
           - nightly
           - release
+      commit_sha:
+        description: 'specify which sha value the image was built.'
+        required: false
+        default: ''
   workflow_call:
     inputs:
       mode:
@@ -18,6 +22,11 @@ on:
         type: string
         required: true
         default: 'nightly'
+      commit_sha:
+        type: string
+        description: 'specify which sha value the image was built.'
+        required: false
+        default: ''
 
 permissions:
   id-token: write
@@ -73,13 +82,13 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           aws ecr get-login-password --region $ECR_REPO_REGION | docker login --username AWS --password-stdin ${{env.AWS_TMP_ECR_REPO}}
-          ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }}
+          ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }} ${{ inputs.commit_sha }}
       - name: Pull and sync to ECR
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           aws ecr get-login-password --region $ECR_REPO_REGION | docker login --username AWS --password-stdin $AWS_STAGING_ECR_REPO
-          ./scripts/push_image_from_ECR.sh $DJL_VERSION $repo ${{ inputs.mode }}
+          ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ inputs.commit_sha }}
       - name: Retag image for release latest
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
