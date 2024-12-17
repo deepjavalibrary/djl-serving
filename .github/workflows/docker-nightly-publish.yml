@@ -24,9 +24,10 @@ on:
         type: string
         required: false
         default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
-  schedule:
-    - cron: '0 13 * * *'
-
+    outputs:
+      djl_version: 
+        description: "djl version"
+        value: ${{ jobs.nightly-build.outputs.djl_version }}
 permissions:
   id-token: write
   contents: read
@@ -43,6 +44,8 @@ jobs:
         arch: ${{ fromJson(inputs.arch) }}
         exclude:
           - arch: aarch64
+    outputs:
+      djl_version: ${{ steps.get-versions.outputs.DJL_VERSION }}
     steps:
       - name: Clean disk space
         run: |
@@ -76,6 +79,7 @@ jobs:
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
           echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
+          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_OUTPUT
       - name: Build release candidate docker image
         if: ${{ inputs.mode == 'release'}}
         working-directory: serving/docker

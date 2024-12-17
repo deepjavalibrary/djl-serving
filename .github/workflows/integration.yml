@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       djl-version:
-        description: 'The released version of DJL'
+        description: 'The released version of DJL.'
         required: false
         default: ''
       tag-suffix:
@@ -15,17 +15,15 @@ on:
   workflow_call:
     inputs:
       djl-version:
-        description: 'The released version of DJL'
+        description: 'The released version of DJL.'
         required: false
         type: string
-        default: ''
+        default: 'nightly'
       tag-suffix:
         description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
         required: false
         type: string
-        default: 'nightly'
-  schedule:
-    - cron: '0 15 * * *'
+        default: ''
 
 permissions:
   id-token: write

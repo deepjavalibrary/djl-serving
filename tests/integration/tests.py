@@ -36,14 +36,11 @@ class Runner:
         if djl_version is None or len(
                 djl_version) == 0 or djl_version == "nightly":
             flavor = f"{container}-nightly"
+        elif djl_version == "temp":
+            flavor = f"{container}-temp-{os.environ['GITHUB_SHA']}"
         else:
-            if djl_version == "temp":
-                flavor = f"{container}-temp-{os.environ['GITHUB_SHA']}"
-            else:
-                if container == "cpu":
-                    flavor = djl_version
-                else:
-                    flavor = f"{djl_version}-{container}"
+            flavor = f"{container}-{djl_version}-{os.environ['GITHUB_SHA']}"
+
         if override_image_tag_suffix:
             flavor = f"{container}-{override_image_tag_suffix}"
 
