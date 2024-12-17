@@ -18,6 +18,7 @@ for image in $images; do
     tag="$image-nightly"
   fi
   echo docker pull $temprepo:$image-$mode-$GITHUB_RUN_ID
+  docker pull $temprepo:$image-$mode-$GITHUB_RUN_ID
   echo docker tag $temprepo:$image-$mode-$GITHUB_RUN_ID $repo:$tag
   echo docker push $repo:$tag
 done
