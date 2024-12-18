@@ -37,6 +37,6 @@ for image in "${images[@]}"; do
     tag="$image-nightly"
   fi
   docker pull $from_repo:$image-$mode-$commit_sha
-  docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
-  docker push $to_repo:$tag
+  echo docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
+  echo docker push $to_repo:$tag
 done
