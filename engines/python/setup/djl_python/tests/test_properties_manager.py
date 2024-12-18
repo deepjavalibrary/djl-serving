@@ -9,7 +9,7 @@ from djl_python.properties_manager.tnx_properties import (
     TnXMemoryLayout, TnXDtypeName, TnXModelLoaders)
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties, DTYPE_MAPPER
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
@@ -425,63 +425,56 @@ class TestConfigManager(unittest.TestCase):
 
         def test_vllm_valid(properties):
             vllm_configs = VllmRbProperties(**properties)
-            self.assertEqual(vllm_configs.model_id_or_path,
-                             properties['model_id'])
-            self.assertEqual(vllm_configs.engine, properties['engine'])
-            self.assertEqual(
-                vllm_configs.max_rolling_batch_prefill_tokens,
-                int(properties['max_rolling_batch_prefill_tokens']))
-            self.assertEqual(vllm_configs.dtype, properties['dtype'])
-            self.assertEqual(vllm_configs.load_format,
-                             properties['load_format'])
-            self.assertEqual(vllm_configs.quantize, properties['quantize'])
+            engine_args = vllm_configs.get_engine_args()
+            self.assertEqual(vllm_configs.model_id_or_path, engine_args.model)
+            self.assertEqual(vllm_configs.max_rolling_batch_prefill_tokens,
+                             engine_args.max_num_batched_tokens)
             self.assertEqual(vllm_configs.tensor_parallel_degree,
-                             int(properties['tensor_parallel_degree']))
-            self.assertEqual(vllm_configs.max_model_len,
-                             int(properties['max_model_len']))
-            self.assertEqual(vllm_configs.enforce_eager,
-                             bool(properties['enforce_eager']))
-            self.assertEqual(vllm_configs.enable_lora,
-                             bool(properties['enable_lora']))
-            self.assertEqual(vllm_configs.gpu_memory_utilization,
-                             float(properties['gpu_memory_utilization']))
-
-        def test_enforce_eager(properties):
-            properties.pop('enforce_eager')
-            properties.pop('quantize')
-            self.assertTrue("enforce_eager" not in properties)
-            vllm_props = VllmRbProperties(**properties)
-            self.assertTrue(vllm_props.enforce_eager is False)
+                             engine_args.tensor_parallel_size)
+            self.assertEqual(vllm_configs.pipeline_parallel_degree,
+                             engine_args.pipeline_parallel_size)
+            self.assertEqual(vllm_configs.quantize, engine_args.quantization)
+            self.assertEqual(DTYPE_MAPPER[vllm_configs.dtype],
+                             engine_args.dtype)
+            self.assertEqual(vllm_configs.cpu_offload_gb_per_gpu,
+                             engine_args.cpu_offload_gb)
 
         def test_long_lora_scaling_factors(properties):
             properties['long_lora_scaling_factors'] = "3.0"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "3"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "3.0,4.0"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
             properties['long_lora_scaling_factors'] = "3.0, 4.0 "
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
             properties['long_lora_scaling_factors'] = "(3.0,)"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, ))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, ))
 
             properties['long_lora_scaling_factors'] = "(3.0,4.0)"
             vllm_props = VllmRbProperties(**properties)
-            self.assertEqual(vllm_props.long_lora_scaling_factors, (3.0, 4.0))
+            engine_args = vllm_props.get_engine_args()
+            self.assertEqual(engine_args.long_lora_scaling_factors, (3.0, 4.0))
 
         def test_invalid_long_lora_scaling_factors(properties):
             properties['long_lora_scaling_factors'] = "a,b"
+            vllm_props = VllmRbProperties(**properties)
             with self.assertRaises(ValueError):
-                VllmRbProperties(**properties)
+                vllm_props.get_engine_args()
 
         properties = {
             'model_id': 'sample_model_id',
@@ -494,10 +487,10 @@ class TestConfigManager(unittest.TestCase):
             'enforce_eager': "True",
             'enable_lora': "true",
             "gpu_memory_utilization": "0.85",
-            'load_format': 'pt'
+            'load_format': 'pt',
+            'cpu_offload_gb_per_gpu': '3',
         }
         test_vllm_valid(properties.copy())
-        test_enforce_eager(properties.copy())
         test_long_lora_scaling_factors(properties.copy())
         test_invalid_long_lora_scaling_factors(properties.copy())
 
