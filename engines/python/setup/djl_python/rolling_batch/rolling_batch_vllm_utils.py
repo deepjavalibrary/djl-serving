@@ -304,7 +304,7 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
         )
 
 
-def get_multi_modal_data(request: Request) -> dict:
+def get_multi_modal_data(request: Request) -> Optional[dict]:
     parameters = request.parameters
     images = parameters.pop("images", None)
     multi_modal_data = None
@@ -320,8 +320,10 @@ def get_prompt_inputs(request: Request):
     # In both HuggingFace and mistral cases, that process can also yield token-ids directly
     # that we may want to consider passing directly to the engine
     if isinstance(text_prompt, list):
-        return TokensPrompt(prompt_token_ids=text_prompt,
-                            multi_modal_data=multi_modal_data)
+        prompt = TokensPrompt(prompt_token_ids=text_prompt)
     else:
-        return TextPrompt(prompt=text_prompt,
-                          multi_modal_data=multi_modal_data)
+        prompt = TextPrompt(prompt=text_prompt)
+
+    if multi_modal_data is not None:
+        prompt["multi_modal_data"] = multi_modal_data
+    return prompt

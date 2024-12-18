@@ -128,7 +128,7 @@ def remove_option_from_properties(properties: dict):
 def init_hf_tokenizer(model_id_or_path: str, hf_configs):
     tokenizer = AutoTokenizer.from_pretrained(
         model_id_or_path,
-        padding_size="left",
+        padding_side="left",
         trust_remote_code=hf_configs.trust_remote_code,
         revision=hf_configs.revision,
     )

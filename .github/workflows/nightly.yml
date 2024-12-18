@@ -25,7 +25,7 @@ on:
 permissions:
     id-token: write
     contents: read
-    
+
 jobs:
     build:
         uses: ./.github/workflows/docker-nightly-publish.yml

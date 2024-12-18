@@ -250,8 +250,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 if (translatorFactory != null) {
                     builder.optArgument("translatorFactory", translatorFactory);
                 }
-                if (batchSize > 1) {
+                if (batchSize > 1 && !arguments.containsKey("batchifier")) {
                     builder.optArgument("batchifier", "stack");
+                }
+                if (translator == null
+                        && translatorFactory == null
+                        && "Python".equals(engineName)
+                        && !arguments.containsKey("translator")
+                        && !arguments.containsKey("translatorFactory")) {
+                    builder.optTranslatorFactory(new NoopServingTranslatorFactory());
                 }
             }
             logger.info("Loading model {} {} on {}", id, uid, device);
@@ -264,9 +271,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (downloadDir != null) {
                 // override model_id
                 builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
-            }
-            if (translator == null && translatorFactory == null && "Python".equals(engineName)) {
-                builder.optTranslatorFactory(new NoopServingTranslatorFactory());
             }
             ZooModel<I, O> m = builder.build().loadModel();
             m.setProperty("metric_dimension", id);

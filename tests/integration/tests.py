@@ -983,6 +983,12 @@ class TestMultiModalLmiDist:
             r.launch()
             client.run("multimodal pixtral-12b".split())
 
+    def test_mllama_11b(self):
+        with Runner('lmi', 'llama32-11b-multimodal') as r:
+            prepare.build_lmi_dist_model('llama32-11b-multimodal')
+            r.launch()
+            client.run("multimodal llama32-11b-multimodal".split())
+
 
 class TestMultiModalVllm:
 
