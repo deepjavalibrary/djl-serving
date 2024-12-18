@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# for djl-serving/.github/workflows/nightly-docker-ecr-sync.yml
 
 version=$1
 repo=$2

@@ -1,4 +1,4 @@
-name: Build and push docker nightly to temp ECR repo
+name: Publish docker nightly to dockerhub & staging ECR repo
 
 on:
   workflow_dispatch:
@@ -11,6 +11,10 @@ on:
         options:
           - nightly
           - release
+      commit_sha:
+        description: 'specify which sha value the image was built with.'
+        required: false
+        default: ''
   workflow_call:
     inputs:
       mode:
@@ -18,13 +22,20 @@ on:
         type: string
         required: true
         default: 'nightly'
+      commit_sha:
+        type: string
+        description: 'specify which sha value the image aws built with.'
+        required: false
+        default: ''
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+  AWS_TMP_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+  AWS_STAGING_ECR_REPO: "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving"
+  ECR_REPO_REGION: "us-east-1"
 
 jobs:
   create-aarch64-runner:
@@ -66,25 +77,26 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_TMP_ECR_REPO }}
+          aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_STAGING_ECR_REPO }}
+      - name: Get DJL Version
+        run: |
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ./gradle/libs.versions.toml)
+          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
       - name: Pull and sync to docker hub
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          ./scripts/pull_and_retag.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }}
+          ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }} ${{ inputs.commit_sha }}
       - name: Pull and sync to ECR
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
-          repo="125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving"
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          ./scripts/pull_and_retag.sh $DJL_VERSION $repo ${{ inputs.mode }}
+          ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ inputs.commit_sha }}
       - name: Retag image for release latest
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
           docker push deepjavalibrary/djl-serving:latest
       - name: Clean docker env

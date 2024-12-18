@@ -11,6 +11,8 @@ model_path=$2   #required
 platform=$3     #required
 args=${@:4}     #optional
 
+echo launch_container.sh: using docker image: $docker_image
+
 is_sm_neo_context=false
 if [[ $4 == "sm_neo_context" ]]; then
   is_sm_neo_context=true
