@@ -201,6 +201,7 @@ jobs:
           chmod +x awscurl
           mkdir outputs
       - name: Configure AWS Credentials
+        if: matrix.test.instance == 'ubuntu-latest'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
