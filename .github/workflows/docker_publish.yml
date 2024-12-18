@@ -1,4 +1,4 @@
-name: Build and push docker nightly to temp ECR repo
+name: Publish docker nightly to dockerhub & staging ECR repo
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
           - nightly
           - release
       commit_sha:
-        description: 'specify which sha value the image was built.'
+        description: 'specify which sha value the image was built with.'
         required: false
         default: ''
   workflow_call:
@@ -24,7 +24,7 @@ on:
         default: 'nightly'
       commit_sha:
         type: string
-        description: 'specify which sha value the image was built.'
+        description: 'specify which sha value the image aws built with.'
         required: false
         default: ''
 
