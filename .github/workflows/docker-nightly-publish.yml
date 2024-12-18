@@ -22,11 +22,106 @@ permissions:
   contents: read
 
 jobs:
+  create-runners:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
+      - name: Create new CPU instance
+        id: create_cpu_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_3
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_4
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_5
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_6
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create Graviton instance
+        id: create_graviton_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token djl-serving
+    outputs:
+      cpu_instance_id_1: ${{ steps.create_cpu_1.outputs.action_cpu_instance_id }}
+      cpu_instance_id_2: ${{ steps.create_cpu_2.outputs.action_cpu_instance_id }}
+      cpu_instance_id_3: ${{ steps.create_cpu_3.outputs.action_cpu_instance_id }}
+      cpu_instance_id_4: ${{ steps.create_cpu_4.outputs.action_cpu_instance_id }}
+      cpu_instance_id_5: ${{ steps.create_cpu_5.outputs.action_cpu_instance_id }}
+      cpu_instance_id_6: ${{ steps.create_cpu_6.outputs.action_cpu_instance_id }}
+      graviton_instance_id_1: ${{ steps.create_graviton_1.outputs.action_graviton_instance_id }}
   nightly-build:
-    runs-on: ubuntu-latest
+    needs: create-runners
     strategy:
+      fail-fast: false
       matrix:
-        arch: [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi ]
+        containers:
+          - name: cpu
+            instance: cpu
+          - name: cpu-full
+            instance: cpu
+          - name: pytorch-inf2
+            instance: cpu
+          - name: pytorch-gpu
+            instance: cpu
+          - name: tensorrt-llm
+            instance: cpu
+          - name: lmi
+            instance: cpu
+          - name: aarch64
+            instance: aarch64
+    runs-on:
+      - self-hosted
+      - ${{ matrix.containers.instance }}
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     steps:
       - name: Clean disk space
         run: |
@@ -39,7 +134,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
       - name: install awscli
         run: |
           sudo apt-get update
@@ -77,8 +172,8 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
+          ${{ matrix.containers.name }}
+          docker compose push ${{ matrix.containers.name }}
       - name: Build and push temp image
         if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
@@ -87,11 +182,11 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{ matrix.arch }}
+          ${{ matrix.containers.name }}
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
-          docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
+          tempTag="$repo:${{ matrix.containers.name }}-${GITHUB_SHA}"
+          docker tag deepjavalibrary/djl-serving:${{ matrix.containers.name }}-nightly $tempTag
           docker push $tempTag
       - name: Build and push release docker image
         if: ${{ inputs.mode == 'release' }}
@@ -102,123 +197,33 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }} \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
-          ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
+          ${{ matrix.containers.name }}
+          docker compose push ${{ matrix.containers.name }}
       - name: Retag image for release
-        if: ${{ matrix.arch == 'cpu' && inputs.mode == 'release' }}
+        if: ${{ matrix.containers.name == 'cpu' && inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           docker tag deepjavalibrary/djl-serving:${{ env.SERVING_VERSION }} deepjavalibrary/djl-serving:latest
           docker push deepjavalibrary/djl-serving:latest
-
-  create-runner:
-    runs-on: [ self-hosted, scheduler ]
-    steps:
-      - name: Create new Graviton instance
-        id: create_aarch64
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token djl-serving
-    outputs:
-      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
-
-  nightly-aarch64:
-    runs-on:
-      - self-hosted
-      - aarch64
-      - RUN_ID-${{ github.run_id }}
-      - RUN_NUMBER-${{ github.run_number }}
-      - SHA-${{ github.sha }}
-    timeout-minutes: 60
-    needs: create-runner
-    steps:
-      - uses: actions/checkout@v4
-      - name: Clean docker env
-        working-directory: serving/docker
-        run: |
-          yes | docker system prune -a --volumes
-      - name: Login to Docker
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: install awscli
-        run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
-          aws-region: us-east-1
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'corretto'
-          java-version: 17
-      - uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-      - name: Extract DJL and DJL Serving versions from TOML
-        id: get-versions
-        run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
-          SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
-          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
-          echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
-      - name: Build serving package for nightly
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        run: |
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
-      - name: Build and push nightly docker image
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        working-directory: serving/docker
-        run: |
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          aarch64
-          docker compose push aarch64
-      - name: Build and push temp image
-        if: ${{ inputs.mode == 'temp' }}
-        working-directory: serving/docker
-        run: |
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          aarch64
-          repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:aarch64-${GITHUB_SHA}"
-          docker tag deepjavalibrary/djl-serving:aarch64-nightly $tempTag
-          docker push $tempTag
-      - name: Build and push release docker image
-        if: ${{ inputs.mode == 'release' }}
-        working-directory: serving/docker
-        run: |
-          export BASE_RELEASE_VERSION="${{ env.SERVING_VERSION }}"
-          export RELEASE_VERSION="${{ env.SERVING_VERSION }}-"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }} \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
-          aarch64
-          docker compose push aarch64
-
-
-  stop-runner:
+  stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [nightly-aarch64, create-runner]
+    needs: [nightly-build, create-runners]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runner.outputs.aarch64_instance_id }}
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_3 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_4 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_5 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_6 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.graviton_instance_id_1 }}
           ./stop_instance.sh $instance_id
