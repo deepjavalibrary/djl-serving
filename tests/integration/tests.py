@@ -51,6 +51,7 @@ class Runner:
 
         if download:
             os.system(f"./download_models.sh {self.container}")
+        logging.info(f"Using the following image for tests: {self.image}")
 
     def __enter__(self):
         return self
