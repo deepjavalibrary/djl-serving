@@ -7,6 +7,11 @@ on:
         description: 'release/nightly/temp, default is nightly'
         required: true
         default: 'nightly'
+      arch:
+        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        type: string
+        required: false
+        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   workflow_call:
     inputs:
       mode:
@@ -14,6 +19,11 @@ on:
         type: string
         required: true
         default: 'nightly'
+      arch:
+        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        type: string
+        required: false
+        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
     outputs:
       djl_version:
         description: "djl version"
@@ -30,9 +40,13 @@ env:
 jobs:
   create-runners:
     runs-on: [ self-hosted, scheduler ]
+    strategy:
+      matrix:
+        arch: ${{ fromJson(inputs.arch) }}
     steps:
       - name: Create new CPU instance
-        id: create_cpu_1
+        if: matrix.arch != 'aarch64'
+        id: create_cpu
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -40,53 +54,12 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_cpu $token djl-serving
-      - name: Create new CPU instance
-        id: create_cpu_2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_cpu $token djl-serving
-      - name: Create new CPU instance
-        id: create_cpu_3
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_cpu $token djl-serving
-      - name: Create new CPU instance
-        id: create_cpu_4
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_cpu $token djl-serving
-      - name: Create new CPU instance
-        id: create_cpu_5
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_cpu $token djl-serving
-      - name: Create new CPU instance
-        id: create_cpu_6
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_cpu $token djl-serving
+          instance_id=`grep "instance_id=" $GITHUB_OUTPUT | cut -d'=' -f2`
+          echo "instance_id_${{matrix.arch}}=$instance_id" >>"$GITHUB_OUTPUT"
+
       - name: Create Graviton instance
-        id: create_graviton_1
+        if: matrix.arch == 'aarch64'
+        id: create_graviton
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -94,38 +67,27 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_graviton $token djl-serving
+          instance_id=`grep "instance_id=" $GITHUB_OUTPUT | cut -d'=' -f2`
+          echo "instance_id_${{matrix.arch}}=$instance_id" >>"$GITHUB_OUTPUT"
     outputs:
-      cpu_instance_id_1: ${{ steps.create_cpu_1.outputs.action_cpu_instance_id }}
-      cpu_instance_id_2: ${{ steps.create_cpu_2.outputs.action_cpu_instance_id }}
-      cpu_instance_id_3: ${{ steps.create_cpu_3.outputs.action_cpu_instance_id }}
-      cpu_instance_id_4: ${{ steps.create_cpu_4.outputs.action_cpu_instance_id }}
-      cpu_instance_id_5: ${{ steps.create_cpu_5.outputs.action_cpu_instance_id }}
-      cpu_instance_id_6: ${{ steps.create_cpu_6.outputs.action_cpu_instance_id }}
-      graviton_instance_id_1: ${{ steps.create_graviton_1.outputs.action_graviton_instance_id }}
+      instance_id_cpu: ${{ steps.create_cpu.outputs.instance_id_cpu }}
+      instance_id_cpu-full: ${{ steps.create_cpu.outputs.instance_id_cpu-full }}
+      instance_id_pytorch-inf2: ${{ steps.create_cpu.outputs.instance_id_pytorch-inf2 }}
+      instance_id_pytorch-gpu: ${{ steps.create_cpu.outputs.instance_id_pytorch-gpu }}
+      instance_id_tensorrt-llm: ${{ steps.create_cpu.outputs.instance_id_tensorrt-llm }}
+      instance_id_lmi: ${{ steps.create_cpu.outputs.instance_id_lmi }}
+      instance_id_aarch64: ${{ steps.create_cpu.outputs.instance_id_aarch64 }}
 
   nightly-build:
     needs: create-runners
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        containers:
-          - name: cpu
-            instance: cpu
-          - name: cpu-full
-            instance: cpu
-          - name: pytorch-inf2
-            instance: cpu
-          - name: pytorch-gpu
-            instance: cpu
-          - name: tensorrt-llm
-            instance: cpu
-          - name: lmi
-            instance: cpu
-          - name: aarch64
-            instance: aarch64
+        arch: ${{ fromJson(inputs.arch) }}
     runs-on:
       - self-hosted
-      - ${{ matrix.containers.instance }}
+      - instance_id_${{ matrix.arch }}
       - RUN_ID-${{ github.run_id }}
       - RUN_NUMBER-${{ github.run_number }}
       - SHA-${{ github.sha }}
@@ -174,7 +136,7 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }} \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
-          ${{  matrix.containers.name }}
+          ${{  matrix.arch }}
       - name: Build temp docker image
         if: ${{ inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
         run: |
@@ -185,7 +147,7 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{  matrix.containers.name }}
+          ${{   matrix.arch }}
       - name: Tag and push temp image to ECR repo
         working-directory: serving/docker
         run: |
@@ -195,13 +157,13 @@ jobs:
           if [ "${{ inputs.mode }}" == "release" ]; then
             mode=${{ env.DJL_VERSION }}
           fi
-          tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.containers.name }}-$mode-${GITHUB_RUN_ID}"
-          tempCommitTag="${{ env.AWS_ECR_REPO }}:${{  matrix.containers.name }}-$mode-${GITHUB_SHA}"
+          tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_RUN_ID}"
+          tempCommitTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_SHA}"
 
-          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.containers.name }}${{ env.NIGHTLY }} $tempRunIdTag
-          docker tag ${{ env.DOCKER_HUB_REPO }}:${{  matrix.containers.name }}${{ env.NIGHTLY }} $tempCommitTag
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{  matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
           if ${{ inputs.mode == 'nightly' }}; then
-            docker tag ${{ env.DOCKER_HUB_REPO }}:${{  matrix.containers.name }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{  matrix.containers.name }}-nightly
+            docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
           fi
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
@@ -209,21 +171,15 @@ jobs:
     if: always()
     runs-on: [ self-hosted, scheduler ]
     needs: [nightly-build, create-runners]
+    env:
+      runner_output: ${{ toJson(needs.create-runners.outputs) }}
     steps:
       - name: Stop all instances
+        continue-on-error: true
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_1 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_2 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_3 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_4 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_5 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.cpu_instance_id_6 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.graviton_instance_id_1 }}
-          ./stop_instance.sh $instance_id
+          for key in $(echo $runner_output | jq -r 'keys[]'); do
+            instance_id=$(echo $runner_output | jq -r ".$key")
+            echo "Key: $key, instance_id: $instance_id"
+            ./stop_instance.sh $instance_id
+          done
