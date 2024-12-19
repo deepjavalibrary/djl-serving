@@ -71,7 +71,7 @@ jobs:
       instance_id_pytorch-gpu: ${{ steps.create_cpu.outputs.instance_id_pytorch-gpu }}
       instance_id_tensorrt-llm: ${{ steps.create_cpu.outputs.instance_id_tensorrt-llm }}
       instance_id_lmi: ${{ steps.create_cpu.outputs.instance_id_lmi }}
-      instance_id_aarch64: ${{ steps.create_cpu.outputs.instance_id_aarch64 }}
+      instance_id_aarch64: ${{ steps.create_graviton.outputs.instance_id_aarch64 }}
 
   nightly-build:
     needs: create-runners
