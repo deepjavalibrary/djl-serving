@@ -179,7 +179,7 @@ jobs:
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           for key in $(echo $runner_output | jq -r 'keys[]'); do
-            instance_id=$(echo $runner_output | jq -r ".$key")
+            instance_id=$(echo $runner_output | jq -r ".[\"$key\"]")
             echo "Key: $key, instance_id: $instance_id"
             ./stop_instance.sh $instance_id
           done
