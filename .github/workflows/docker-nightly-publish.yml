@@ -87,7 +87,7 @@ jobs:
         arch: ${{ fromJson(inputs.arch) }}
     runs-on:
       - self-hosted
-      - instance_id_${{ matrix.arch }}
+      - ${{ inputs.arch != 'aarch64' && 'cpu' || 'aarch64' }}
       - RUN_ID-${{ github.run_id }}
       - RUN_NUMBER-${{ github.run_number }}
       - SHA-${{ github.sha }}
