@@ -4,12 +4,33 @@ on:
   workflow_dispatch:
     inputs:
       djl-version:
-        description: 'The released version of DJL'
+        description: 'The released version of DJL.'
         required: false
         default: ''
-  schedule:
-    - cron: '0 15 * * *'
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: 'nightly'
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL.'
+        required: false
+        type: string
+        default: 'nightly'
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: ''
 
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
   create-runners:
@@ -151,6 +172,10 @@ jobs:
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
       - name: Set up Python3
         if: ${{ matrix.test.instance != 'aarch64' }}
         uses: actions/setup-python@v5
@@ -175,12 +200,22 @@ jobs:
           wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
+      - name: Configure AWS Credentials
+        if: matrix.test.instance == 'ubuntu-latest'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Test
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
         run: |
-          python -m pytest -k ${{ matrix.test.test }} tests.py
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
         run: |
@@ -224,11 +259,25 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow wheel
-      - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Download models and dockers
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          if [ "${{ github.event.inputs.djl-version }}" == "temp"  ]; then
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-temp-${GITHUB_SHA}"
+          elif [ -n "${{ inputs.tag-suffix }}" ]; then
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-${{ inputs.tag-suffix }}"
+          else
+            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-nightly"
+          fi
+          echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          echo $DOCKER_IMAGE_URI
+          docker pull $DOCKER_IMAGE_URI
       - name: Run djl_python unit/integration tests on container
         working-directory: engines/python/setup
         run: |
@@ -241,7 +290,7 @@ jobs:
           -v $PWD/:/opt/ml/model/ \
           -w /opt/ml/model \
           --device=/dev/neuron0:/dev/neuron0 \
-          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          $DOCKER_IMAGE_URI \
           /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
           pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
           

@@ -14,12 +14,18 @@ on:
         type: string
         required: true
         default: 'nightly'
-  schedule:
-    - cron: '0 13 * * *'
+    outputs:
+      djl_version:
+        description: "djl version"
+        value: ${{ jobs.nightly-build.outputs.djl_version }}
 
 permissions:
   id-token: write
   contents: read
+
+env:
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+  DOCKER_HUB_REPO: "deepjavalibrary/djl-serving"
 
 jobs:
   create-runners:
@@ -96,6 +102,7 @@ jobs:
       cpu_instance_id_5: ${{ steps.create_cpu_5.outputs.action_cpu_instance_id }}
       cpu_instance_id_6: ${{ steps.create_cpu_6.outputs.action_cpu_instance_id }}
       graviton_instance_id_1: ${{ steps.create_graviton_1.outputs.action_graviton_instance_id }}
+
   nightly-build:
     needs: create-runners
     strategy:
@@ -122,6 +129,8 @@ jobs:
       - RUN_ID-${{ github.run_id }}
       - RUN_NUMBER-${{ github.run_number }}
       - SHA-${{ github.sha }}
+    outputs:
+      djl_version: ${{ steps.get-versions.outputs.DJL_VERSION }}
     steps:
       - name: Clean disk space
         run: |
@@ -130,11 +139,6 @@ jobs:
           /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
           $AGENT_TOOLSDIRECTORY
       - uses: actions/checkout@v4
-      - name: Login to Docker
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
       - name: install awscli
         run: |
           sudo apt-get update
@@ -160,35 +164,8 @@ jobs:
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
           echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
-      - name: Build serving package for nightly
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        run: |
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
-      - name: Build and push nightly docker image
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        working-directory: serving/docker
-        run: |
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{ matrix.containers.name }}
-          docker compose push ${{ matrix.containers.name }}
-      - name: Build and push temp image
-        if: ${{ inputs.mode == 'temp' }}
-        working-directory: serving/docker
-        run: |
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{ matrix.containers.name }}
-          repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:${{ matrix.containers.name }}-${GITHUB_SHA}"
-          docker tag deepjavalibrary/djl-serving:${{ matrix.containers.name }}-nightly $tempTag
-          docker push $tempTag
-      - name: Build and push release docker image
+          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_OUTPUT
+      - name: Build release candidate docker image
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
@@ -197,14 +174,37 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }} \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
-          ${{ matrix.containers.name }}
-          docker compose push ${{ matrix.containers.name }}
-      - name: Retag image for release
-        if: ${{ matrix.containers.name == 'cpu' && inputs.mode == 'release' }}
+          ${{  matrix.containers.name }}
+      - name: Build temp docker image
+        if: ${{ inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
+        run: |
+          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
+          cd serving/docker
+          export NIGHTLY="-nightly"
+          echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
+          ${{  matrix.containers.name }}
+      - name: Tag and push temp image to ECR repo
         working-directory: serving/docker
         run: |
-          docker tag deepjavalibrary/djl-serving:${{ env.SERVING_VERSION }} deepjavalibrary/djl-serving:latest
-          docker push deepjavalibrary/djl-serving:latest
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          mode=${{ inputs.mode }}
+          if [ "${{ inputs.mode }}" == "release" ]; then
+            mode=${{ env.DJL_VERSION }}
+          fi
+          tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.containers.name }}-$mode-${GITHUB_RUN_ID}"
+          tempCommitTag="${{ env.AWS_ECR_REPO }}:${{  matrix.containers.name }}-$mode-${GITHUB_SHA}"
+
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.containers.name }}${{ env.NIGHTLY }} $tempRunIdTag
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{  matrix.containers.name }}${{ env.NIGHTLY }} $tempCommitTag
+          if ${{ inputs.mode == 'nightly' }}; then
+            docker tag ${{ env.DOCKER_HUB_REPO }}:${{  matrix.containers.name }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{  matrix.containers.name }}-nightly
+          fi
+          time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
+
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]

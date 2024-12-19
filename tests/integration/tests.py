@@ -10,6 +10,9 @@ import rb_client as rb_client
 import test_client
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
+override_image_tag_suffix = os.environ.get('OVERRIDE_IMAGE_TAG_SUFFIX',
+                                           '').strip()
+image_repo = os.environ.get('IMAGE_REPO', '').strip()
 
 
 def is_applicable_cuda_capability(arch: int) -> bool:
@@ -29,19 +32,17 @@ class Runner:
         self.client_file_handler = None
 
         # Compute flavor and repo
-        repo = "deepjavalibrary/djl-serving"
+        repo = image_repo
         if djl_version is None or len(
                 djl_version) == 0 or djl_version == "nightly":
             flavor = f"{container}-nightly"
+        elif djl_version == "temp":
+            flavor = f"{container}-temp-{os.environ['GITHUB_SHA']}"
         else:
-            if djl_version == "temp":
-                repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
-                flavor = f"{container}-{os.environ['GITHUB_SHA']}"
-            else:
-                if container == "cpu":
-                    flavor = djl_version
-                else:
-                    flavor = f"{djl_version}-{container}"
+            flavor = f"{container}-{djl_version}-{os.environ['GITHUB_SHA']}"
+
+        if override_image_tag_suffix:
+            flavor = f"{container}-{override_image_tag_suffix}"
 
         self.image = f"{repo}:{flavor}"
 
@@ -50,6 +51,7 @@ class Runner:
 
         if download:
             os.system(f"./download_models.sh {self.container}")
+        logging.info(f"Using the following image for tests: {self.image}")
 
     def __enter__(self):
         return self

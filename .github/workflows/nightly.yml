@@ -25,7 +25,7 @@ on:
 permissions:
     id-token: write
     contents: read
-    
+
 jobs:
     build:
         uses: ./.github/workflows/docker-nightly-publish.yml
@@ -41,22 +41,24 @@ jobs:
             - name: get_image_tag_suffix
               id: get_image_tag_suffix
               run: |
-                if ${{ inputs.mode == 'nightly'}}; then
-                    test_image_tag_suffix='nightly'
+                if [[ "${{ inputs.mode }}" == "nightly" ]]; then
+                    echo "test_image_tag_suffix=nightly" >> $GITHUB_OUTPUT
+                elif [[ "${{ inputs.mode }}" == "release" ]]; then
+                    echo "test_image_tag_suffix=${{ needs.build.outputs.djl_version }}-${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
+                else
+                    echo "Invalid mode specified"
+                    exit 1
                 fi
-                if ${{ inputs.mode == 'release'}}; then
-                    test_image_tag_suffix='${{ needs.build.outputs.djl_version}}-${GITHUB_RUN_ID}'
-                fi
-                echo "test_image_tag_suffix=$test_image_tag_suffix" >> $GITHUB_OUTPUT
     integration-test:
         needs: [get_image_tag_suffix]
         uses: ./.github/workflows/integration.yml
         secrets: inherit
         with:
-            tag-suffix:: ${{ needs.get_image_tag_suffix.outputs.test_image_tag_suffix }}
+            tag-suffix: ${{ needs.get_image_tag_suffix.outputs.test_image_tag_suffix }}
     publish:
         needs: [integration-test, get_image_tag_suffix]
         uses: ./.github/workflows/docker_publish.yml
         secrets: inherit
         with:
             mode: ${{ inputs.mode }}
+            commit_sha: ${{ github.sha }}
