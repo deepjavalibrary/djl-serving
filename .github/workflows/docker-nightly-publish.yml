@@ -67,7 +67,7 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_graviton $token djl-serving
-          instance_id=`grep "instance_id=" $GITHUB_OUTPUT | cut -d'=' -f2`
+          instance_id=`grep "^instance_id=" $GITHUB_OUTPUT | cut -d'=' -f2`
           echo "instance_id_${{matrix.arch}}=$instance_id" >>"$GITHUB_OUTPUT"
     outputs:
       instance_id_cpu: ${{ steps.create_cpu.outputs.instance_id_cpu }}
