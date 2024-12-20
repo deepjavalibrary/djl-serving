@@ -189,7 +189,7 @@ def main():
 
     # noinspection PyBroadException
     try:
-        args = ArgParser.python_engine_args().parse_args(args=sys.argv[1:])
+        args = ArgParser.python_engine_args().parse_args()
         logging.basicConfig(stream=sys.stdout,
                             format="%(levelname)s::%(message)s",
                             level=args.log_level.upper())
