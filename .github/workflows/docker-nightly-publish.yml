@@ -45,7 +45,6 @@ jobs:
         arch: ${{ fromJson(inputs.arch) }}
     steps:
       - name: Create new instance
-        if: matrix.arch != 'aarch64'
         id: create_cpu
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
