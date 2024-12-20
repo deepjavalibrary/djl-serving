@@ -44,7 +44,7 @@ jobs:
       matrix:
         arch: ${{ fromJson(inputs.arch) }}
     steps:
-      - name: Create new CPU instance
+      - name: Create new instance
         if: matrix.arch != 'aarch64'
         id: create_cpu
         run: |
@@ -53,22 +53,14 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_cpu $token djl-serving
+          instance_type=action_cpu
+          if [ "${{matrix.arch}}" == "aarch64" ]; then
+            instance_type=action_graviton
+          fi
+          ./start_instance.sh $instance_type $token djl-serving
           instance_id=`grep "^instance_id=" $GITHUB_OUTPUT | cut -d'=' -f2`
           echo "instance_id_${{matrix.arch}}=$instance_id" >>"$GITHUB_OUTPUT"
 
-      - name: Create Graviton instance
-        if: matrix.arch == 'aarch64'
-        id: create_graviton
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token djl-serving
-          instance_id=`grep "^instance_id=" $GITHUB_OUTPUT | cut -d'=' -f2`
-          echo "instance_id_${{matrix.arch}}=$instance_id" >>"$GITHUB_OUTPUT"
     outputs:
       instance_id_cpu: ${{ steps.create_cpu.outputs.instance_id_cpu }}
       instance_id_cpu-full: ${{ steps.create_cpu.outputs.instance_id_cpu-full }}
