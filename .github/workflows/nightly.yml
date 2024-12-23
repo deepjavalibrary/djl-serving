@@ -41,7 +41,7 @@ jobs:
             - name: get_image_tag_suffix
               id: get_image_tag_suffix
               run: |
-                if [[ "${{ inputs.mode }}" == "nightly" ]]; then
+                if [[ "${{ inputs.mode || 'nightly' }}" == "nightly" ]]; then
                     echo "test_image_tag_suffix=nightly" >> $GITHUB_OUTPUT
                 elif [[ "${{ inputs.mode }}" == "release" ]]; then
                     echo "test_image_tag_suffix=${{ needs.build.outputs.djl_version }}-${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
