@@ -42,7 +42,7 @@ jobs:
     runs-on: [ self-hosted, scheduler ]
     strategy:
       matrix:
-        arch: ${{ fromJson(inputs.arch) }}
+        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || format('[{0}]', inputs.arch) }}
     steps:
       - name: Create new instance
         id: create_cpu
@@ -127,7 +127,7 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }} \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
-          ${{  matrix.arch }}
+          ${{ matrix.arch }}
       - name: Build temp docker image
         if: ${{ inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
         run: |
@@ -138,7 +138,7 @@ jobs:
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
           --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
-          ${{   matrix.arch }}
+          ${{ matrix.arch }}
       - name: Tag and push temp image to ECR repo
         working-directory: serving/docker
         run: |
@@ -152,7 +152,7 @@ jobs:
           tempCommitTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_SHA}"
 
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
-          docker tag ${{ env.DOCKER_HUB_REPO }}:${{  matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
           if ${{ inputs.mode == 'nightly' }}; then
             docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
           fi
