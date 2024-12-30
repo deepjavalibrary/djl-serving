@@ -8,16 +8,16 @@ LMI-Dist expects the model to be in the [standard HuggingFace format](../deploym
 
 **Text Generation Models**
 
-LMI-Dist supports the same set of text-generation models as [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
+LMI-Dist supports the same set of text-generation models as [vllm 0.6.3.post1](https://docs.vllm.ai/en/v0.6.3.post1/models/supported_models.html#decoder-only-language-models).
 
 In addition to the vllm models, LMI-Dist also supports the t5 model family (e.g. google/flan-t5-xl).
 
 **Multi Modal Models**
 
-LMI-Dist supports the same set of multi-modal models as [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
+LMI-Dist supports the same set of multi-modal models as [vllm 0.6.3.post1](https://docs.vllm.ai/en/v0.6.3.post1/models/supported_models.html#decoder-only-language-models).
 
 However, the one known exception is MLlama (Llama3.2 multimodal models). 
-MLlama support is expected in the v13 (0.31.0) release.
+MLlama support is expected in the v13 (0.32.0) release.
 
 ### Model Coverage in CI
 
@@ -92,7 +92,7 @@ Please check that your base model [supports LoRA adapters in vLLM](https://docs.
 
 ## Quantization Support
 
-LMI-Dist supports the same quantization techniques as [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
+LMI-Dist supports the same quantization techniques as [vllm 0.6.3.post1](https://docs.vllm.ai/en/v0.6.3.post1/quantization/supported_hardware.html).
 
 We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.

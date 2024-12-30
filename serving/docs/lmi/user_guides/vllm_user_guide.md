@@ -8,11 +8,11 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 **Text Generation Models**
 
-Here is the list of text generation models supported in [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
+Here is the list of text generation models supported in [vllm 0.6.3.post1](https://docs.vllm.ai/en/v0.6.3.post1/models/supported_models.html#decoder-only-language-models).
 
 **Multi Modal Models**
 
-Here is the list of multi-modal models supported in [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
+Here is the list of multi-modal models supported in [vllm 0.6.3.post1](https://docs.vllm.ai/en/v0.6.3.post1/models/supported_models.html#decoder-only-language-models).
 
 ### Model Coverage in CI
 
@@ -34,7 +34,7 @@ The following set of models are tested in our nightly tests
 
 ## Quantization Support
 
-The quantization techniques supported in vLLM 0.6.2 are listed [here](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
+The quantization techniques supported in vLLM 0.6.3.post1 are listed [here](https://docs.vllm.ai/en/v0.6.3.post1/quantization/supported_hardware.html).
 
 We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.
@@ -47,7 +47,7 @@ The following quantization techniques are supported for runtime quantization:
 You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
 
 Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
-You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.6.3.post1/quantization/supported_hardware.html).
 
 ## Quick Start Configurations 
 

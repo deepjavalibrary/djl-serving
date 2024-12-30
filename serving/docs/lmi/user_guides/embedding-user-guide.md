@@ -18,7 +18,7 @@ LMI supports Text Embedding Inference with the following engines:
 - Rust
 - Python
 
-Currently, the OnnxRuntime engine provides the best performance for text embedding in LMI. 
+Currently, the Rust engine provides the best performance for text embedding in LMI. 
 
 ## Quick Start Configurations
 
@@ -36,11 +36,11 @@ SERVING_BATCH_SIZE=32
 
 ### environment variables
 
-You can specify the `HF_MODEL_ID` environment variable to load a model from HuggingFace hub. DJLServing
-will download the model from HuggingFace hub and optimize the model with OnnxRuntime at runtime.
+You can specify the `HF_MODEL_ID` environment variable to load a model from HuggingFace hub, DJL Model Zoo, AWS S3, or a local path. 
+DJLServing will download the model from HuggingFace hub and optimize the model with the selected engine at runtime.
 
 ```
-OPTION_ENGINE=OnnxRuntime
+OPTION_ENGINE=Rust
 HF_MODEL_ID=BAAI/bge-base-en-v1.5
 # Optional
 SERVING_BATCH_SIZE=32
@@ -52,7 +52,7 @@ to deploy a model with environment variable configuration on SageMaker.
 ### serving.properties
 
 ```
-engine=OnnxRuntime
+engine=Rust
 option.model_id=BAAI/bge-base-en-v1.5
 translatorFactory=ai.djl.huggingface.translator.TextEmbeddingTranslatorFactory
 # Optional

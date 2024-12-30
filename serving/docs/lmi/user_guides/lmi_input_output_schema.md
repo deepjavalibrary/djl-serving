@@ -1,7 +1,7 @@
 # LMI handlers Inference API Schema
 
 This document provides the default API schema for the inference endpoints (`/invocations`, `/predictions/<model_name>`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.28.0.
+This schema is applicable to our latest release, v0.31.0.
 Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.27.0-dlc).
 
 LMI provides two distinct schemas depending on what type of batching you use:
@@ -41,7 +41,7 @@ curl -X POST https://my.sample.endpoint.com/invocations \
 
 ### Response Schema
 
-When not using streaming (this is the default), the response is returned as application/json content-type:
+When not using streaming (the default), the response is returned as application/json content-type:
 
 | Field Name       | Field Type          | Always Returned                           | Possible Values                                                                     | 
 |------------------|---------------------|-------------------------------------------|-------------------------------------------------------------------------------------|
@@ -84,7 +84,10 @@ Example response:
 }
 ```
 
-When using streaming, if you want Server Side Events, then you could use `option.output_formatter=sse`. If you `stream=True`, the default `output_formatter` is `jsonlines`. So you would want to explicitly provide `option.output_formatter=sse` when you want SSE with streaming. Check out `TGI_COMPAT` option below, enabling that option will make SSE as the default formatter with streaming. 
+When using streaming, if you want Server Side Events, then you could use `option.output_formatter=sse`. 
+If you `stream=True`, the default `output_formatter` is `jsonlines`. 
+So you would want to explicitly provide `option.output_formatter=sse` when you want SSE with streaming. 
+Check out `TGI_COMPAT` option below, enabling that option will make SSE as the default formatter with streaming. 
 When using SSE the jsonline will have the prefix `data`. 
 
 Example response:
@@ -103,7 +106,7 @@ data:{
 
 #### Error Responses
 
-Errors can typically happen in 2 places:
+Errors can typically happen in two places:
 
 - Before inference has started
 - During token generation (in the middle of inference)
@@ -154,7 +157,8 @@ When using streaming:
 
 ## Response with TGI compatibility
 
-In order to get the same response output as HuggingFace's Text Generation Inference, you can use the env `OPTION_TGI_COMPAT=true` or `option.tgi_compat=true` in your serving.properties. Right now, DJLServing for LMI with rolling batch has minor differences in the response schema compared to TGI. 
+In order to get the same response output as HuggingFace's Text Generation Inference, you can use the env `OPTION_TGI_COMPAT=true` or `option.tgi_compat=true` in your serving.properties. 
+Right now, DJLServing for LMI with rolling batch has minor differences in the response schema compared to TGI. 
 
 This feature is designed for customers transitioning from TGI, making their lives easier by allowing them to continue using their client-side code without any special modifications for our LMI containers or DJLServing.
 Enabling the tgi_compat option would make the response look like below:
@@ -418,7 +422,10 @@ Example:
 
 ### BestOfSequence
 
-Generated text and its details is the one with the highest log probability. Others sequences are returned as best_of_sequences. You can enable this with n > 1. It is also returned when beam search is enabled with the option num_beams > 1. 
+Generated text and its details is the one with the highest log probability. 
+Other sequences are returned as best_of_sequences. 
+You can enable this with n > 1. 
+It is also returned when beam search is enabled with the option num_beams > 1. 
 
 Note that best_of_sequences will only work with non-streaming case.
 
@@ -434,4 +441,4 @@ Note that best_of_sequences will only work with non-streaming case.
 
 If you wish to create your own pre-processing and post-processing for our handlers, check out these guides [Custom input format schema guide](input_formatter_schema.md) and [Custom output format schema guide](output_formatter_schema.md).
 
-This is not an officially supported use-case. The API signature, as well as implementation, is subject to change at any time.
+This is an experimental use-case. The API signature, as well as implementation, is subject to change at any time.
