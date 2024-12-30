@@ -30,7 +30,7 @@ LMI containers provide many features, including:
 LMI containers provide these features through integrations with popular inference libraries.
 A unified configuration format enables users to easily leverage the latest optimizations and technologies across libraries.
 We will refer to each of these libraries as `backends` throughout the documentation. 
-The term backend refers to a combination of Engine (LMI uses the Python Engine) and inference library.
+The term backend refers to a combination of Engine (LMI uses the Python Engine) and inference library (like vLLM).
 You can learn more about the components of LMI [here](deployment_guide/README.md#components-of-lmi).
 
 ## QuickStart
@@ -74,11 +74,10 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 
 | Backend                | SageMakerDLC    | Example URI                                                                               |
 |------------------------|-----------------|-------------------------------------------------------------------------------------------|
-| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
-| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
-| `hf-accelerate`        | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
+| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.31.0-lmi13.0.0-cu124         |
+| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.31.0-lmi13.0.0-cu124         |
 | `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125 |
-| `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-neuronx-sdk2.19.1       |
+| `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-neuronx-sdk2.20.1       |
 
 ## Advanced Features
 
@@ -92,6 +91,3 @@ LMI contains also contain several advanced features that can be used for more co
 The LMI team maintains sample SageMaker notebooks in the [djl-demo repository](https://github.com/deepjavalibrary/djl-demo/tree/master/aws/sagemaker/large-model-inference/sample-llm).
 This repository contains the most up-to-date notebooks for LMI.
 Notebooks are updated with every release, and new notebooks are added to demonstrate new features and capabilities.
-
-Additionally, the [SageMaker GenAI Hosting Examples](https://github.com/aws-samples/sagemaker-genai-hosting-examples) repository contains additional examples.
-However, the notebooks here are not updated as frequently and may be stale.

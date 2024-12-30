@@ -2,18 +2,9 @@
 
 Most models can be served using the single `HF_MODEL_ID=<model_id>` environment variable.
 However, some models require additional configuration.
-You can refer to our example notebooks [here](https://github.com/deepjavalibrary/djl-demo/tree/master/aws/sagemaker/large-model-inference/sample-llm) for model specific examples.
+You can refer to our example notebooks [here](https://github.com/deepjavalibrary/djl-demo/tree/master/aws/sagemaker/large-model-inference/sample-llm) for model-specific examples.
 
 If you are unable to deploy a model using just `HF_MODEL_ID`, and there is no example in the notebook repository, please cut us a Github issue so we can investigate and help.
-
-Based on the selected container, LMI will automatically:
-
-* select the best backend based on the model architecture 
-* enable continuous batching if supported for the model architecture to increase throughput
-* configure the engine and operation mode
-* maximize hardware use through tensor parallelism
-* calculate maximum possible tokens and allocate the KV-Cache
-* enable CUDA kernels and optimizations based on the available hardware and drivers
 
 The following code example demonstrates this configuration UX using the [SageMaker Python SDK](https://github.com/aws/sagemaker-python-sdk).
 
@@ -54,11 +45,11 @@ outputs = predictor.predict({
 
 ## Supported Model Architectures
 
-If you are deploying with the LMI container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124`), you can find the list of supported models [here](lmi-dist_user_guide.md#supported-model-architectures).
+If you are deploying with the LMI container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.31.0-lmi13.0.0-cu124`), you can find the list of supported models [here](lmi-dist_user_guide.md#supported-model-architectures).
 
 If you are deploying with the LMI-TRT container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125`), you can find the list of supported models [here](trt_llm_user_guide.md#supported-model-architectures).
 
-If you are deploying with the LMI-Neuron container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-neuronx-sdk2.19.1`), you can find the list of supported models [here](tnx_user_guide.md#supported-model-architecture).
+If you are deploying with the LMI-Neuron container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-neuronx-sdk2.20.1`), you can find the list of supported models [here](tnx_user_guide.md#supported-model-architecture).
 
 ## Available Environment Variable Configurations
 
@@ -67,7 +58,7 @@ The following environment variables are exposed as part of this simplified UX:
 **HF_MODEL_ID**
 
 This configuration is used to specify the location of your model artifacts.
-It can either be a HuggingFace Hub model-id (e.g. TheBloke/Llama-2-7B-fp16), a S3 uri (e.g. s3://my-bucket/my-model/), or a local path.
+It can either be a HuggingFace Hub model-id (e.g.meta-llama/Meta-Llama-3.1-8B-Instruct), a S3 uri (e.g. s3://my-bucket/my-model/), or a local path.
 If you are using [SageMaker's capability to specify uncompressed model artifacts](https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-uncompressed.html), you should set this value to `/opt/ml/model`.
 `/opt/ml/model` is the path in the container where model artifacts are mounted if using this mechanism.
 
