@@ -75,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJson(inputs.arch) }}
+        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || fromJson(format('[{0}]', inputs.arch)) }}
     runs-on:
       - self-hosted
       - ${{ matrix.arch != 'aarch64' && 'cpu' || 'aarch64' }}
