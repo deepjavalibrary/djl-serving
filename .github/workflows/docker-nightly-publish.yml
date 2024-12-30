@@ -42,7 +42,7 @@ jobs:
     runs-on: [ self-hosted, scheduler ]
     strategy:
       matrix:
-        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || format('[{0}]', inputs.arch) }}
+        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || fromJson(format('[{0}]', inputs.arch)) }}
     steps:
       - name: Create new instance
         id: create_cpu
