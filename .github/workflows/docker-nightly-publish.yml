@@ -145,15 +145,18 @@ jobs:
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           mode=${{ inputs.mode }}
-          if [ "${{ inputs.mode }}" == "release" ]; then
+          if [[ "${{ inputs.mode }}" == "release" ]]; then
             mode=${{ env.DJL_VERSION }}
+          fi
+          if [[ -z "${{ inputs.mode }}" ]]; then
+            mode="nightly"
           fi
           tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_RUN_ID}"
           tempCommitTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_SHA}"
 
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
-          if ${{ inputs.mode == 'nightly' }}; then
+          if [[ "$mode" == "nightly" ]]; then
             docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
           fi
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
