@@ -31,7 +31,7 @@ jobs:
         uses: ./.github/workflows/docker-nightly-publish.yml
         secrets: inherit
         with:
-            mode: ${{ inputs.mode }}
+            mode: ${{ inputs.mode || 'nightly' }}
     get_image_tag_suffix:
         outputs:
             test_image_tag_suffix: ${{ steps.get_image_tag_suffix.test_image_tag_suffix }}
@@ -60,5 +60,5 @@ jobs:
         uses: ./.github/workflows/docker_publish.yml
         secrets: inherit
         with:
-            mode: ${{ inputs.mode }}
+            mode: ${{ inputs.mode || 'nightly' }}
             commit_sha: ${{ github.sha }}
