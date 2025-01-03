@@ -1,0 +1,137 @@
+name: Aarch64 Container Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL.'
+        required: false
+        default: ''
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: 'nightly'
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL.'
+        required: false
+        type: string
+        default: 'nightly'
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+
+jobs:
+  create-runners-aarch64:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new Graviton instance
+        id: create_aarch64
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token djl-serving
+    outputs:
+      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
+
+  test:
+    runs-on:
+      - ${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_NUMBER-{0}', github.run_number) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('SHA-{0}', github.sha) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || 'JOB-$GITHUB_JOB' }}
+      - ${{ matrix.test.instance }}
+    timeout-minutes: 90
+    needs: create-runners-aarch64
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test: TestAarch64
+            instance: aarch64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Set up Python3 (aarch64)
+        if: ${{ matrix.test.instance == 'aarch64' }}
+        run: |
+          # Using an alternate installation because of an incompatible combination
+          # of aarch64 with ubuntu-20.04 not supported by the actions/setup-python
+          sudo apt-get install python3 python-is-python3 python3-pip -y
+      - name: Install pip dependencies
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub torch
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          wget https://publish.djl.ai/awscurl/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Test
+        working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+        run: |
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          python -m pytest -s -k ${{ matrix.test.test }} tests.py
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf outputs
+          rm awscurl
+      - name: On Failure
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          sudo rm -rf outputs && sudo rm -rf models
+          rm awscurl
+          ./remove_container.sh
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-${{ matrix.test.test }}-logs
+          path: tests/integration/all_logs/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners-aarch64, test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
+          ./stop_instance.sh $instance_id

@@ -55,10 +55,10 @@ jobs:
         secrets: inherit
         with:
             tag-suffix: ${{ needs.get_image_tag_suffix.outputs.test_image_tag_suffix }}
-    publish:
-        needs: [integration-test, get_image_tag_suffix]
-        uses: ./.github/workflows/docker_publish.yml
-        secrets: inherit
-        with:
-            mode: ${{ inputs.mode || 'nightly' }}
-            commit_sha: ${{ github.sha }}
+#    publish:
+#        needs: [integration-test, get_image_tag_suffix]
+#        uses: ./.github/workflows/docker_publish.yml
+#        secrets: inherit
+#        with:
+#            mode: ${{ inputs.mode || 'nightly' }}
+#            commit_sha: ${{ github.sha }}
