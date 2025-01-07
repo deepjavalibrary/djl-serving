@@ -16,27 +16,25 @@ fi
 version=$1
 to_repo=$2
 mode=$3
-commit_sha=${4:-$GITHUB_SHA}  # Use parameter expansion for default value
+image=$4
+commit_sha=${5:-$GITHUB_SHA}  # Use parameter expansion for default value
 
-images=(cpu aarch64 cpu-full pytorch-inf2 pytorch-gpu lmi tensorrt-llm)
 
 from_repo=$AWS_TMP_ECR_REPO
 
 set -x
-for image in "${images[@]}"; do
 
-  if [[ "$mode" == "release" ]]; then
-    if [[ "$image" == "cpu" ]]; then
-      tag=$version
-    else
-      tag="$version-$image"
-    fi
+if [[ "$mode" == "release" ]]; then
+  if [[ "$image" == "cpu" ]]; then
+    tag=$version
+  else
+    tag="$version-$image"
   fi
+fi
 
-  if [[ "$mode" == "nightly" ]]; then
-    tag="$image-nightly"
-  fi
-  docker pull $from_repo:$image-$mode-$commit_sha
-  echo docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
-  echo docker push $to_repo:$tag
-done
+if [[ "$mode" == "nightly" ]]; then
+  tag="$image-nightly"
+fi
+docker pull $from_repo:$image-$mode-$commit_sha
+echo docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
+docker push $to_repo:$tag

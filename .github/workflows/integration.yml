@@ -24,6 +24,19 @@ on:
         required: false
         type: string
         default: ''
+    outputs:
+      failure_cpu:
+        value: ${{ jobs.test.outputs.failure_cpu || '0' }}
+      failure_gpu:
+        value: ${{ jobs.test.outputs.failure_gpu || '0' }}
+      failure_aarch64:
+        value: ${{ jobs.test.outputs.failure_aarch64 || '0' }}
+      failure_lmi:
+        value: ${{ jobs.test.outputs.failure_lmi || '0' }}
+      failure_trtllm:
+        value: ${{ jobs.test.outputs.failure_trtllm || '0' }}
+      failure_neuron:
+        value: ${{ jobs.test.outputs.failure_neuron || jobs.transformers-neuronx-container-unit-tests.outputs.failure || '0' }}
 
 permissions:
   id-token: write
@@ -125,45 +138,72 @@ jobs:
           - test: TestCpuFull
             instance: ubuntu-latest
             gh-runner: true
+            failure-prefix: cpu
           - test: TestCpuBoth
             instance: ubuntu-latest
             gh-runner: true
+            failure-prefix: cpu
           - test: TestGpu
             instance: g6
+            failure-prefix: gpu
           - test: TestAarch64
             instance: aarch64
+            failure-prefix: aarch64
           - test: TestHfHandler
             instance: g6
+            failure-prefix: lmi
           - test: TestTrtLlmHandler1
             instance: g6
+            failure-prefix: trtllm
           - test: TestTrtLlmHandler2
             instance: g6
+            failure-prefix: trtllm
           - test: TestSchedulerSingleGPU
             instance: g6
+            failure-prefix: lmi
           - test: TestSchedulerMultiGPU
             instance: g6
+            failure-prefix: lmi
           - test: TestLmiDist1
             instance: g6
+            failure-prefix: lmi
           - test: TestLmiDist2
             instance: g6
+            failure-prefix: lmi
           - test: TestVllm1
             instance: g6
+            failure-prefix: lmi
           - test: TestVllmLora
             instance: g6
+            failure-prefix: lmi
           - test: TestLmiDistLora
             instance: g6
+            failure-prefix: lmi
           - test: TestNeuronx1
             instance: inf2
+            failure-prefix: neuron
           - test: TestNeuronx2
             instance: inf2
+            failure-prefix: neuron
           - test: TestNeuronxRollingBatch
             instance: inf2
+            failure-prefix: neuron
           - test: TestMultiModal
             instance: g6
+            failure-prefix: lmi
           - test: TestTextEmbedding
             instance: g6
+            failure-prefix: lmi
           - test: TestLmiDistPipelineParallel
             instance: g6
+            failure-prefix: lmi
+    outputs:
+      failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
+      failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}
+      failure_aarch64: ${{ steps.test-failure.outputs.failure_aarch64 }}
+      failure_lmi: ${{ steps.test-failure.outputs.failure_lmi }}
+      failure_trtllm: ${{ steps.test-failure.outputs.failure_trtllm }}
+      failure_neuron: ${{ steps.test-failure.outputs.failure_neuron }}
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -222,6 +262,7 @@ jobs:
           rm -rf outputs
           rm awscurl
       - name: On Failure
+        id: test-failure
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
@@ -229,6 +270,8 @@ jobs:
           sudo rm -rf outputs && sudo rm -rf models
           rm awscurl
           ./remove_container.sh
+          failure_prefix="${{ matrix.test.failure-prefix }}"
+          echo "failure_${failure_prefix}=1" >> "$GITHUB_OUTPUT"
       - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -245,6 +288,8 @@ jobs:
       - SHA-${{ github.sha }}
     timeout-minutes: 15
     needs: create-runners
+    outputs:
+      failure: ${{ steps.failure.outputs.failure }}
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -300,10 +345,12 @@ jobs:
           # Fail on failed tests
           if grep -F "failed" logs/results.log &>/dev/null; then exit 1; fi
       - name: On fail step
+        id: failure
         if: ${{ failure() }}
         working-directory: engines/python/setup
         run: |
           cat logs/results.log
+          echo "failure=1" >> "$GITHUB_OUTPUT"
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         with:
