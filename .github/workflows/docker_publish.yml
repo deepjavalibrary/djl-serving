@@ -15,6 +15,11 @@ on:
         description: 'specify which sha value the image was built with.'
         required: false
         default: ''
+      arch:
+        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        type: string
+        required: false
+        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   workflow_call:
     inputs:
       mode:
@@ -27,6 +32,11 @@ on:
         description: 'specify which sha value the image aws built with.'
         required: false
         default: ''
+      arch:
+        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        type: string
+        required: false
+        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
 
 permissions:
   id-token: write
@@ -38,25 +48,13 @@ env:
   ECR_REPO_REGION: "us-east-1"
 
 jobs:
-  create-aarch64-runner:
-    runs-on: [ self-hosted, scheduler ]
-    steps:
-      - name: Create new Graviton instance
-        id: create_aarch64
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token djl-serving
-    outputs:
-      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
-
-  nightly-aarch64:
-    runs-on: [ self-hosted, aarch64 ]
+  docker-sync:
+    runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: create-aarch64-runner
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || fromJson(format('[{0}]', inputs.arch)) }}
     steps:
       - uses: actions/checkout@v4
       - name: Clean docker env
@@ -88,11 +86,11 @@ jobs:
       - name: Pull and sync to docker hub
         working-directory: serving/docker
         run: |
-          ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }} ${{ inputs.commit_sha }}
+          ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
       - name: Pull and sync to ECR
         working-directory: serving/docker
         run: |
-          ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ inputs.commit_sha }}
+          ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
       - name: Retag image for release latest
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
@@ -103,13 +101,3 @@ jobs:
         working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
-  stop-aarch64-runner:
-    if: always()
-    runs-on: [ self-hosted, scheduler ]
-    needs: [nightly-aarch64, create-aarch64-runner]
-    steps:
-      - name: Stop all instances
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-aarch64-runner.outputs.aarch64_instance_id }}
-          ./stop_instance.sh $instance_id

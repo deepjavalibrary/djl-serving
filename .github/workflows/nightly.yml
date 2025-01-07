@@ -55,10 +55,45 @@ jobs:
         secrets: inherit
         with:
             tag-suffix: ${{ needs.get_image_tag_suffix.outputs.test_image_tag_suffix }}
+    determine_images_to_publish:
+        if: always()
+        needs: [ integration-test ]
+        runs-on: ubuntu-latest
+        outputs:
+            images: ${{ steps.generate-images.outputs.images }}
+        steps:
+            - name: Generate image list from test results
+              id: generate-images
+              run: |
+                  images=()
+                  if [[ "${{ needs.integration-test.outputs.failure_cpu }}" == "0" ]]; then
+                    images+=("cpu")
+                    images+=("cpu-full")
+                  fi
+                  if [[ "${{ needs.integration-test.outputs.failure_gpu }}" == "0" ]]; then
+                    images+=("pytorch-gpu") 
+                  fi
+                  if [[ "${{ needs.integration-test.outputs.failure_aarch64 }}" == "0" ]]; then
+                    images+=("aarch64")
+                  fi
+                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]]; then
+                    images+=("lmi")
+                    fi
+                  if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" == "0" ]]; then
+                    images+=("tensorrt-llm")
+                  fi
+                  if [[ "${{ needs.integration-test.outputs.failure_neuron }}" == "0" ]]; then
+                    images+=("pytorch-inf2")
+                  fi
+                  json_images=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${images[@]}")
+                  echo "images are ${json_images}"
+                  echo "images=${json_images}" >> "$GITHUB_OUTPUT"
     publish:
-        needs: [integration-test, get_image_tag_suffix]
+        if: always()
+        needs: [determine_images_to_publish]
         uses: ./.github/workflows/docker_publish.yml
         secrets: inherit
         with:
             mode: ${{ inputs.mode || 'nightly' }}
             commit_sha: ${{ github.sha }}
+            arch: ${{ needs.determine_images_to_publish.outputs.images }}
