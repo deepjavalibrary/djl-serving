@@ -36,5 +36,5 @@ if [[ "$mode" == "nightly" ]]; then
   tag="$image-nightly"
 fi
 docker pull $from_repo:$image-$mode-$commit_sha
-echo docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
+docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
 docker push $to_repo:$tag
