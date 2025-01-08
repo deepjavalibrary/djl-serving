@@ -37,12 +37,9 @@ class Runner:
                 djl_version) == 0 or djl_version == "nightly":
             flavor = f"{container}-nightly"
         elif djl_version == "temp":
-            flavor = f"{container}-temp-{os.environ['GITHUB_SHA']}"
+            flavor = f"{container}-temp"
         else:
-            flavor = f"{container}-{djl_version}-{os.environ['GITHUB_SHA']}"
-
-        if override_image_tag_suffix:
-            flavor = f"{container}-{override_image_tag_suffix}"
+            flavor = f"{djl_version}-{container}"
 
         self.image = f"{repo}:{flavor}"
 

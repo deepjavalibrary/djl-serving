@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: 'nightly'
+      image-repo:
+        description: 'Dockerhub or ECR repository to fetch the image from'
+        required: false
+        type: string
+        default: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
   workflow_call:
     inputs:
       djl-version:
@@ -24,6 +29,11 @@ on:
         required: false
         type: string
         default: ''
+      image-repo:
+        description: 'Dockerhub or ECR repository to fetch the image from'
+        required: false
+        type: string
+        default: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
     outputs:
       failure_cpu:
         value: ${{ jobs.test.outputs.failure_cpu || '0' }}
@@ -41,9 +51,6 @@ on:
 permissions:
   id-token: write
   contents: read
-
-env:
-  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
   create-runners:
@@ -251,10 +258,12 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
           OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
-          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+          IMAGE_REPO: ${{ inputs.image-repo }}
         run: |
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          if [[ "$IMAGE_REPO" == *"dkr.ecr"* ]]; then
+            ECR_REGION=$(echo "$IMAGE_REPO" | awk -F. '{print $4}')
+            aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin "$IMAGE_REPO" 
+          fi
           python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
@@ -311,16 +320,19 @@ jobs:
           aws-region: us-east-1
       - name: Download models and dockers
         run: |
+          image_repo="${{ inputs.image-repo }}"
           if [ "${{ github.event.inputs.djl-version }}" == "temp"  ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-temp-${GITHUB_SHA}"
+            DOCKER_IMAGE_URI="${image_repo}:pytorch-inf2-temp-${GITHUB_SHA}"
           elif [ -n "${{ inputs.tag-suffix }}" ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-${{ inputs.tag-suffix }}"
+            DOCKER_IMAGE_URI="${image_repo}:pytorch-inf2-${{ inputs.tag-suffix }}"
           else
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-nightly"
+            DOCKER_IMAGE_URI="${image_repo}:pytorch-inf2-nightly"
           fi
           echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          if [[ "$image_repo" == *"dkr.ecr"* ]]; then
+            ECR_REGION=$(echo "$image_repo" | awk -F. '{print $4}')
+            aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin "$image_repo" 
+          fi
           echo $DOCKER_IMAGE_URI
           docker pull $DOCKER_IMAGE_URI
       - name: Run djl_python unit/integration tests on container
