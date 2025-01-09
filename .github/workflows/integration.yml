@@ -190,6 +190,9 @@ jobs:
     timeout-minutes: 15
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
