@@ -53,13 +53,19 @@ jobs:
 
   hf-handler-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     strategy:
       matrix:
         arch: [ lmi ]
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -160,10 +166,16 @@ jobs:
 
   trt-llm-handler-test:
     if: contains(fromJson('["", "trtllm"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 120
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -275,10 +287,16 @@ jobs:
 
   trt-llm-handler-test-2:
     if: contains(fromJson('["", "trtllm"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 120
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -368,10 +386,16 @@ jobs:
 
   scheduler-single-gpu-test:
     if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -439,10 +463,16 @@ jobs:
 
   scheduler-multi-gpu-test:
     if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -501,10 +531,16 @@ jobs:
 
   lmi-dist-test-1:
     if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -591,10 +627,16 @@ jobs:
 
   lmi-dist-test-2:
     if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -709,10 +751,16 @@ jobs:
 
   vllm-test:
     if: contains(fromJson('["", "vllm"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -819,10 +867,16 @@ jobs:
 
   vllm-lora-test:
     if: contains(fromJson('["", "vllm-lora"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
@@ -901,10 +955,16 @@ jobs:
 
   lmi-dist-lora-test:
     if: contains(fromJson('["", "lmi-dist-lora"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g6 ]
+    runs-on: 
+      - self-hosted, 
+      - g6 
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
     timeout-minutes: 60
     needs: create-runners
     steps:
+      - name: Chown user
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
