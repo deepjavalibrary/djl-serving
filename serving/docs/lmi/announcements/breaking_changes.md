@@ -45,3 +45,33 @@ As a result of this change, we recommend you take the following actions:
   * `option.max_rolling_batch_prefill_tokens` depends on whether you use chunked prefill.
     * With chunked prefill, you can typically expect higher throughput with larger values, and better latency with lower values.
     * Without chunked prefill, you should set this to the maximum input length you aim to support.
+
+## LMI-TensorrtLLM v12 (0.30.0)
+
+### T5 model family memory increase 
+
+We have observed slightly different behavior for the t5 model family compared to our previous v11 release (0.29.0).
+We have raised an issue with Tensorrt-LLM [here](https://github.com/NVIDIA/TensorRT-LLM/issues/2398). 
+The change in behavior is likely due to how Tensorrt-LLM handles memory for the kv-cache.
+
+#### Guidance
+As a result, we recommend that you carefully tune the batch size and sequence length for your model.
+Configurations that previously worked on v11 may lead to Out-Of-Memory scenarios with v12.
+
+### T5 model family batch scheduler policy
+
+We have noticed runtime issues when using the default `batch_scheduler_policy` of `max_utilization` for t5 models.
+When this is combined with in-flight batching (the default), it leads to inference errors.
+
+#### Guidance
+We recommend users that are deploying t5 model variants to specify `option.batch_scheduler_policy=guaranteed_no_evict`
+to ensure proper inference execution.
+
+## LMI-NeuronX v12 (0.30.0)
+
+### Legacy partition is removed
+
+Before Neuron SDK version 2.18, it was necessary to load a safetensors model using Hugging Face on the CPU, save it as a pre-sharded version, and then load the model using NeuronAutoModel. Starting with Neuron SDK version 2.18, this step is no longer needed. In our code, although we have been loading the safetensors format on the CPU and loading them, the split_model_path is not used anywhere when using the safetensors format. Since we moved to Neuron SDK version 2.20.1, legacy partition is no longer needed.
+
+### Guidance
+You no longer need to specify a partition schema, as the LMI container can deduce it for you using our auto-detection partition schema. If you don't use option.partition_schema, this change does not affect you. If you do, consider making use of our auto-detection partition schema, safetensors, or Optimum.

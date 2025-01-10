@@ -6,77 +6,50 @@ LMI-Dist expects the model to be in the [standard HuggingFace format](../deploym
 
 ## Supported Model Architectures
 
-The model architecture that we test for lmi-dist (in CI):
+**Text Generation Models**
 
-- DBRX
-- Falcon
-- Gemma
-- GPT-NeoX
-- Llama (un-quantized and with GPTQ)
-- Mistral (un-quantized and with AWQ)
-- Mixtral
-- MPT
+LMI-Dist supports the same set of text-generation models as [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
+
+In addition to the vllm models, LMI-Dist also supports the t5 model family (e.g. google/flan-t5-xl).
+
+**Multi Modal Models**
+
+LMI-Dist supports the same set of multi-modal models as [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/models/supported_models.html#decoder-only-language-models).
+
+However, the one known exception is MLlama (Llama3.2 multimodal models). 
+MLlama support is expected in the v13 (0.31.0) release.
+
+### Model Coverage in CI
+
+The following set of models are tested in our nightly tests:
+
+- GPT NeoX 20b
+- Falcon 7b
+- Falcon2 11b
+- GPT2
+- MPT 7b
+- Llama2 13b
+- Llama3 8b
+- Flan T5 Xl
 - Octocoder
-- Phi
-- Starcoder
-- T5
-- LlaVA-NeXT
-- Phi-3-Vision
-- PaliGemma
-
-
-### Complete Model Set
-
-Text Generation Models
-
-- Aquila & Aquila2 (`BAAI/AquilaChat2-7B`, `BAAI/AquilaChat2-34B`, `BAAI/Aquila-7B`, `BAAI/AquilaChat-7B`, etc.)
-- Arctic (`Snowflake/snowflake-arctic-base`, `Snowflake/snowflake-arctic-instruct`, etc.)
-- Baichuan & Baichuan2 (`baichuan-inc/Baichuan2-13B-Chat`, `baichuan-inc/Baichuan-7B`, etc.)
-- BLOOM (`bigscience/bloom`, `bigscience/bloomz`, etc.)
-- ChatGLM (`THUDM/chatglm2-6b`, `THUDM/chatglm3-6b`, etc.)
-- Command-R (`CohereForAI/c4ai-command-r-v01`, etc.)
-- DBRX (`databricks/dbrx-base`, `databricks/dbrx-instruct` etc.)
-- DeciLM (`Deci/DeciLM-7B`, `Deci/DeciLM-7B-instruct`, etc.)
-- Falcon & Falcon2 (`tiiuae/falcon-7b`, `tiiuae/falcon-11b`, `tiiuae/falcon-40b`, `tiiuae/falcon-rw-7b`, etc.)
-- Gemma (`google/gemma-2b`, `google/gemma-7b`, etc.)
-- Gemma2 (`google/gemma-2-9b`, `google/gemma-2-27b`, etc.)
-- GPT-2 (`gpt2`, `gpt2-xl`, etc.)
-- GPT BigCode (`bigcode/starcoder`, `bigcode/gpt_bigcode-santacoder`, etc.)
-- GPT-J (`EleutherAI/gpt-j-6b`, `nomic-ai/gpt4all-j`, etc.)
-- GPT-NeoX (`EleutherAI/gpt-neox-20b`, `databricks/dolly-v2-12b`, `stabilityai/stablelm-tuned-alpha-7b`, etc.)
-- InternLM (`internlm/internlm-7b`, `internlm/internlm-chat-7b`, etc.)
-- InternLM2 (`internlm/internlm2-7b`, `internlm/internlm2-chat-7b`, etc.)
-- Jais (`core42/jais-13b`, `core42/jais-13b-chat`, `core42/jais-30b-v3`, `core42/jais-30b-chat-v3`, etc.)
-- Jamba (`ai21labs/Jamba-v0.1`, etc.)
-- LLaMA, Llama 2, Llama 3, Llama 3.1 (`meta-llama/Meta-Llama-3.1-405B-Instruct`, `meta-llama/Meta-Llama-3.1-70B`, `meta-llama/Meta-Llama-3-70B-Instruct`, `meta-llama/Llama-2-70b-hf`, `01-ai/Yi-34B`, etc.)
-- MiniCPM (`openbmb/MiniCPM-2B-sft-bf16`, `openbmb/MiniCPM-2B-dpo-bf16`, etc.)
-- Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
-- Mixtral (`mistralai/Mixtral-8x7B-v0.1`, `mistralai/Mixtral-8x7B-Instruct-v0.1`, `mistral-community/Mixtral-8x22B-v0.1`, etc.)
-- MPT (`mosaicml/mpt-7b`, `mosaicml/mpt-30b`, etc.)
-- OLMo (`allenai/OLMo-1B-hf`, `allenai/OLMo-7B-hf`, etc.)
-- OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
-- Orion (`OrionStarAI/Orion-14B-Base`, `OrionStarAI/Orion-14B-Chat`, etc.)
-- Phi (`microsoft/phi-1_5`, `microsoft/phi-2`, etc.)
-- Phi-3 (`microsoft/Phi-3-mini-4k-instruct`, `microsoft/Phi-3-mini-128k-instruct`, etc.)
-- Qwen (`Qwen/Qwen-7B`, `Qwen/Qwen-7B-Chat`, etc.)
-- Qwen2 (`Qwen/Qwen1.5-7B`, `Qwen/Qwen1.5-7B-Chat`, etc.)
-- Qwen2MoE (`Qwen/Qwen1.5-MoE-A2.7B`, `Qwen/Qwen1.5-MoE-A2.7B-Chat`, etc.)
-- StableLM(`stabilityai/stablelm-3b-4e1t`, `stabilityai/stablelm-base-alpha-7b-v2`, etc.)
-- Starcoder2(`bigcode/starcoder2-3b`, `bigcode/starcoder2-7b`, `bigcode/starcoder2-15b`, etc.)
-- T5 (`google/flan-t5-xxl`, `google/flan-t5-base`, etc.)
-- Xverse (`xverse/XVERSE-7B-Chat`, `xverse/XVERSE-13B-Chat`, `xverse/XVERSE-65B-Chat`, etc.)
-
-Multi Modal Models
-
-- Chameleon (`facebook/chameleon-7b` etc.)
-- Fuyu (`adept/fuyu-8b` etc.)
-- LlaVA-1.5 (`llava-hf/llava-1.5-7b-hf`, `llava-hf/llava-1.5-13b-hf`, etc.)
-- LlaVA-NeXT (`llava-hf/llava-v1.6-mistral-7b-hf`, `llava-hf/llava-v1.6-vicuna-7b-hf`, etc.)
-- PaliGemma (`google/paligemma-3b-pt-224`, `google/paligemma-3b-mix-224`, etc.)
-- Phi-3-Vision (`microsoft/Phi-3-vision-128k-instruct`, etc.)
-
-We will add more model support for the future versions to have them tested. Please feel free to [file us an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) for more model coverage in CI.
-
+- Starcoder2 7b
+- Gemma 2b
+- Llama2 13b + GPTQ
+- Mistral 7b
+- Llama3.1 8b
+- Llama3.1 8b - Multi Node
+- Codestral 22b
+- Llava-v1.6-mistral (multi modal)
+- Phi3v (multi modal)
+- Pixtral12b (multi modal)
+- Llama3.2 1b/3b
+- Llama2 13b + Speculative Decoding
+- Codellama 34b
+- Mixtral 8x7b
+- DBRX
+- Llama3.1 70b
+- Baichuan2 13b
+- Qwen1.5 14b
 
 ## Quick Start Configurations
 
@@ -109,25 +82,41 @@ You can follow [this example](../deployment_guide/deploying-your-endpoint.md#opt
 
 ### LoRA Adapter Support
 
-vLLM has support for LoRA adapters using the [adapters API](../../adapters.md).
+LMI-Dist has support for LoRA adapters using the [adapters API](../../adapters.md).
 In order to use the adapters, you must begin by enabling them by setting `option.enable_lora=true`.
 Following that, you can configure the LoRA support through the additional settings `option.max_loras`, `option.max_lora_rank`, `option.lora_extra_vocab_size`, and `option.max_cpu_loras`.
 If you run into OOM by enabling adapter support, reduce the `option.gpu_memory_utilization`.
 
 Please check that your base model [supports LoRA adapters in vLLM](https://docs.vllm.ai/en/v0.5.3.post1/models/supported_models.html#decoder-only-language-models).
 
-
 ## Quantization Support
 
-Currently, we allow customer to use `option.quantize=<quantization-type>` or `OPTION_QUANTIZE=<quantization-type>` to load a quantized model in `lmi-dist`.
+LMI-Dist supports the same quantization techniques as [vllm 0.6.2](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
 
-We support the following `<quantization-type>`:
+We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
+Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.
 
-* awq (LMI container versions >= 0.26.0)
-* gptq (LMI container versions >= 0.24.0)
-* squeezellm (LMI container versions >= 0.27.0)
+The following quantization techniques are supported for runtime quantization:
 
-When using pre-quantized models make sure to use the correct model artifacts e.g. `TheBloke/Llama-2-13B-chat-GPTQ`, `TheBloke/Llama-2-13B-chat-AWQ`.
+- fp8
+- bitsandbytes
+
+You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
+
+Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
+
+### Ahead of time (AOT) quantization
+
+If you bring a pre-quantized model to LMI, you should not set the `option.quantize` configuration.
+The lmi-dist engine will directly parse the quantization configuration from the model and load it for inference.
+This is especially important if you are using a technique that has a Marlin variant like GPTQ, AWQ, or FP8.
+The engine will determine if it can use the Marlin kernels at runtime, and use them if it can (hardware support).
+
+For example, let's say you are deploying an AWQ quantized model on a g6.12xlarge instance (GPUs support marlin).
+If you explicitly specify `option.quantize=awq`, the engine will not apply Marlin as it is explicitly instructed to only use `awq`.
+If you omit the `option.quantize` configuration, then the engine will determine it can use marlin and leverage that for optimized performance.
+ 
 
 ## Advanced LMI-Dist Configurations
 

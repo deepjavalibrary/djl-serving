@@ -21,7 +21,7 @@ LMI containers provide many features, including:
 * Integration with open source inference libraries like vLLM, TensorRT-LLM, and Transformers NeuronX
 * Continuous Batching for maximizing throughput at high concurrency
 * Token Streaming
-* Quantization through AWQ, GPTQ, and SmoothQuant
+* Quantization through AWQ, GPTQ, FP8 and more 
 * Multi GPU inference using Tensor Parallelism
 * Serving LoRA fine-tuned models
 * Text Embedding to convert text data into numerical vectors 
@@ -73,10 +73,10 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 
 | Backend                | SageMakerDLC    | Example URI                                                                               |
 |------------------------|-----------------|-------------------------------------------------------------------------------------------|
-| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124         |
-| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124         |
-| `hf-accelerate`        | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124         |
-| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-tensorrtllm0.11.0-cu124 |
+| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
+| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
+| `hf-accelerate`        | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
+| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125 |
 | `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-neuronx-sdk2.19.1       |
 
 ## Advanced Features
