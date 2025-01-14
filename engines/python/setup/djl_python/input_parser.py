@@ -143,6 +143,7 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
         inputs, param = parse_chat_completions_request(
             input_map,
             kwargs.get("is_rolling_batch"),
+            kwargs.get("rolling_batch"),
             tokenizer,
             image_token=image_token,
             configs=configs,

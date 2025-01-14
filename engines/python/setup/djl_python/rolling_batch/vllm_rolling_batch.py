@@ -57,6 +57,9 @@ class VLLMRollingBatch(RollingBatch):
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
 
+    def get_model_config(self):
+        return self.engine.model_config
+
     def get_huggingface_model_config(self):
         return self.engine.model_config.hf_config
 
