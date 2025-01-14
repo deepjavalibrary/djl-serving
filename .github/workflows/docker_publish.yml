@@ -46,7 +46,6 @@ env:
   AWS_TMP_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
   AWS_STAGING_ECR_REPO: "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving"
   ECR_REPO_REGION: "us-east-1"
-  REQUIRE_SELF_HOST: "[tensorrt-llm]" #requires larger disk size
 
 jobs:
   create-aarch64-runner:
@@ -66,7 +65,7 @@ jobs:
 
 
   docker-sync:
-    runs-on:  ${{ contains( github.env['REQUIRE_SELF_HOST'], matrix.arch) && '[ self-hosted, aarch64 ]' || 'ubuntu-latest' }}
+    runs-on:  ${{ contains( '[tensorrt-llm]', matrix.arch) && '[ self-hosted, aarch64 ]' || 'ubuntu-latest' }}
     timeout-minutes: 60
     needs: [create-aarch64-runner]
     strategy:
@@ -79,12 +78,6 @@ jobs:
         working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
-      - name: test
-        run: |
-          echo ${{ matrix.arch }}
-          echo ${{ contains( github.env.REQUIRE_SELF_HOST, matrix.arch) }}
-          echo ${{  github.env.REQUIRE_SELF_HOST }}
-          echo ${{  github.env['REQUIRE_SELF_HOST'] }}
       # - name: Login to Docker
       #   uses: docker/login-action@v2
       #   with:
