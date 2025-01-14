@@ -65,7 +65,7 @@ jobs:
 
 
   docker-sync:
-    runs-on:  ${{ contains( '[tensorrt-llm]', matrix.arch) && '[ self-hosted, aarch64 ]' || 'ubuntu-latest' }}
+    runs-on:  ${{ contains( '[tensorrt-llm]', matrix.arch) && needs.create-aarch64-runner.outputs.aarch64_instance_id || 'ubuntu-latest' }}
     timeout-minutes: 60
     needs: [create-aarch64-runner]
     strategy:
