@@ -46,11 +46,29 @@ env:
   AWS_TMP_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
   AWS_STAGING_ECR_REPO: "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving"
   ECR_REPO_REGION: "us-east-1"
+  REQUIRE_SELF_HOST: "[tensorrt-llm]" #requires larger disk size
 
 jobs:
+  create-aarch64-runner:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
+      - name: Create new Graviton instance
+        id: create_aarch64
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token djl-serving
+    outputs:
+      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
+
+
   docker-sync:
-    runs-on: ubuntu-latest
+    runs-on:  ${{ contains( github.env.REQUIRE_SELF_HOST, matrix.arch) && '[ self-hosted, aarch64 ]' || 'ubuntu-latest' }}
     timeout-minutes: 60
+    needs: [create-aarch64-runner]
     strategy:
       fail-fast: false
       matrix:
@@ -61,43 +79,53 @@ jobs:
         working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
-      - name: Login to Docker
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: install awscli
-        run: |  
-          sudo apt-get update
-          sudo apt-get install awscli -y
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
-          aws-region: us-east-1
-      - name: Login to ECR
+      # - name: Login to Docker
+      #   uses: docker/login-action@v2
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      # - name: install awscli
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install awscli -y
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+      #     aws-region: us-east-1
+      # - name: Login to ECR
+      #   run: |
+      #     aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_TMP_ECR_REPO }}
+      #     aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_STAGING_ECR_REPO }}
+      # - name: Get DJL Version
+      #   run: |
+      #     DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ./gradle/libs.versions.toml)
+      #     echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
+      # - name: Pull and sync to docker hub
+      #   working-directory: serving/docker
+      #   run: |
+      #     ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
+      # - name: Pull and sync to ECR
+      #   working-directory: serving/docker
+      #   run: |
+      #     ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
+      # - name: Retag image for release latest
+      #   if: ${{ inputs.mode == 'release' }}
+      #   working-directory: serving/docker
+      #   run: |
+      #     docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
+      #     docker push deepjavalibrary/djl-serving:latest
+      # - name: Clean docker env
+      #   working-directory: serving/docker
+      #   run: |
+      #     yes | docker system prune -a --volumes
+  stop-aarch64-runner:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [docker-sync, create-aarch64-runner]
+    steps:
+      - name: Stop all instances
         run: |
-          aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_TMP_ECR_REPO }}
-          aws ecr get-login-password --region ${{ env.ECR_REPO_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_STAGING_ECR_REPO }}
-      - name: Get DJL Version
-        run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ./gradle/libs.versions.toml)
-          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
-      - name: Pull and sync to docker hub
-        working-directory: serving/docker
-        run: |
-          ./scripts/push_image_from_ECR.sh $DJL_VERSION deepjavalibrary/djl-serving ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
-      - name: Pull and sync to ECR
-        working-directory: serving/docker
-        run: |
-          ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
-      - name: Retag image for release latest
-        if: ${{ inputs.mode == 'release' }}
-        working-directory: serving/docker
-        run: |
-          docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
-          docker push deepjavalibrary/djl-serving:latest
-      - name: Clean docker env
-        working-directory: serving/docker
-        run: |
-          yes | docker system prune -a --volumes
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-aarch64-runner.outputs.aarch64_instance_id }}
+          ./stop_instance.sh $instance_id
