@@ -19,7 +19,7 @@ from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, create_lora_request, get_lora_request,
-    get_engine_args_from_config, get_prompt_inputs)
+    get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import List, Optional
 
@@ -47,12 +47,12 @@ class VLLMRollingBatch(RollingBatch):
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(self.vllm_configs)
-        args = get_engine_args_from_config(self.vllm_configs)
+        args = self.vllm_configs.get_engine_args()
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
-        self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
+        self.is_mistral_tokenizer = args.tokenizer_mode == 'mistral'
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
