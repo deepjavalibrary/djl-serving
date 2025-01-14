@@ -66,7 +66,7 @@ jobs:
 
 
   docker-sync:
-    runs-on:  ${{ contains( github.env.REQUIRE_SELF_HOST, matrix.arch) && '[ self-hosted, aarch64 ]' || 'ubuntu-latest' }}
+    runs-on:  ${{ contains( github.env['REQUIRE_SELF_HOST'], matrix.arch) && '[ self-hosted, aarch64 ]' || 'ubuntu-latest' }}
     timeout-minutes: 60
     needs: [create-aarch64-runner]
     strategy:
@@ -83,6 +83,8 @@ jobs:
         run: |
           echo ${{ matrix.arch }}
           echo ${{ contains( github.env.REQUIRE_SELF_HOST, matrix.arch) }}
+          echo ${{  github.env.REQUIRE_SELF_HOST }}
+          echo ${{  github.env['REQUIRE_SELF_HOST'] }}
       # - name: Login to Docker
       #   uses: docker/login-action@v2
       #   with:
