@@ -21,7 +21,6 @@ from djl_python.encode_decode import decode
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 from djl_python.request import Request
 from djl_python.request_io import TextInput, RequestInput
-from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.three_p.three_p_utils import parse_3p_request
 
 
@@ -142,7 +141,7 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     if configs is not None:
         is_bedrock = configs.bedrock_compat
     if is_chat_completions_request(input_map):
-        if isinstance(kwargs.get("rolling_batch"), TRTLLMRollingBatch):
+        if type(kwargs.get("rolling_batch")).__name__ == "TRTLLMRollingBatch":
             inputs, param = parse_chat_completions_request(
                 input_map,
                 kwargs.get("is_rolling_batch"),
