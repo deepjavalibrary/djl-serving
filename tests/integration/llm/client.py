@@ -445,6 +445,21 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
+    },
+    "llama-3-3-70b-instruct": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "mixtral-8x7b-instruct": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "dbrx-instruct": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
     }
 }
 
@@ -617,6 +632,21 @@ vllm_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
     },
+    "llama-3-3-70b-instruct": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "mixtral-8x7b-instruct": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "dbrx-instruct": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    }
 }
 
 vllm_neo_model_spec = {
@@ -760,6 +790,14 @@ trtllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "NousResearch/Meta-Llama-3.1-8B",
     },
+    "llama-3-1-70b-instruct": {
+        "batch_size": [1, 8],
+        "seq_length": [256],
+    },
+    "mixtral-8x7b-instruct": {
+        "batch_size": [1, 8],
+        "seq_length": [256],
+    }
 }
 
 trtllm_chat_model_spec = {

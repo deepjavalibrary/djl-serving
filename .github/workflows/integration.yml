@@ -112,6 +112,24 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_inf2 $token djl-serving
+      - name: Create new P4d instance
+        id: create_p4d_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
+      - name: Create new P4d instance
+        id: create_p4d_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
@@ -120,7 +138,8 @@ jobs:
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
       inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
       inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
-
+      p4d_instance_id_1: ${{ steps.create_p4d_1.outputs.action_p4d_instance_id }}
+      p4d_instance_id_2: ${{ steps.create_p4d_2.outputs.action_p4d_instance_id }}
 
   test:
     runs-on:
@@ -209,6 +228,12 @@ jobs:
           - test: TestCorrectnessNeuronx
             instance: inf2
             failure-prefix: neuron
+          - test: TestLmiLargeModel
+            instance: p4d
+            failure-prefix: lmi
+          - test: TestTrtLlmLargeModel
+            instance: p4d
+            failure-prefix: trtllm
     outputs:
       failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
       failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}
@@ -390,4 +415,8 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.inf2_instance_id_1 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.p4d_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.p4d_instance_id_2 }}
           ./stop_instance.sh $instance_id

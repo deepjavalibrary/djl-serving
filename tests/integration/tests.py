@@ -964,6 +964,8 @@ class TestCorrectnessNeuronx:
             client.run("correctness neuronx-llama3-1-8b".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu
 class TestMultiModalLmiDist:
 
     def test_llava_next(self):
@@ -991,6 +993,8 @@ class TestMultiModalLmiDist:
             client.run("multimodal llama32-11b-multimodal".split())
 
 
+@pytest.mark.vllm
+@pytest.mark.gpu
 class TestMultiModalVllm:
 
     def test_llava_next(self):
@@ -1019,6 +1023,8 @@ class TestMultiModalVllm:
             client.run("multimodal llama32-11b-multimodal".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu
 class TestLmiDistPipelineParallel:
 
     def test_llama32_3b_multi_worker_tp1_pp1(self):
@@ -1151,3 +1157,43 @@ class TestGPUHandlerPerformance:
             prepare.build_handler_performance_model("tiny-llama-trtllm")
             r.launch("CUDA_VISIBLE_DEVICES=0")
             client.run("handler_performance trtllm".split())
+
+
+@pytest.mark.gpu
+@pytest.mark.lmi_dist
+class TestLmiLargeModel:
+
+    def test_llama_3_3_70b_instruct(self):
+        with Runner('lmi', 'llama-3-3-70b-instruct') as r:
+            prepare.build_lmi_dist_model('llama-3-3-70b-instruct')
+            r.launch()
+            client.run('lmi_dist llama-3-3-70b-instruct'.split())
+
+    def test_mixtral_8x7b_instruct(self):
+        with Runner('lmi', 'mixtral-8x7b-instruct') as r:
+            prepare.build_lmi_dist_model('mixtral-8x7b-instruct')
+            r.launch()
+            client.run('lmi_dist mixtral-8x7b-instruct'.split())
+
+    def test_dbrx_instruct(self):
+        with Runner('lmi', 'dbrx-instruct') as r:
+            prepare.build_lmi_dist_model('dbrx-instruct')
+            r.launch()
+            client.run('lmi_dist dbrx-instruct'.split())
+
+
+@pytest.mark.trtllm
+@pytest.mark.gpu
+class TestTrtLlmLargeModel:
+
+    def test_llama_3_1_70b_instruct(self):
+        with Runner('tensorrt-llm', 'llama-3-1-70b-instruct') as r:
+            prepare.build_trtllm_handler_model('llama-3-1-70b-instruct')
+            r.launch()
+            client.run('trtllm llama-3-1-70b-instruct'.split())
+
+    def test_mixtral_8x7b(self):
+        with Runner('tensorrt-llm', 'mixtral-8x7b-instruct') as r:
+            prepare.build_trtllm_handler_model('mixtral-8x7b-instruct')
+            r.launch()
+            client.run('trtllm mixtral-8x7b-instruct'.split())

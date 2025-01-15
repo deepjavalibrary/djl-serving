@@ -709,6 +709,18 @@ lmi_dist_model_list = {
     },
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
+    },
+    "llama-3-3-70b-instruct": {
+        "option.model_id": "s3://djl-llm/llama-3.3-70b-instruct/"
+    },
+    "mixtral-8x7b-instruct": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b-instruct/",
+        "option.max_model_len": 8192,
+    },
+    "dbrx-instruct": {
+        "option.model_id": "s3://djl-llm/dbrx-instruct/",
+        # need this to fit on p4d
+        "option.gpu_memory_utilization": 0.95,
     }
 }
 
@@ -1041,6 +1053,15 @@ vllm_model_list = {
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
         "option.enforce_eager": True,
+    },
+    "llama-3-3-70b-instruct": {
+        "option.model_id": "s3://djl-llm/llama-3.3-70b-instruct/"
+    },
+    "mixtral-8x7b-instruct": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b-instruct/"
+    },
+    "dbrx-instruct": {
+        "option.model_id": "s3://djl-llm/dbrx-instruct/"
     }
 }
 
@@ -1184,6 +1205,14 @@ trtllm_handler_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 4,
     },
+    "llama-3-1-70b-instruct": {
+        "option.model_id": "s3://djl-llm/llama-3.1-70b-instruct-hf/",
+        "option.max_seq_len": 8192,
+        "option.max_num_tokens": 8192,
+    },
+    "mixtral-8x7b-instruct": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b-instruct/"
+    }
 }
 
 correctness_model_list = {
@@ -1711,7 +1740,7 @@ def build_handler_performance_model(model):
 def build_text_embedding_model(model):
     if model not in text_embedding_model_list:
         raise ValueError(
-            f"{model} is not one of the supporting handler {list(onnx_list.keys())}"
+            f"{model} is not one of the supporting handler {list(text_embedding_model_list.keys())}"
         )
     options = text_embedding_model_list[model]
     options["option.task"] = "text_embedding"
