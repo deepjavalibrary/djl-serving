@@ -10,123 +10,14 @@ on:
   schedule:
     - cron: '0 9 * * *'
 
+# TODO: port this to integration tests in 0.31.0 and then delete this file
 jobs:
-  create-runners:
-    runs-on: [self-hosted, scheduler]
+  fast-fail:
+    runs-on: ubuntu-latest
     steps:
-      - name: Create new G6 instance
-        id: create_gpu1
+      - name: Fail if run on master branch
+        id: fast_fail
+        if: github.ref == 'refs/heads/master'
         run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new G6 instance
-        id: create_gpu2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new Inf2.24xl instance
-        id: create_inf2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_inf2 $token djl-serving
-    outputs:
-      gpu_instance_id_1: ${{ steps.create_gpu1.outputs.action_g6_instance_id }}
-      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
-      inf2_instance_id: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
-
-  test:
-    runs-on: [ "${{ matrix.test.instance }}" ]
-    timeout-minutes: 90
-    needs: create-runners
-    strategy:
-      fail-fast: false
-      matrix:
-        test:
-          - test: TestCorrectnessTrtLlm
-            instance: g6
-          - test: TestCorrectnessLmiDist
-            instance: g6
-          - test: TestCorrectnessNeuronx
-            instance: inf2
-    steps:
-      - uses: actions/checkout@v4
-      - name: Clean env
-        run: |
-          yes | docker system prune -a --volumes
-          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
-          echo "wait dpkg lock..."
-          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'corretto'
-          java-version: 17
-      - name: Set up Python3
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10.x'
-      - name: Install pip dependencies
-        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
-      - name: Install torch
-        # Use torch to get cuda capability of current device to selectively run tests
-        # Torch version doesn't really matter that much
-        run: |
-          pip3 install torch==2.3.0
-      - name: Install awscurl
-        working-directory: tests/integration
-        run: |
-          curl -OL https://publish.djl.ai/awscurl/awscurl
-          chmod +x awscurl
-          mkdir outputs
-      - name: Test
-        working-directory: tests/integration
-        env:
-          TEST_DJL_VERSION: ${{ inputs.djl-version }}
-        run: |
-          python -m pytest -k ${{ matrix.test.test }} tests.py
-      - name: Cleanup
-        working-directory: tests/integration
-        run: |
-          rm -rf outputs
-          rm awscurl
-      - name: On Failure
-        if: ${{ failure() }}
-        working-directory: tests/integration
-        run: |
-          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
-          sudo rm -rf outputs && sudo rm -rf models
-          rm awscurl
-          docker rm -f $(docker ps -aq) || true
-      - name: Upload test logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-${{ matrix.test.test }}-logs
-          path: tests/integration/all_logs/
-
-  stop-runners:
-    if: always()
-    runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, test]
-    steps:
-      - name: Stop all instances
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.inf2_instance_id }}
-          ./stop_instance.sh $instance_id
+          echo "Fast fail"
+          exit 1

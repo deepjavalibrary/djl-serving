@@ -197,6 +197,18 @@ jobs:
           - test: TestLmiDistPipelineParallel
             instance: g6
             failure-prefix: lmi
+          - test: TestLmiDistMultiNode
+            instance: g6
+            failure-prefix: lmi
+          - test: TestCorrectnessTrtLlm
+            instance: g6
+            failure-prefix: trtllm
+          - test: TestCorrectnessLmiDist
+            instance: g6
+            failure-prefix: lmi
+          - test: TestCorrectnessNeuronx
+            instance: inf2
+            failure-prefix: neuron
     outputs:
       failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
       failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}
