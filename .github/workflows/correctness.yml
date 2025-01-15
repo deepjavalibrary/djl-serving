@@ -7,8 +7,6 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
-  schedule:
-    - cron: '0 9 * * *'
 
 # TODO: port this to integration tests in 0.31.0 and then delete this file
 jobs:
