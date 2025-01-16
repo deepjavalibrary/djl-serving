@@ -30,6 +30,7 @@ ARG torch_xla_version=2.1.6
 ARG libneuronxla_version=2.1.681.0
 
 ARG transformers_version=4.45.2
+ARG tokenizers_version=0.20.3
 ARG accelerate_version=0.29.2
 ARG diffusers_version=0.28.2
 ARG pydantic_version=2.6.1
@@ -113,8 +114,11 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     neuronx_distributed_inference==${neuronx_distributed_inference_version} \
     optimum-neuron==${optimum_neuron_version} \
     transformers-neuronx==${transformers_neuronx_version} \
-    ${vllm_wheel} \
-    transformers==${transformers_version} && \
+    transformers==${transformers_version} \
+    tokenizers==${tokenizers_version} && \
+    # Install vllm and uninstall triton \
+    pip install ${vllm_wheel} &&\
+    echo y | pip uninstall triton && \
     # Install s5cmd and patch OSS DLC
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
