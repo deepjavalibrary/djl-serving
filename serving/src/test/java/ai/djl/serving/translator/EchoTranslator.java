@@ -37,7 +37,7 @@ public class EchoTranslator implements ServingTranslator {
     @Override
     public NDList processInput(TranslatorContext ctx, Input input) {
         ctx.setAttachment("input", input);
-        return null;
+        return new NDList();
     }
 
     @Override
