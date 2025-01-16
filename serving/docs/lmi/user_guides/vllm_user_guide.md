@@ -39,6 +39,8 @@ The quantization techniques supported in vLLM 0.6.3.post1 are listed [here](http
 We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.
 
+### Runtime Quantization
+
 The following quantization techniques are supported for runtime quantization:
 
 - fp8
@@ -47,7 +49,18 @@ The following quantization techniques are supported for runtime quantization:
 You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
 
 Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
-You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.6.3.post1/quantization/supported_hardware.html).
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.6.2/quantization/supported_hardware.html).
+
+### Ahead of time (AOT) quantization
+
+If you bring a pre-quantized model to LMI, you should not set the `option.quantize` configuration.
+The lmi-dist engine will directly parse the quantization configuration from the model and load it for inference.
+This is especially important if you are using a technique that has a Marlin variant like GPTQ, AWQ, or FP8.
+The engine will determine if it can use the Marlin kernels at runtime, and use them if it can (hardware support).
+
+For example, let's say you are deploying an AWQ quantized model on a g6.12xlarge instance (GPUs support marlin).
+If you explicitly specify `option.quantize=awq`, the engine will not apply Marlin as it is explicitly instructed to only use `awq`.
+If you omit the `option.quantize` configuration, then the engine will determine it can use marlin and leverage that for optimized performance.
 
 ## Quick Start Configurations 
 
