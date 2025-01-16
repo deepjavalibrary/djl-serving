@@ -131,6 +131,14 @@ class LmiDistRollingBatch(RollingBatch):
         # an interface method and retrieve it from there after v12
         return self.engine.preprocessor.model_config if not self.is_t5_model else None
 
+    def use_vllm_chat_completions(self):
+        return True
+
+    def get_huggingface_model_config(self):
+        # TODO: this is a hack right now to get the model config from the engine. We should expose this as
+        # an interface method and retrieve it from there after v12
+        return self.engine.preprocessor.model_config.hf_config if not self.is_t5_model else None
+
     def get_huggingface_model_config(self):
         # TODO: this is a hack right now to get the model config from the engine. We should expose this as
         # an interface method and retrieve it from there after v12

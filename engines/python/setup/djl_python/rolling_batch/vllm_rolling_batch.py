@@ -63,6 +63,9 @@ class VLLMRollingBatch(RollingBatch):
     def get_huggingface_model_config(self):
         return self.engine.model_config.hf_config
 
+    def use_vllm_chat_completions(self):
+        return True
+
     def reset(self) -> None:
         """
         Aborts all requests

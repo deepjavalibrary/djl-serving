@@ -141,13 +141,13 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     if configs is not None:
         is_bedrock = configs.bedrock_compat
     if is_chat_completions_request(input_map):
-        if type(kwargs.get("rolling_batch")).__name__ in [
-                "LmiDistRollingBatch", "VLLMRollingBatch"
-        ]:
+        rolling_batch = kwargs.get("rolling_batch")
+        if rolling_batch is not None and rolling_batch.use_vllm_chat_completions(
+        ):
             inputs, param = parse_chat_completions_request_vllm(
                 input_map,
                 kwargs.get("is_rolling_batch"),
-                kwargs.get("rolling_batch"),
+                rolling_batch,
                 tokenizer,
                 image_token=image_token,
                 configs=configs,
