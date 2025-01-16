@@ -304,18 +304,9 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
         )
 
 
-def get_multi_modal_data(request: Request) -> Optional[dict]:
-    parameters = request.parameters
-    images = parameters.pop("images", None)
-    multi_modal_data = None
-    if images:
-        multi_modal_data = {"image": images}
-    return multi_modal_data
-
-
 def get_prompt_inputs(request: Request):
     text_prompt = request.request_input.input_text
-    multi_modal_data = get_multi_modal_data(request)
+    multi_modal_data = request.parameters.pop("mm_data", None)
     # TODO: In chat cases, we need to apply the chat template to the messages object to get a string
     # In both HuggingFace and mistral cases, that process can also yield token-ids directly
     # that we may want to consider passing directly to the engine

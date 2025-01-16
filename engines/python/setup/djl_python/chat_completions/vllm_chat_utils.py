@@ -75,7 +75,7 @@ def parse_chat_completions_request_vllm(
         "output_formatter"] = "jsonlines_chat" if chat_params.stream else "json_chat"
 
     if mm_data:
-        param.update(mm_data)
+        param["mm_data"] = mm_data
 
     # In the case of mistral, text_inputs = List[TokenIds], else = str
     return text_inputs, param
