@@ -55,11 +55,14 @@ ENV TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 ENV TORCH_NCCL_AVOID_RECORD_STREAMS=1
 ENV SERVING_FEATURES=vllm,lmi-dist
 ENV DEBIAN_FRONTEND=noninteractive
+# Making s5cmd discoverable
+ENV PATH="/opt/djl/bin:${PATH}"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 COPY scripts scripts/
+RUN chmod -R +x scripts
 RUN mkdir -p /opt/djl/conf \
     && mkdir -p /opt/djl/deps \
     && mkdir -p /opt/djl/partition \
@@ -100,7 +103,6 @@ RUN scripts/patch_oss_dlc.sh python \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
-    && rm -rf scripts \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$djl_onnx_version
 
