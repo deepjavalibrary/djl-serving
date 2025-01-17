@@ -9,12 +9,19 @@ fi
 
 if [[ "$1" = "serve" ]]; then
   shift 1
-  code=77
-  while [[ code -eq 77 ]]; do
-    /usr/bin/djl-serving "$@"
-    code=$?
-  done
-  exit $code
+  echo "$DEBUG_MODE=$DEBUG_MODE"
+  if [[ -n "$DEBUG_MODE" ]]; then
+    set -e
+    source /opt/djl/scripts/install_debug_tools.sh
+    /opt/djl/scripts/start_debug_tools.sh "$@"
+  else
+    code=77
+    while [[ code -eq 77 ]]; do
+      /usr/bin/djl-serving "$@"
+      code=$?
+    done
+    exit $code
+  fi
 elif [[ "$1" = "partition" ]] || [[ "$1" = "train" ]]; then
   set -e
   shift 1
