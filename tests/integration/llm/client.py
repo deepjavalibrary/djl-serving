@@ -1918,7 +1918,7 @@ def get_multimodal_prompt(batch_size):
         "messages": messages,
         "temperature": 0.9,
         "top_p": 0.6,
-        "max_new_tokens": 512,
+        "max_tokens": 512,
     }
 
 

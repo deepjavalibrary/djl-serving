@@ -16,6 +16,7 @@ from typing import List, Dict, Optional, Callable
 
 from djl_python import Input
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
+from djl_python.chat_completions.vllm_chat_utils import parse_chat_completions_request_vllm
 from djl_python.encode_decode import decode
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 from djl_python.request import Request
@@ -140,14 +141,27 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     if configs is not None:
         is_bedrock = configs.bedrock_compat
     if is_chat_completions_request(input_map):
-        inputs, param = parse_chat_completions_request(
-            input_map,
-            kwargs.get("is_rolling_batch"),
-            tokenizer,
-            image_token=image_token,
-            configs=configs,
-            is_mistral_tokenizer=is_mistral_tokenizer,
-        )
+        rolling_batch = kwargs.get("rolling_batch")
+        if rolling_batch is not None and rolling_batch.use_vllm_chat_completions(
+        ):
+            inputs, param = parse_chat_completions_request_vllm(
+                input_map,
+                kwargs.get("is_rolling_batch"),
+                rolling_batch,
+                tokenizer,
+                image_token=image_token,
+                configs=configs,
+                is_mistral_tokenizer=is_mistral_tokenizer,
+            )
+        else:
+            inputs, param = parse_chat_completions_request(
+                input_map,
+                kwargs.get("is_rolling_batch"),
+                tokenizer,
+                image_token=image_token,
+                configs=configs,
+                is_mistral_tokenizer=is_mistral_tokenizer,
+            )
     elif is_bedrock:
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),
