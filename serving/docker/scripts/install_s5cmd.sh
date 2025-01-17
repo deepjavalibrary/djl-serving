@@ -10,6 +10,11 @@ else
   curl https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz -L -o s5cmd.tar.gz
 fi
 
-mkdir -p /opt/djl/bin
-tar -xvf s5cmd.tar.gz -C /opt/djl/bin
+INSTALL_DIR="/opt/djl/bin"
+
+mkdir -p "${INSTALL_DIR}"
+tar -xvf s5cmd.tar.gz -C "${INSTALL_DIR}"
 rm -rf s5cmd.tar.gz
+
+export PATH="${INSTALL_DIR}:${PATH}"
+echo "export PATH=${INSTALL_DIR}:\$PATH" >> ~/.bashrc

@@ -26,6 +26,8 @@ ENV HF_HOME=/tmp/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV DNNL_DEFAULT_FPMATH_MODE=BF16
 ENV LRU_CACHE_CAPACITY=1024
+# Making s5cmd discoverable
+ENV PATH="/opt/djl/bin:${PATH}"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
