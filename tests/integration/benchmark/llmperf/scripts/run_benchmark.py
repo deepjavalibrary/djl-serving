@@ -16,7 +16,10 @@ import yaml
 import traceback
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='run_benchmark.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename='run_benchmark.log',
+                    encoding='utf-8',
+                    level=logging.INFO)
+
 
 def publish_cw_metrics(cw, metrics_namespace, metrics, json_map, model_name,
                        endpoint_type, container, instance_type, concurrency):
@@ -114,21 +117,28 @@ def build_parameter_str(parameter_list):
     return " ".join(parameter_list)
 
 
-def launch_container(container, image, model, hf_token, container_log_file_name):
-    docker_parameters = build_parameter_str(container.get("docker_parameters", []))
-    server_parameters = build_parameter_str(container.get("server_parameters", []))
-   
-    try: 
+def launch_container(container, image, model, hf_token,
+                     container_log_file_name):
+    docker_parameters = build_parameter_str(
+        container.get("docker_parameters", []))
+    server_parameters = build_parameter_str(
+        container.get("server_parameters", []))
+
+    try:
         container_name = container["container"]
         docker_command = f"docker run --name {container_name} --rm -e HUGGING_FACE_HUB_TOKEN={hf_token} {docker_parameters} --init {image} {server_parameters}"
         logger.info(f"docker_command={docker_command}")
         # Open log file for writing
         log_file = open(Path(container_log_file_name), "w")
 
-        process = subprocess.Popen(docker_command, shell=True, stdout=log_file, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(docker_command,
+                                   shell=True,
+                                   stdout=log_file,
+                                   stderr=subprocess.STDOUT)
         logger.info(f"Docker run shell process={process.pid}")
         time.sleep(60)
-        container = subprocess.check_output(["docker", "inspect", "-f", "{{.Name}}", container_name])
+        container = subprocess.check_output(
+            ["docker", "inspect", "-f", "{{.Name}}", container_name])
     except Exception as e:
         logger.error(f"Failed to launch container. error: {e}")
         logger.error(traceback.format_exc())
@@ -219,7 +229,8 @@ def upload_summary_to_s3(s3, result_outputs, s3_bucket, s3_metrics_folder):
                 if file.name.endswith("_summary.json"):
                     summary_json_file = Path(file)
                 s3_metrics_object = f"{s3_metrics_folder}{file}"
-                logger.info(f"upload to s3_metrics_object: {s3_metrics_object}")
+                logger.info(
+                    f"upload to s3_metrics_object: {s3_metrics_object}")
                 s3.upload_file(Path(file), s3_bucket, s3_metrics_object)
             except Exception as e:
                 logger.error(
@@ -275,7 +286,8 @@ def get_public_ecr_image_latest_tag(repo):
 def get_vllm_image(repo, tag=None):
     #repo default public.ecr.aws/q9t5s3a7/vllm-ci-postmerge-repo
     if tag is None:
-        image = get_public_ecr_image_latest_tag("q9t5s3a7/vllm-ci-postmerge-repo")
+        image = get_public_ecr_image_latest_tag(
+            "q9t5s3a7/vllm-ci-postmerge-repo")
         if image is None:
             raise ValueError("Invalid vllm repo: {repo} in public.ecr.aws")
     else:
@@ -381,7 +393,7 @@ def get_image_name(container):
 def run_benchmark(config_yml, llmperf_path):
     os.environ["OPENAI_API_BASE"] = "http://localhost:8080/v1"
     os.environ["OPENAI_API_KEY"] = "EMPTY"
-    
+
     ec2_instance_type = get_ec2_instance_type()
     if ec2_instance_type is None:
         logger.fatal("Failed to get EC2 instance type")
@@ -420,10 +432,10 @@ def run_benchmark(config_yml, llmperf_path):
                 for container in containers:
                     if not container["action"]:
                         continue
-                    
+
                     if not is_valid_device(container["instance_types"],
                                            ec2_instance_type):
-                        continue   
+                        continue
                     logger.info(f"ec2_instance_type:{ec2_instance_type}")
 
                     image = pull_docker_image(container)
@@ -436,20 +448,26 @@ def run_benchmark(config_yml, llmperf_path):
                     for concurrency in llmperf_parameters[
                             "num-concurrent-requests-list"]:
                         try:
-                            logger.info(f"start {model}-{test_name} on container {container_name} with concurrency {concurrency}")
-                            container_log_file_name = f"{model}_{test_name}_{container_name}_{concurrency}.log".replace("/", "_")
-                            launch_container(container, image, model, hf_token, container_log_file_name)
+                            logger.info(
+                                f"start {model}-{test_name} on container {container_name} with concurrency {concurrency}"
+                            )
+                            container_log_file_name = f"{model}_{test_name}_{container_name}_{concurrency}.log".replace(
+                                "/", "_")
+                            launch_container(container, image, model, hf_token,
+                                             container_log_file_name)
                             wait_for_server(model, timeout)
                             logger.info("server started successfully")
 
                             result_outputs = f"{container_name}/{model}-{test_name}/{concurrency}"
 
                             logger.info("start warmup")
-                            run_llm_perf(True, model, concurrency, llmperf_parameters.get("others", []),
+                            run_llm_perf(True, model, concurrency,
+                                         llmperf_parameters.get("others", []),
                                          result_outputs, llmperf_path)
                             logger.info("start llmperf")
                             run_llm_perf(False, model, concurrency,
-                                         llmperf_parameters.get("others", []), result_outputs, llmperf_path)
+                                         llmperf_parameters.get("others", []),
+                                         result_outputs, llmperf_path)
                             logger.info("shutdowm container")
                             shutdown_container(container_name)
 
@@ -465,7 +483,8 @@ def run_benchmark(config_yml, llmperf_path):
                             publish_cw_metrics(cloudwatch, metrics_namespace,
                                                metrics, json_map, model, "ec2",
                                                container_name,
-                                               ec2_instance_type, str(concurrency))
+                                               ec2_instance_type,
+                                               str(concurrency))
                         except Exception as e:
                             logger.error(
                                 f'Error in test: {test["test_name"]} on {container["container"]} with concurrency {concurrency}, error: {e}'
