@@ -29,6 +29,7 @@ import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -416,6 +417,17 @@ public final class ModelManager {
                                         if (wlm.getWorkerPool(wpc).isFullyScaled()) {
                                             data.put(modelName, new StatusResponse("Healthy"));
                                         } else {
+                                            boolean sageMakerHealthCheckOverride =
+                                                    Boolean.parseBoolean(
+                                                            Utils.getEnvOrSystemProperty(
+                                                                    "SAGEMAKER_HEALTH_CHECK_OVERRIDE"));
+                                            if (sageMakerHealthCheckOverride) {
+                                                logger.info(
+                                                        "SAGEMAKER_HEALTH_CHECK_OVERRIDE is"
+                                                                + " enabled. Failing ping as"
+                                                                + " requested");
+                                                hasFailure = true;
+                                            }
                                             data.put(modelName, new StatusResponse("Unhealthy"));
                                         }
                                         break;
