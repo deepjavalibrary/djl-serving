@@ -35,43 +35,36 @@ def get_model_name():
 
 hf_model_spec = {
     "gpt-neo-2.7b": {
-        "max_memory_per_gpu": [8.0, 8.0, 9.0, 17.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
     },
     "gpt-j-6b": {
-        "max_memory_per_gpu": [8.0, 9.0, 9.0, 21.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
     },
     "llama-2-7b": {
-        "max_memory_per_gpu": [10.0, 7.0, 7.0, 17.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256]
     },
     "bloom-7b1": {
-        "max_memory_per_gpu": [7.0, 7.0, 8.0, 9.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128]
     },
     "bigscience/bloom-3b": {
-        "max_memory_per_gpu": [5.0, 6.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
         "stream": [True],
     },
     "t5-large": {
-        "max_memory_per_gpu": [5.0],
         "batch_size": [1],
         "seq_length": [32],
         "worker": 1,
         "stream": [True],
     },
     "llama3-tiny-random-lora": {
-        "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
@@ -213,71 +206,59 @@ transformers_neuronx_neo_model_spec = {
 
 lmi_dist_model_spec = {
     "gpt-neox-20b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "EleutherAI/gpt-neox-20b"
     },
     "falcon-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-7b"
     },
     "falcon-11b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-11B"
     },
     "flan-t5-xxl": {
-        "max_memory_per_gpu": [10.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "google/flan-t5-xxl"
     },
     "gpt2": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "gpt2"
     },
     "mpt-7b": {
-        "max_memory_per_gpu": [20.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "mosaicml/mpt-7b"
     },
     "octocoder": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "bigcode/octocoder"
     },
     "speculative-llama-13b": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "starcoder2-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "bigcode/starcoder2-7b"
     },
     "gemma-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256]
     },
     "gemma-2b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama2-13b-gptq": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
@@ -286,25 +267,21 @@ lmi_dist_model_spec = {
         }
     },
     "mistral-7b": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama3-8b-chunked-prefill": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
     },
     "falcon-11b-chunked-prefill": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-11B"
     },
     "llama2-7b-32k": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [1024],
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
@@ -313,13 +290,11 @@ lmi_dist_model_spec = {
         }
     },
     "mistral-7b-128k-awq": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "mistral-7b-marlin": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
@@ -330,7 +305,6 @@ lmi_dist_model_spec = {
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
     },
     "llama-7b-unmerged-lora": {
-        "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
@@ -338,7 +312,6 @@ lmi_dist_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16"
     },
     "llama-7b-unmerged-lora-overflow": {
-        "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
@@ -395,54 +368,44 @@ lmi_dist_model_spec = {
         "tokenizer": "microsoft/phi-2"
     },
     "llama-2-tiny": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256]
     },
     "llama3-8b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
     "llama-3.1-8b": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "NousResearch/Hermes-3-Llama-3.1-8B"
     },
     "llama32-3b-multi-worker-tp1-pp1": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama32-3b-multi-worker-tp2-pp1": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama32-3b-multi-worker-tp1-pp2": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama31-8b-pp-only": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama31-8b-tp2-pp2": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama31-8b-tp2-pp2-spec-dec": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "flan-t5-xl": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     }
@@ -450,7 +413,6 @@ lmi_dist_model_spec = {
 
 lmi_dist_chat_model_spec = {
     "llama2-7b-chat": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
@@ -459,19 +421,16 @@ lmi_dist_chat_model_spec = {
 
 vllm_model_spec = {
     "gpt-neox-20b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "EleutherAI/gpt-neox-20b"
     },
     "llama2-13b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
@@ -480,31 +439,26 @@ vllm_model_spec = {
         }
     },
     "phi-2": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "microsoft/phi-2"
     },
     "llama2-70b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "llama3-8b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
     "mixtral-8x7b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "qwen2-7b-fp8": {
-        "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "Qwen/Qwen-7B",
@@ -513,31 +467,26 @@ vllm_model_spec = {
         }
     },
     "llama3-8b-chunked-prefill": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
     },
     "falcon-11b-chunked-prefill": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-11B"
     },
     "llama-68m-speculative-medusa": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "JackFram/llama-68m"
     },
     "llama-68m-speculative-eagle": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "JackFram/llama-68m"
     },
     "llama-7b-unmerged-lora": {
-        "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
@@ -545,7 +494,6 @@ vllm_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16"
     },
     "llama-7b-unmerged-lora-overflow": {
-        "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
@@ -602,18 +550,15 @@ vllm_model_spec = {
         "tokenizer": "microsoft/phi-2"
     },
     "starcoder2-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "bigcode/starcoder2-7b"
     },
     "gemma-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256]
     },
     "gemma-2b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
@@ -645,7 +590,6 @@ vllm_neo_model_spec = {
 
 vllm_chat_model_spec = {
     "llama2-7b-chat": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
@@ -654,25 +598,21 @@ vllm_chat_model_spec = {
 
 lmi_dist_aiccl_model_spec = {
     "llama-2-70b-aiccl": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "codellama-34b-aiccl": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "codellama/CodeLlama-34b-hf"
     },
     "falcon-40b-aiccl": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-40b"
     },
     "mixtral-8x7b-aiccl": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
@@ -681,71 +621,59 @@ lmi_dist_aiccl_model_spec = {
 
 trtllm_model_spec = {
     "llama2-13b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "llama2-7b-smoothquant": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "internlm-7b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "internlm/internlm-7b"
     },
     "baichuan2-13b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "chatglm3-6b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "mistral-7b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "gpt-j-6b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "EleutherAI/gpt-j-6b"
     },
     "qwen-7b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "Qwen/Qwen-7B"
     },
     "gpt2": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "gpt2"
     },
     "santacoder": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "bigcode/santacoder"
     },
     "llama2-70b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mixtral-8x7b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
@@ -764,7 +692,6 @@ trtllm_model_spec = {
 
 trtllm_chat_model_spec = {
     "llama2-7b-chat": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
@@ -773,13 +700,11 @@ trtllm_chat_model_spec = {
 
 trtllm_neo_model_spec = {
     "llama3-8b": {
-        "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "NousResearch/Meta-Llama-3-8B"
     },
     "llama3-70b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Meta-Llama-3-70B"
@@ -788,88 +713,73 @@ trtllm_neo_model_spec = {
 
 no_code_rolling_batch_spec = {
     "llama-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
     },
     "llama-13b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
     },
     "gemma-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "gemma-2b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "mistral-7b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
     },
     "gpt-neox": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "EleutherAI/gpt-neox-20b",
     },
     "phi-2": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "microsoft/phi-2",
     },
     "baichuan-13b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "baichuan-inc/Baichuan2-13B-Base",
     },
     "qwen-1.5-14b": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "Qwen/Qwen1.5-14B",
     },
     "starcoder": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     },
     "llama-70b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-70B-fp16",
     },
     "codellama": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "codellama/CodeLlama-34b-hf",
     },
     "mixtral-8x7b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
     },
     "falcon-40b": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-40b",
     },
     "dbrx": {
-        "max_memory_per_gpu": [40.0],
         "batch_size": [1, 4],
         "seq_length": [256],
     }
@@ -961,73 +871,57 @@ correctness_model_spec = {
 
 multi_modal_spec = {
     "llava_v1.6-mistral": {
-        "max_memory_per_gpu": [25.0, 25.0],
         "batch_size": [1, 4],
         "tokenizer": "llava-hf/llava-v1.6-mistral-7b-hf"
     },
     "paligemma-3b-mix-448": {
-        "max_memory_per_gpu": [25.0],
         "batch_size": [1]
     },
     "phi-3-vision-128k-instruct": {
-        "max_memory_per_gpu": [25.0, 25.0],
         "batch_size": [1, 4],
         "tokenizer": "microsoft/Phi-3-vision-128k-instruct"
     },
     "pixtral-12b": {
-        "max_memory_per_gpu": [25.0, 25.0, 25.0],
         "batch_size": [1, 4],
     },
     "llama32-11b-multimodal": {
-        "max_memory_per_gpu": [25.0, 25.0, 25.0],
         "batch_size": [1],
     },
 }
 
 text_embedding_model_spec = {
     "bge-base-rust": {
-        "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
     "e5-base-v2-rust": {
-        "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
     "sentence-camembert-large-rust": {
-        "max_memory_per_gpu": [3.0, 3.0],
         "batch_size": [1, 8],
     },
     "roberta-base-rust": {
-        "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
     "msmarco-distilbert-base-v4-rust": {
-        "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     },
     "bge-reranker-rust": {
-        "max_memory_per_gpu": [3.0, 3.0],
         "batch_size": [1, 8],
         "reranking": True,
     },
     "e5-mistral-7b-rust": {
-        "max_memory_per_gpu": [18.0, 18.0],
         "batch_size": [1, 8],
     },
     "gte-qwen2-7b-rust": {
-        "max_memory_per_gpu": [18.0, 18.0],
         "batch_size": [1, 8],
     },
     "gte-large-rust": {
-        "max_memory_per_gpu": [3.0, 3.0],
         "batch_size": [1, 8],
     },
     "bge-multilingual-gemma2-rust": {
-        "max_memory_per_gpu": [20.0, 20.0],
         "batch_size": [1, 8],
     },
     "bge-base-onnx": {
-        "max_memory_per_gpu": [2.0, 2.0],
         "batch_size": [1, 8],
     }
 }
@@ -1225,17 +1119,6 @@ def get_gpu_memory():
     return [
         convert_str_to_mem_used_gb(x) for i, x in enumerate(memory_free_info)
     ]
-
-
-def validate_memory_usage(expected_memory_limit):
-    used_memory_per_gpu = get_gpu_memory()
-    LOGGER.info(f"Used memory per GPU: {used_memory_per_gpu}")
-    if any(x > expected_memory_limit for x in used_memory_per_gpu):
-        msg = (f"Memory usage is too high!"
-               f"Used Memory:{used_memory_per_gpu}"
-               f"Expected Upper Limit:{expected_memory_limit}")
-        LOGGER.error(msg)
-        raise AssertionError(msg)
 
 
 def fake_tokenizer(prompt, in_tokens):
@@ -1693,8 +1576,6 @@ def test_handler(model, model_spec):
                         assert len(result) == batch_size
                     elif isinstance(res, dict):
                         assert 1 == batch_size
-                if "max_memory_per_gpu" in spec:
-                    validate_memory_usage(spec["max_memory_per_gpu"][i])
                 if "tokenizer" in spec:
                     awscurl_run(req, spec.get("tokenizer"), batch_size)
 
@@ -1932,9 +1813,6 @@ def test_multimodal(model, model_spec):
         logging.info(f"req {req}")
         res = send_json(req).json()
         logging.info(f"res: {res}")
-        if "max_memory_per_gpu" in spec:
-            validate_memory_usage(spec["max_memory_per_gpu"][i])
-
         # awscurl little benchmark phase
         awscurl_run(req,
                     spec.get("tokenizer", None),
@@ -1960,8 +1838,6 @@ def test_text_embedding_model(model, model_spec):
         logging.info(f"req {req}")
         res = send_json(req).json()
         assert len(res) == batch_size
-        if "max_memory_per_gpu" in spec:
-            validate_memory_usage(spec["max_memory_per_gpu"][i])
 
         # awscurl little benchmark phase
         logging.info(f"Little benchmark: concurrency {batch_size}")
