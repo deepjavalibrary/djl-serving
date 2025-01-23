@@ -63,20 +63,20 @@ class TRTLLMRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with TensorRT-LLM style parameter names.
         """
-        if "request_output_len" not in parameters.keys():
+        if "request_output_len" not in parameters:
             parameters["request_output_len"] = parameters.pop(
                 "max_new_tokens", 30)
-        if "top_k" in parameters.keys():
+        if "top_k" in parameters:
             parameters["runtime_top_k"] = parameters.pop("top_k")
-        if "top_p" in parameters.keys():
+        if "top_p" in parameters:
             parameters["runtime_top_p"] = parameters.pop("top_p")
-        if "seed" in parameters.keys():
+        if "seed" in parameters:
             parameters["random_seed"] = int(parameters.pop("seed"))
         if parameters.pop("do_sample", False):
             parameters["runtime_top_k"] = parameters.get("runtime_top_k", 5)
             parameters["runtime_top_p"] = parameters.get("runtime_top_p", 0.85)
             parameters["temperature"] = parameters.get("temperature", 0.8)
-        if "length_penalty" in parameters.keys():
+        if "length_penalty" in parameters:
             parameters['len_penalty'] = parameters.pop('length_penalty')
         parameters["streaming"] = parameters.pop(
             "stream", parameters.get("streaming", True))
