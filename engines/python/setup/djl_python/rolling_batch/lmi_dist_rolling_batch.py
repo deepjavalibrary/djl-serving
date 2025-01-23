@@ -154,28 +154,27 @@ class LmiDistRollingBatch(RollingBatch):
         :return: The same parameters dict, but with lmi-dist style parameter names.
         """
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
-        # If `do_sample` is not provided, force temperature=0.0, i.e. greedy
-        # else set to user-provided value or default to 1.0
-        if not parameters.pop('do_sample', False):
-            parameters['temperature'] = 0.0
-        else:
-            parameters['temperature'] = parameters.get('temperature', 1.0)
+        do_sample = parameters.pop("do_sample", None)
+        if do_sample is not None and do_sample is False:
+            parameters["temperature"] = 0.0
+        if do_sample is None and parameters.get("temperature") is None:
+            parameters["temperature"] = 0.0
         if "seed" in parameters.keys():
             parameters["seed"] = int(parameters["seed"])
-        if "stop_sequences" in parameters.keys():
+        if "stop_sequences" in parameters:
             parameters["stop"] = parameters.pop("stop_sequences")
-        if "ignore_eos_token" in parameters.keys():
+        if "ignore_eos_token" in parameters:
             parameters["ignore_eos"] = parameters.pop("ignore_eos_token")
-        if "num_beams" in parameters.keys():
+        if "num_beams" in parameters:
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
-        if "best_of" in parameters.keys():
+        if "best_of" in parameters:
             # if n is not explicitly set, we return `best_of` values sequences.
             if "n" not in "best_of":
                 parameters["n"] = parameters["best_of"]
-        if "top_n_tokens" in parameters.keys():
+        if "top_n_tokens" in parameters:
             parameters["logprobs"] = parameters.pop("top_n_tokens")
         else:
             parameters["logprobs"] = parameters.get("logprobs", 1)

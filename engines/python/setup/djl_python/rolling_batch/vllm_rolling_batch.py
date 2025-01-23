@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import logging
 from collections import OrderedDict, defaultdict
 
 from vllm import LLMEngine, SamplingParams
@@ -85,31 +86,29 @@ class VLLMRollingBatch(RollingBatch):
         :return: The same parameters dict, but with VLLM style parameter names.
         """
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
-        if "seed" in parameters.keys():
+        do_sample = parameters.pop("do_sample", None)
+        if do_sample is not None and do_sample is False:
+            parameters["temperature"] = 0.0
+        if do_sample is None and parameters.get("temperature") is None:
+            parameters["temperature"] = 0.0
+        if "seed" in parameters:
             parameters["seed"] = int(parameters["seed"])
-
-        # If `do_sample` is not provided, force temperature=0.0, i.e. greedy
-        # else set to user-provided value or default to 1.0
-        if not parameters.pop('do_sample', False):
-            parameters['temperature'] = 0.0
-        else:
-            parameters['temperature'] = parameters.get('temperature', 1.0)
-        if "stop_sequences" in parameters.keys():
+        if "stop_sequences" in parameters:
             parameters["stop"] = parameters.pop("stop_sequences")
-        if "ignore_eos_token" in parameters.keys():
+        if "ignore_eos_token" in parameters:
             parameters["ignore_eos"] = parameters.pop("ignore_eos_token")
-        if "num_beams" in parameters.keys():
+        if "num_beams" in parameters:
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
 
         # if n is not explicitly set when best_of is set, we return `best_of` values sequences for tgi compatibility.
-        if "best_of" in parameters.keys():
+        if "best_of" in parameters:
             if "n" not in "best_of":
                 parameters["n"] = parameters["best_of"]
 
-        if "top_n_tokens" in parameters.keys():
+        if "top_n_tokens" in parameters:
             parameters["logprobs"] = parameters.pop("top_n_tokens")
         else:
             parameters["logprobs"] = parameters.get("logprobs", 1)

@@ -289,6 +289,11 @@ If you are not specifying a specific engine or rolling batch implementation, we 
 
 If you are deploying with a specific backend, additional parameters are available that are unique to the specific backend.
 
+**Note:** 
+To enable sampling in LMI <= 0.31.0, you must specify `do_sample: true` in addition to any sampling parameters you set.
+This behavior will change starting LMI 0.32.0 where you will no longer be required to set `do_sample`,
+it will be inferred from the other sampling parameters.
+
 #### Additional LMI Dist Generation parameters
 
 ```
