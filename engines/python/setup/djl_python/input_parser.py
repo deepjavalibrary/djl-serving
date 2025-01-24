@@ -16,7 +16,6 @@ from typing import List, Dict, Optional, Callable
 
 from djl_python import Input
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
-from djl_python.chat_completions.vllm_chat_utils import parse_chat_completions_request_vllm
 from djl_python.encode_decode import decode
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 from djl_python.request import Request
@@ -144,6 +143,8 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
         rolling_batch = kwargs.get("rolling_batch")
         if rolling_batch is not None and rolling_batch.use_vllm_chat_completions(
         ):
+            # we only import this here as we know we're in a vllm context - ensures no bad imports for trtllm
+            from djl_python.chat_completions.vllm_chat_utils import parse_chat_completions_request_vllm
             inputs, param = parse_chat_completions_request_vllm(
                 input_map,
                 kwargs.get("is_rolling_batch"),
