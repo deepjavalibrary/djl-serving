@@ -16,7 +16,24 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from djl_python.request_io import Token
-from typing import List
+from typing import List, Optional
+from transformers import GenerationConfig
+
+
+# https://github.com/vllm-project/vllm/blame/3132a933b65d8ed3383e082264c682940d92d803/vllm/config.py#L873
+def try_get_generation_config(
+    model: str,
+    trust_remote_code: bool,
+    revision: Optional[str] = None,
+) -> dict:
+    try:
+        return GenerationConfig.from_pretrained(
+            model,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+        ).to_diff_dict()
+    except OSError:  # Not found
+        return {}
 
 
 class TRTLLMRollingBatch(RollingBatch):
@@ -41,6 +58,9 @@ class TRTLLMRollingBatch(RollingBatch):
         self.model = tensorrt_llm_toolkit.init_inference(
             model_id_or_path, **properties)
         self.request_cache = {}
+        self.default_generation_params = try_get_generation_config(
+            self.model.model.model_path, configs.trust_remote_code,
+            configs.revision) if configs.generation_config == 'auto' else {}
 
     def get_tokenizer(self):
         return self.model.tokenizer
@@ -63,6 +83,11 @@ class TRTLLMRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with TensorRT-LLM style parameter names.
         """
+        # when a default generation_config.json is provided, we still respect any overrides
+        # sent directly from the request
+        for k, v in self.default_generation_params.items():
+            if k not in parameters:
+                parameters[k] = v
         if "request_output_len" not in parameters:
             parameters["request_output_len"] = parameters.pop(
                 "max_new_tokens", 30)
@@ -72,7 +97,8 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters["runtime_top_p"] = parameters.pop("top_p")
         if "seed" in parameters:
             parameters["random_seed"] = int(parameters.pop("seed"))
-        if parameters.pop("do_sample", False):
+        do_sample = parameters.pop("do_sample", None)
+        if do_sample is not None and do_sample:
             parameters["runtime_top_k"] = parameters.get("runtime_top_k", 5)
             parameters["runtime_top_p"] = parameters.get("runtime_top_p", 0.85)
             parameters["temperature"] = parameters.get("temperature", 0.8)

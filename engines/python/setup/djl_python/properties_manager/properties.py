@@ -64,6 +64,7 @@ class Properties(BaseModel):
     tgi_compat: Optional[bool] = False
     bedrock_compat: Optional[bool] = False
     enable_lora: Optional[bool] = False
+    generation_config: Optional[str] = None
 
     # Spec_dec
     draft_model_id: Optional[str] = None

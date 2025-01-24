@@ -10,8 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import logging
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
 from vllm import LLMEngine, SamplingParams
 from vllm.utils import random_uuid, AtomicCounter
@@ -24,10 +23,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import List, Optional
 
-# FIXME: Once all vllm versions are past 0.6.0 we can move to just struct_fields
-VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__) if hasattr(
-    SamplingParams(), "__struct_fields__") else set(
-        SamplingParams().__dict__.keys())
+VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__)
 
 
 class VLLMRollingBatch(RollingBatch):
@@ -54,6 +50,7 @@ class VLLMRollingBatch(RollingBatch):
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
         self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
+        self.default_generation_params = self.engine.generation_config_fields if self.vllm_configs.generation_config == 'auto' else {}
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
@@ -85,6 +82,11 @@ class VLLMRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
+        # when a default generation_config.json is provided, we still respect any overrides
+        # sent directly from the request
+        for k, v in self.default_generation_params.items():
+            if k not in parameters and k in VLLM_GENERATION_PARAMS:
+                parameters[k] = v
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
         do_sample = parameters.pop("do_sample", None)
         if do_sample is not None and do_sample is False:

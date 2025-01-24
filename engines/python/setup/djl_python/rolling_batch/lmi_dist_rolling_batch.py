@@ -13,14 +13,14 @@
 import logging
 import os
 from typing import List, Optional
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
 from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
 from lmi_dist.seq2seq_engine import Seq2SeqPreprocessor
-from vllm import SamplingParams
 from vllm.utils import AtomicCounter
+from vllm.engine.llm_engine import _load_generation_config_dict
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
@@ -96,15 +96,6 @@ class LmiDistRollingBatch(RollingBatch):
         kwargs = {}
         logging.info(f"engine_args: {engine_args}, kwargs: {kwargs}")
 
-        if self.lmi_dist_config.max_rolling_batch_prefill_tokens is None:
-            logging.warning(
-                "djl-serving/lmi has changed the default behavior for max_rolling_batch_prefill_tokens in 0.30.0 (lmi v12). "
-                "Previously, when max_rolling_batch_prefill_tokens was unset, djl-serving would use a warmup prefill limit of 4096 tokens. "
-                "This behavior differs from vLLM's default behavior, which (essentially) defaults to max_model_len. As a result of this change, "
-                "model deployments that worked previously may fail due to higher memory requirements at model loading time for the warmup phase. "
-                "For more information on this change, and guidance on what configurations to set, please see "
-                "https://github.com/deepjavalibrary/djl-serving/tree/master/serving/docs/lmi/announcements/breaking_changes.md"
-            )
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
         self.lora_id_counter = AtomicCounter(0)
@@ -112,6 +103,9 @@ class LmiDistRollingBatch(RollingBatch):
         self.is_mistral_tokenizer = self.lmi_dist_config.tokenizer_mode == 'mistral'
         self.is_t5_model = isinstance(self.engine.preprocessor,
                                       Seq2SeqPreprocessor)
+        self.default_generation_params = _load_generation_config_dict(
+            self.engine.model_config
+        ) if self.lmi_dist_config.generation_config == 'auto' else {}
 
     def reset(self) -> None:
         """
@@ -139,11 +133,6 @@ class LmiDistRollingBatch(RollingBatch):
         # an interface method and retrieve it from there after v12
         return self.engine.preprocessor.model_config.hf_config if not self.is_t5_model else None
 
-    def get_huggingface_model_config(self):
-        # TODO: this is a hack right now to get the model config from the engine. We should expose this as
-        # an interface method and retrieve it from there after v12
-        return self.engine.preprocessor.model_config.hf_config if not self.is_t5_model else None
-
     def translate_lmi_dist_params(self, parameters: dict):
         """
         Helper function to convert DJL Serving parameter names to parameter names
@@ -154,6 +143,11 @@ class LmiDistRollingBatch(RollingBatch):
         :return: The same parameters dict, but with lmi-dist style parameter names.
         """
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
+        # when a default generation_config.json is provided, we still respect any overrides
+        # sent directly from the request
+        for k, v in self.default_generation_params.items():
+            if k not in parameters and k in LMI_DIST_GENERATION_PARAMS:
+                parameters[k] = v
         do_sample = parameters.pop("do_sample", None)
         if do_sample is not None and do_sample is False:
             parameters["temperature"] = 0.0
