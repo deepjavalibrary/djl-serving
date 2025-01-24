@@ -256,6 +256,21 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 1024,
         "option.max_rolling_batch_size": 4,
         "option.model_loading_timeout": 1200,
+    },
+    "llama-3-1-8b-instruct-vllm-nxdi": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "vllm",
+        "option.model_loader": "nxdi",
+        "option.max_rolling_batch_size": 1,
+        "option.model_loading_timeout": 1200,
+        "option.override_neuron_config": {
+            "on_device_sampling_config": {
+                "global_topk": 64,
+                "dynamic": True,
+                "deterministic": False
+            }
+        }
     }
 }
 

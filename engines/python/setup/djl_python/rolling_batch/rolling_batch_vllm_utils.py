@@ -238,7 +238,6 @@ def get_lora_request(lora_name: str, lora_requests: dict) -> dict:
 def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
     if config.device == "neuron":
         return EngineArgs(model=config.model_id_or_path,
-                          preloaded_model=config.preloaded_model,
                           tensor_parallel_size=config.tensor_parallel_degree,
                           dtype=DTYPE_MAPPER[config.dtype],
                           seed=0,
@@ -248,7 +247,7 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
                           trust_remote_code=config.trust_remote_code,
                           revision=config.revision,
                           device=config.device,
-                          generation_config=config.generation_config)
+                          override_neuron_config=config.override_neuron_config)
     else:
         return EngineArgs(
             model=config.model_id_or_path,
