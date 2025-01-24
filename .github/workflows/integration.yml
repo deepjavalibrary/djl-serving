@@ -224,28 +224,14 @@ jobs:
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
-      - name: install awscli
-        run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
       - name: Set up Python3
-        if: ${{ matrix.test.instance != 'aarch64' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
-      - name: Set up Python3 (aarch64)
-        if: ${{ matrix.test.instance == 'aarch64' }}
-        run: |
-          # Using an alternate installation because of an incompatible combination
-          # of aarch64 with ubuntu-20.04 not supported by the actions/setup-python
-          sudo apt-get install python3 python-is-python3 python3-pip -y
       - name: Install pip dependencies
-        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
-      - name: Install torch
-        # Use torch to get cuda capability of current device to selectively run tests
-        # Torch version doesn't really matter that much
         run: |
-          pip3 install torch==2.3.0
+          python -m pip install --upgrade pip
+          pip install pytest requests "numpy<2" pillow huggingface_hub awscli torch
       - name: Install awscurl
         working-directory: tests/integration
         run: |
