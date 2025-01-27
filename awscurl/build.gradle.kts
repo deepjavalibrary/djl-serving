@@ -44,7 +44,7 @@ dependencies {
                         "-c",
                         "cat src/main/scripts/stub.sh build/libs/awscurl*.jar > build/awscurl && chmod +x build/awscurl"
                     )
-                }
+                }.result.get()
             }
         }
     }
