@@ -37,7 +37,7 @@ ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.27
 ARG huggingface_hub_version=0.25.2
 # %2B is the url escape for the '+' character
-ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.6.2%2Bnightly-py3-none-any.whl"
+ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm_neuronx-0.6.2%2Bneuron216-py3-none-any.whl"
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
