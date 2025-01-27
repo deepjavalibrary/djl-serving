@@ -890,6 +890,16 @@ class TestNeuronxRollingBatch:
                 "transformers_neuronx_rolling_batch llama-speculative-compiled-rb"
                 .split())
 
+    def test_llama_vllm_nxdi(self):
+        # For neuron, handler is names as transformers_neuronx, but this handler supports, TNX, NXDI and optimum.
+        with Runner('pytorch-inf2', 'llama-3-1-8b-instruct-vllm-nxdi') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "llama-3-1-8b-instruct-vllm-nxdi")
+            r.launch(container='pytorch-inf2-4')
+            client.run(
+                "transformers_neuronx_rolling_batch llama-3-1-8b-instruct-vllm-nxdi"
+            )
+
 
 @pytest.mark.correctness
 @pytest.mark.trtllm

@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import ast
+import json
 from enum import Enum
 from typing import Optional, Any, Mapping, Tuple, Dict
 
@@ -47,6 +48,7 @@ class VllmRbProperties(Properties):
     device: Optional[str] = None
     preloaded_model: Optional[Any] = None
     generation_config: Optional[Any] = None
+    override_neuron_config: Optional[Dict] = None
 
     max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = None
@@ -116,6 +118,19 @@ class VllmRbProperties(Properties):
                     f"Conflicting values specified for key: {key}")
             out_dict[key] = parsed_value
         return out_dict
+
+    @field_validator('override_neuron_config', mode="before")
+    def validate_override_neuron_config(cls, val):
+        if isinstance(val, str):
+            neuron_config = ast.literal_eval(val)
+            if not isinstance(neuron_config, dict):
+                raise ValueError(
+                    f"Invalid json format for override_neuron_config")
+            return neuron_config
+        elif isinstance(val, Dict):
+            return val
+        else:
+            raise ValueError("Invalid json format for override_neuron_config")
 
     @model_validator(mode='after')
     def validate_speculative_model(self):
