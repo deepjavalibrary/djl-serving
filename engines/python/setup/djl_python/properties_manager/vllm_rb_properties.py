@@ -132,7 +132,6 @@ class VllmRbProperties(Properties):
         else:
             raise ValueError("Invalid json format for override_neuron_config")
 
-
     @model_validator(mode='after')
     def validate_speculative_model(self):
         if self.speculative_model is not None and not self.use_v2_block_manager:
