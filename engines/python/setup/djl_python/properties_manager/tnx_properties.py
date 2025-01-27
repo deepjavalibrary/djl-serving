@@ -56,6 +56,7 @@ class TnXModelLoaders(str, Enum):
     tnx = "tnx"
     optimum = "optimum"
     vllm = "vllm"
+    nxdi = "nxdi"
 
 
 class TnXModelSchema(str, Enum):
