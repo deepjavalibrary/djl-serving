@@ -271,6 +271,22 @@ transformers_neuronx_handler_list = {
                 "deterministic": False
             }
         }
+    },
+    "llama-3-2-1b-instruct-vllm-nxdi-aot": {
+        "option.model_id": "s3://djl-llm/llama-3-2-1b-instruct/",
+        "option.tensor_parallel_degree": 2,
+        "option.rolling_batch": "vllm",
+        "option.model_loading_timeout": 1200,
+        "option.model_loader": "nxdi",
+        "option.override_neuron_config": {
+            "on_device_sampling_config": {
+                "global_topk": 64,
+                "dynamic": True,
+                "deterministic": False
+            }
+        },
+        "option.n_positions": 128,
+        "option.max_rolling_batch_size": 1,
     }
 }
 
