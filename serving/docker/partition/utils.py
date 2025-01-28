@@ -42,16 +42,6 @@ def get_partition_cmd(is_mpi_mode, properties):
         ]
 
 
-def get_engine_configs(properties):
-    engine = properties.get('engine')
-    configs = {}
-    if engine == 'DeepSpeed':
-        configs['option.checkpoint'] = 'ds_inference_config.json'
-        configs['option.parallel_loading'] = True
-
-    return configs
-
-
 def extract_python_jar(target_dir):
     os.makedirs(target_dir, exist_ok=True)
     jar_files = glob.glob('/usr/local/djl-serving-*/lib/python-*.jar')
@@ -72,7 +62,7 @@ def get_djl_version_from_lib():
 
 
 def is_engine_mpi_mode(engine):
-    if engine == 'DeepSpeed':
+    if engine == 'MPI':
         return True
     else:
         return False
