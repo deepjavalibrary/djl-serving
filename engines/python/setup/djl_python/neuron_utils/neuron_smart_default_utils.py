@@ -112,7 +112,9 @@ class NeuronSmartDefaultUtils:
         command = "neuron-ls --json-output"
         try:
             output = sp.check_output(command, shell=True).decode("utf-8")
-            return len(json.loads(output))
+            output = json.loads(output)
+            neuron_cores = sum(device.get("nc_count", 0) for device in output)
+            return neuron_cores
         except Exception as e:
             logger.debug(f"Failed to get available cores: {e}")
         return 0

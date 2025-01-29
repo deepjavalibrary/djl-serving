@@ -66,8 +66,10 @@ class TestNeuronSmartDefaultUtils(unittest.TestCase):
 
     def test_get_available_cores(self):
         with patch('subprocess.check_output') as mock_check_output:
-            mock_check_output.return_value = b'[{"core": 0}, {"core": 1}, {"core": 2}, {"core": 3}]'
-            assert NeuronSmartDefaultUtils.get_available_cores() == 4
+            mock_check_output.return_value = (
+                b'[{"core": 0, "nc_count": 2}, {"core": 1, "nc_count": 2}, '
+                b'{"core": 2, "nc_count": 2}, {"core": 3, "nc_count": 2}]')
+            assert NeuronSmartDefaultUtils.get_available_cores() == 8
 
     def test_get_available_cores_exception(self):
         with patch('subprocess.check_output') as mock_check_output:
