@@ -172,6 +172,10 @@ transformers_neuronx_model_spec = {
     "llama-3-1-8b-instruct-vllm-nxdi": {
         "batch_size": [1, 2],
         "seq_length": [256],
+    },
+    "llama-3-2-1b-instruct-vllm-nxdi-aot": {
+        "batch_size": [1],
+        "seq_length": [128],
     }
 }
 

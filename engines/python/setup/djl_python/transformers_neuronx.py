@@ -36,6 +36,7 @@ model = None
 OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama", "mistral"}
 OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS = {"llama", "mistral"}
 VLLM_CONTINUOUS_BATCHING_MODELS = {"llama"}
+NXDI_COMPILED_MODEL_FILE_NAME = "model.pt"
 
 
 class TransformersNeuronXService(object):
@@ -141,6 +142,14 @@ class TransformersNeuronXService(object):
         if self.config.model_loader == "nxdi":
             os.environ[
                 'VLLM_NEURON_FRAMEWORK'] = "neuronx-distributed-inference"
+            if self.config.save_mp_checkpoint_path:
+                os.environ[
+                    "NEURON_COMPILED_ARTIFACTS"] = self.config.save_mp_checkpoint_path
+            nxdi_compiled_model_path = os.path.join(
+                self.config.model_id_or_path, NXDI_COMPILED_MODEL_FILE_NAME)
+            if os.path.isfile(nxdi_compiled_model_path):
+                os.environ[
+                    "NEURON_COMPILED_ARTIFACTS"] = self.config.model_id_or_path
             return
 
         if self.config.model_loader == "vllm":
