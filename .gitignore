@@ -15,6 +15,7 @@ libs
 *.pt
 *.npy
 *.csv
+.kotlin
 
 # Eclipse
 .settings
