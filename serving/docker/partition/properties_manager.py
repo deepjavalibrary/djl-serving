@@ -89,7 +89,7 @@ class PropertiesManager(object):
 
     def generate_properties_file(self):
         checkpoint_path = self.properties.get('option.save_mp_checkpoint_path')
-        configs = get_engine_configs(self.properties)
+        configs = {}
 
         for key, value in self.properties.items():
             if key not in EXCLUDE_PROPERTIES:
