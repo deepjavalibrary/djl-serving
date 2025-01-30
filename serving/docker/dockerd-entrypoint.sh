@@ -9,8 +9,8 @@ fi
 
 if [[ "$1" = "serve" ]]; then
   shift 1
-  echo "$DEBUG_MODE=$DEBUG_MODE"
-  if [[ -n "$DEBUG_MODE" ]]; then
+  echo "LMI_DEBUG_NSYS_ENABLED=$LMI_DEBUG_NSYS_ENABLED"
+  if [[ -n "$LMI_DEBUG_NSYS_ENABLED" ]]; then
     set -e
     source /opt/djl/scripts/install_debug_tools.sh
     /opt/djl/scripts/start_debug_tools.sh "$@"
