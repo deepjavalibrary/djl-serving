@@ -1,9 +1,12 @@
 package ai.djl
 
+open class Cmd @Inject constructor(@Internal val execOperations: ExecOperations) : DefaultTask()
+
 tasks {
-    register("formatShell") {
+    register<Cmd>("formatShell") {
         doLast {
-            project.exec {
+            execOperations.exec {
+                workingDir = projectDir
                 commandLine(
                     "bash",
                     "-c",
