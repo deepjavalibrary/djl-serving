@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
 from vllm import LLMEngine, SamplingParams
 from vllm.sampling_params import RequestOutputKind
@@ -20,14 +20,11 @@ from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, create_lora_request, get_lora_request,
-    get_engine_args_from_config, get_prompt_inputs)
+    get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import Callable, List, Optional
 
-# FIXME: Once all vllm versions are past 0.6.0 we can move to just struct_fields
-VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__) if hasattr(
-    SamplingParams(), "__struct_fields__") else set(
-        SamplingParams().__dict__.keys())
+VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__)
 
 
 class VLLMRollingBatch(RollingBatch):
@@ -48,12 +45,12 @@ class VLLMRollingBatch(RollingBatch):
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(self.vllm_configs)
-        args = get_engine_args_from_config(self.vllm_configs)
+        args = self.vllm_configs.get_engine_args()
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
-        self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
+        self.is_mistral_tokenizer = args.tokenizer_mode == 'mistral'
         self.tool_parser = None
         if self.vllm_configs.enable_auto_tool_choice:
             from vllm.entrypoints.openai.tool_parsers import ToolParserManager
