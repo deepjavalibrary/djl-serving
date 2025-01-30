@@ -14,6 +14,7 @@ import logging
 from collections import OrderedDict, defaultdict
 
 from vllm import LLMEngine, SamplingParams
+from vllm.sampling_params import RequestOutputKind
 from vllm.utils import random_uuid, AtomicCounter
 
 from djl_python.request import Request
@@ -85,6 +86,7 @@ class VLLMRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
+        parameters["output_kind"] = RequestOutputKind.DELTA
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
         do_sample = parameters.pop("do_sample", None)
         if do_sample is not None and do_sample is False:

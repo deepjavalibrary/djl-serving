@@ -19,7 +19,7 @@ from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
 from lmi_dist.seq2seq_engine import Seq2SeqPreprocessor
-from vllm import SamplingParams
+from vllm.sampling_params import RequestOutputKind
 from vllm.utils import AtomicCounter
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
@@ -153,6 +153,7 @@ class LmiDistRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with lmi-dist style parameter names.
         """
+        parameters["output_kind"] = RequestOutputKind.DELTA
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
         do_sample = parameters.pop("do_sample", None)
         if do_sample is not None and do_sample is False:
