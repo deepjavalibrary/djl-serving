@@ -44,6 +44,8 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+# Making s5cmd discoverable
+ENV PATH="/opt/djl/bin:${PATH}"
 
 RUN useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl

@@ -47,6 +47,8 @@ ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
+# Making s5cmd discoverable
+ENV PATH="/opt/djl/bin:${PATH}"
 
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
