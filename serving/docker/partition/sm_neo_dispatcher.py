@@ -25,6 +25,7 @@ LMI_DIST_VENV_EXEC = "/opt/djl/lmi_dist_venv/bin/python"
 VLLM_VENV_EXEC = "/opt/djl/vllm_venv/bin/python"
 SYSTEM_PY_EXEC = "/usr/bin/python3"
 
+
 class NeoTask(Enum):
     """
     Enum representing available Neo optimization tasks, including their names and script paths
@@ -79,7 +80,8 @@ class NeoDispatcher:
             return True
         return False
 
-    def _get_mpirun_command(self, task: NeoTask, num_processes: int, python_exec: str):
+    def _get_mpirun_command(self, task: NeoTask, num_processes: int,
+                            python_exec: str):
         return [
             "mpirun", "--allow-run-as-root", "--bind-to", "none", "--mca",
             "btl_vader_single_copy_mechanism", "none", "--tag-output", "-x",
@@ -129,7 +131,8 @@ class NeoDispatcher:
         match self.serving_features:
             case "vllm,lmi-dist":
                 if self.is_valid_sharding_config():
-                    if self.properties.get("option.rolling_batch", "lmi-dist").lower() == "vllm":
+                    if self.properties.get("option.rolling_batch",
+                                           "lmi-dist").lower() == "vllm":
                         python_exec = VLLM_VENV_EXEC
                     else:
                         python_exec = LMI_DIST_VENV_EXEC
