@@ -14,8 +14,6 @@ from collections import OrderedDict, defaultdict
 
 from vllm import LLMEngine, SamplingParams
 from vllm.sampling_params import RequestOutputKind
-from vllm.entrypoints.openai.tool_parsers import ToolParser, ToolParserManager
-from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.utils import random_uuid, AtomicCounter
 
 from djl_python.request import Request
@@ -56,8 +54,9 @@ class VLLMRollingBatch(RollingBatch):
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
         self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
-        self.tool_parser: Optional[Callable[[AnyTokenizer], ToolParser]] = None
+        self.tool_parser = None
         if self.vllm_configs.enable_auto_tool_choice:
+            from vllm.entrypoints.openai.tool_parsers import ToolParserManager
             try:
                 self.tool_parser = ToolParserManager.get_tool_parser(
                     self.vllm_configs.tool_call_parser)

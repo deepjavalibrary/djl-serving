@@ -16,7 +16,6 @@ from typing import Optional, Any, Mapping, Tuple, Dict
 from pydantic import field_validator, model_validator
 
 from djl_python.properties_manager.properties import Properties
-from vllm.entrypoints.openai.tool_parsers import ToolParserManager
 
 
 class VllmRbProperties(Properties):
@@ -153,9 +152,10 @@ class VllmRbProperties(Properties):
 
     @model_validator(mode='after')
     def validate_tool_call_parser(self):
-        valid_tool_parses = ToolParserManager.tool_parsers.keys()
-        if self.enable_auto_tool_choice \
-                and self.tool_call_parser not in valid_tool_parses:
-            raise ValueError(
-                f"Invalid tool call parser: {self.tool_call_parser} "
-                f"(chose from {{ {','.join(valid_tool_parses)} }})")
+        if self.enable_auto_tool_choice:
+            from vllm.entrypoints.openai.tool_parsers import ToolParserManager
+            valid_tool_parses = ToolParserManager.tool_parsers.keys()
+            if self.tool_call_parser not in valid_tool_parses:
+                raise ValueError(
+                    f"Invalid tool call parser: {self.tool_call_parser} "
+                    f"(chose from {{ {','.join(valid_tool_parses)} }})")
