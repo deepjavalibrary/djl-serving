@@ -902,15 +902,21 @@ class TestNeuronxRollingBatch:
                 "transformers_neuronx_rolling_batch llama-speculative-compiled-rb"
                 .split())
 
-    def test_llama_vllm_nxdi(self):
+    def test_llama_8b_vllm_nxdi(self):
         # For neuron, handler is names as transformers_neuronx, but this handler supports, TNX, NXDI and optimum.
         with Runner('pytorch-inf2', 'llama-3-1-8b-instruct-vllm-nxdi') as r:
             prepare.build_transformers_neuronx_handler_model(
                 "llama-3-1-8b-instruct-vllm-nxdi")
-            r.launch(container='pytorch-inf2-4')
+            r.launch(
+                container="pytorch-inf2-4",
+                cmd=
+                "partition --model-dir /opt/ml/input/data/training --save-mp-checkpoint-path /opt/ml/input/data/training/aot --skip-copy"
+            )
+            r.launch(container="pytorch-inf2-4",
+                     cmd="serve -m test=file:/opt/ml/model/test/aot")
             client.run(
                 "transformers_neuronx_rolling_batch llama-3-1-8b-instruct-vllm-nxdi"
-            )
+                .split())
 
     def test_llama_vllm_nxdi_aot(self):
         with Runner('pytorch-inf2',
@@ -926,7 +932,7 @@ class TestNeuronxRollingBatch:
                      cmd="serve -m test=file:/opt/ml/model/test/aot")
             client.run(
                 "transformers_neuronx_rolling_batch llama-3-2-1b-instruct-vllm-nxdi-aot"
-            )
+                .split())
 
 
 @pytest.mark.correctness
