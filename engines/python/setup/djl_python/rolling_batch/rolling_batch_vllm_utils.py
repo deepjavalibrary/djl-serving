@@ -290,3 +290,19 @@ def get_prompt_inputs(request: Request):
     if multi_modal_data is not None:
         prompt["multi_modal_data"] = multi_modal_data
     return prompt
+
+
+def maybe_serialize_tool_calls(request):
+    # Adapted from https://github.com/vllm-project/vllm/blob/v0.7.0/vllm/transformers_utils/tokenizers/mistral.py#L34-L68
+    for i, message in enumerate(request.messages):
+        if message.get("role") == 'assistant':
+            tool_calls_validator = message.get("tool_calls", ().__iter__())
+            validated_tool_calls = []
+            while True:
+                try:
+                    tool_call = next(tool_calls_validator)  # type: ignore
+                    validated_tool_calls.append(tool_call)
+                except StopIteration:
+                    break
+
+            request.messages[i]["tool_calls"] = validated_tool_calls

@@ -150,7 +150,6 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
                 kwargs.get("is_rolling_batch"),
                 rolling_batch,
                 tokenizer,
-                image_token=image_token,
                 configs=configs,
                 is_mistral_tokenizer=is_mistral_tokenizer,
             )

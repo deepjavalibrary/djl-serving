@@ -10,11 +10,12 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import logging
 from collections import OrderedDict, defaultdict
 
 from vllm import LLMEngine, SamplingParams
 from vllm.sampling_params import RequestOutputKind
+from vllm.entrypoints.openai.tool_parsers import ToolParser, ToolParserManager
+from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.utils import random_uuid, AtomicCounter
 
 from djl_python.request import Request
@@ -23,7 +24,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, create_lora_request, get_lora_request,
     get_engine_args_from_config, get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 # FIXME: Once all vllm versions are past 0.6.0 we can move to just struct_fields
 VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__) if hasattr(
@@ -55,6 +56,15 @@ class VLLMRollingBatch(RollingBatch):
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
         self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
+        self.tool_parser: Optional[Callable[[AnyTokenizer], ToolParser]] = None
+        if self.vllm_configs.enable_auto_tool_choice:
+            try:
+                self.tool_parser = ToolParserManager.get_tool_parser(
+                    self.vllm_configs.tool_call_parser)
+                self.tool_parser = self.tool_parser(
+                    self.engine.tokenizer.tokenizer)
+            except Exception as e:
+                raise TypeError("Error in tool parser creation.") from e
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
@@ -67,6 +77,9 @@ class VLLMRollingBatch(RollingBatch):
 
     def use_vllm_chat_completions(self):
         return True
+
+    def get_tool_parser(self):
+        return self.tool_parser
 
     def reset(self) -> None:
         """

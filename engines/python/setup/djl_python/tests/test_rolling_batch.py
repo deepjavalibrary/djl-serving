@@ -1047,7 +1047,7 @@ class TestRollingBatch(unittest.TestCase):
             sequence_index = request_output.best_sequence_index
             best_sequence = request_output.sequences[
                 request_output.best_sequence_index]
-            _, _, last_token = best_sequence.get_next_token()
+            _, _, _, last_token = best_sequence.get_next_token()
             if last_token:
                 tokens = best_sequence.tokens
                 generated_text = ""
