@@ -239,6 +239,8 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.rolling_batch": "auto",
         "option.model_loading_timeout": 3600,
+        # TODO: Remove this once neuron 2.21 issue if fixed.
+        "option.tensor_parallel_degree": 2,
     },
     "tiny-llama-rb-aot": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
