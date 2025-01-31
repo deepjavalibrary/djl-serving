@@ -20,6 +20,10 @@ from utils import update_kwargs_with_env_vars, load_properties
 
 VALID_LOAD_FORMATS = ["sagemaker_fast_model_loader"]
 
+# Paths to each Python executable
+LMI_DIST_VENV_EXEC = "/opt/djl/lmi_dist_venv/bin/python"
+VLLM_VENV_EXEC = "/opt/djl/vllm_venv/bin/python"
+SYSTEM_PY_EXEC = "/usr/bin/python3"
 
 class NeoTask(Enum):
     """
@@ -75,17 +79,17 @@ class NeoDispatcher:
             return True
         return False
 
-    def _get_mpirun_command(self, task: NeoTask, num_processes: int):
+    def _get_mpirun_command(self, task: NeoTask, num_processes: int, python_exec: str):
         return [
             "mpirun", "--allow-run-as-root", "--bind-to", "none", "--mca",
             "btl_vader_single_copy_mechanism", "none", "--tag-output", "-x",
             "FI_PROVIDER=efa", "-x", "RDMAV_FORK_SAFE=1", "-x",
             "FI_EFA_USE_DEVICE_RDMA=1", "-x", "LD_LIBRARY_PATH", "-x",
             "PYTHONPATH", "-x", "MKL_DYNAMIC=FALSE", "-np",
-            str(num_processes), "/usr/bin/python3", task.script_path
+            str(num_processes), python_exec, task.script_path
         ]
 
-    def run_task(self, task: NeoTask):
+    def run_task(self, task: NeoTask, python_exec: str):
         """
         Run the specified task as a subprocess, while forwarding its output to the console.
         For sharding jobs, use mpirun to launch multiple processes.
@@ -97,9 +101,9 @@ class NeoDispatcher:
                 pp_degree = self.properties.get(
                     "option.pipeline_parallel_degree", 1)
                 world_size = int(tp_degree) * int(pp_degree)
-                cmd = self._get_mpirun_command(task, world_size)
+                cmd = self._get_mpirun_command(task, world_size, python_exec)
             else:
-                cmd = ["/usr/bin/python3", task.script_path]
+                cmd = [python_exec, task.script_path]
 
             with subprocess.Popen(cmd,
                                   env=os.environ,
@@ -125,14 +129,18 @@ class NeoDispatcher:
         match self.serving_features:
             case "vllm,lmi-dist":
                 if self.is_valid_sharding_config():
+                    if self.properties.get("option.rolling_batch", "lmi-dist").lower() == "vllm":
+                        python_exec = VLLM_VENV_EXEC
+                    else:
+                        python_exec = LMI_DIST_VENV_EXEC
                     print(f"Sharding Model...")
-                    self.run_task(NeoTask.SHARDING)
+                    self.run_task(NeoTask.SHARDING, python_exec)
                 else:
-                    self.run_task(NeoTask.QUANTIZATION)
+                    self.run_task(NeoTask.QUANTIZATION, LMI_DIST_VENV_EXEC)
             case "trtllm":
-                self.run_task(NeoTask.TENSORRT_LLM)
+                self.run_task(NeoTask.TENSORRT_LLM, SYSTEM_PY_EXEC)
             case "vllm,lmi-dist,tnx":
-                self.run_task(NeoTask.NEURON)
+                self.run_task(NeoTask.NEURON, SYSTEM_PY_EXEC)
             case _:
                 raise ValueError(
                     "Container does not support SageMaker Neo context")
