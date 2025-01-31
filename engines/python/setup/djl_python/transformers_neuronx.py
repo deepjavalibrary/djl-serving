@@ -142,14 +142,22 @@ class TransformersNeuronXService(object):
         if self.config.model_loader == "nxdi":
             os.environ[
                 'VLLM_NEURON_FRAMEWORK'] = "neuronx-distributed-inference"
-            if self.config.save_mp_checkpoint_path:
-                os.environ[
-                    "NEURON_COMPILED_ARTIFACTS"] = self.config.save_mp_checkpoint_path
+            djl_neuron_compiled_artifacts_path = os.path.join(
+                os.getenv("DJL_CACHE_DIR", "/tmp/.djl.ai"),
+                "neuron-compiled-artifacts")
             nxdi_compiled_model_path = os.path.join(
                 self.config.model_id_or_path, NXDI_COMPILED_MODEL_FILE_NAME)
-            if os.path.isfile(nxdi_compiled_model_path):
+            if self.config.save_mp_checkpoint_path:
+                # If the compilation path is given by the user
+                os.environ[
+                    "NEURON_COMPILED_ARTIFACTS"] = self.config.save_mp_checkpoint_path
+            elif os.path.isfile(nxdi_compiled_model_path):
+                # if the compilation path already exists
                 os.environ[
                     "NEURON_COMPILED_ARTIFACTS"] = self.config.model_id_or_path
+            else:
+                os.environ[
+                    "NEURON_COMPILED_ARTIFACTS"] = djl_neuron_compiled_artifacts_path
             return
 
         if self.config.model_loader == "vllm":
