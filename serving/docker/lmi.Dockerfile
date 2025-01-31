@@ -73,9 +73,6 @@ COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 COPY scripts/telemetry.sh /opt/djl/bin
 
-COPY distribution[s]/ ./
-RUN mv *.deb djl-serving_all.deb || true
-
 RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-4 \
     && scripts/install_openssh.sh \
     && scripts/install_python.sh ${python_version} \
@@ -84,23 +81,21 @@ RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cu
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-lmi.txt ./requirements.txt
-RUN pip3 install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124 && pip3 cache purge
-RUN pip3 install -r requirements.txt \
-    && pip3 install ${djl_converter_wheel} --no-deps \
-    && git clone https://github.com/neuralmagic/AutoFP8.git \
-    && cd AutoFP8 \
-    && git reset --hard 4b2092c \
-    && pip3 install . \
-    && cd .. \
-    && rm -rf AutoFP8 \
-    && pip3 cache purge
-
 RUN scripts/patch_oss_dlc.sh python \
     && scripts/security_patch.sh lmi \
     && useradd -m -d /home/djl djl \
     && chown -R djl:djl /opt/djl \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+COPY lmi-container-requirements-common.txt ./requirements-common.txt
+COPY requirements-lmi.txt ./requirements-lmi.txt
+COPY requirements-vllm.txt ./requirements-vllm.txt
+RUN pip3 install -r requirements-common.txt \
+    && scripts/create_virtual_env.sh /opt/djl/vllm_venv requirements-vllm.txt \
+    && scripts/create_virtual_env.sh /opt/djl/lmi_dist_venv requirements-lmi.txt
+
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
 
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \

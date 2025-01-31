@@ -15,10 +15,10 @@ from typing import Dict, List, Optional, Union
 from djl_python.chat_completions.vllm_chat_properties import ChatProperties
 from djl_python.properties_manager.properties import Properties
 from djl_python.rolling_batch.rolling_batch_vllm_utils import maybe_serialize_tool_calls
-from vllm.entrypoints.chat_utils import (ChatCompletionMessageParam,
-                                         apply_hf_chat_template,
+from vllm.entrypoints.chat_utils import (apply_hf_chat_template,
                                          apply_mistral_chat_template,
-                                         parse_chat_messages)
+                                         parse_chat_messages,
+                                         resolve_chat_template_content_format)
 
 
 def is_chat_completions_request(inputs: Dict) -> bool:
@@ -70,9 +70,16 @@ def parse_chat_completions_request_vllm(
     tool_dicts = None if chat_params.tools is None else [
         tool.model_dump() for tool in chat_params.tools
     ]
+    # TODO - figure out what we need to pass for given format
+    content_format = resolve_chat_template_content_format(
+        chat_template=None,
+        given_format="auto",
+        tokenizer=tokenizer,
+    )
 
     conversation, mm_data = parse_chat_messages(
-        chat_params.messages, rolling_batch.get_model_config(), tokenizer)
+        chat_params.messages, rolling_batch.get_model_config(), tokenizer,
+        content_format)
 
     prompt_data: Union[str, List[int]]
     if is_mistral_tokenizer:

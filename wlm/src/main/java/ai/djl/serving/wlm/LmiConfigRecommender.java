@@ -43,6 +43,7 @@ public final class LmiConfigRecommender {
         setRollingBatchSize(lmiProperties);
         setIsPeftModel(lmiProperties, modelConfig);
         setPropertiesForLora(lmiProperties);
+        setPythonExecutable(lmiProperties);
     }
 
     private static void setRollingBatch(
@@ -205,5 +206,20 @@ public final class LmiConfigRecommender {
                 modelConfig.getArchitectures(),
                 OPTIMIZED_TASK_ARCHITECTURES);
         return false;
+    }
+
+    private static void setPythonExecutable(Properties lmiProperties) {
+        if (lmiProperties.containsKey("option.pythonExecutable")) {
+            return;
+        }
+        String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
+        if ("vllm".equals(rollingBatch)) {
+            lmiProperties.setProperty("option.pythonExecutable", "/opt/djl/vllm_venv/bin/python");
+            return;
+        }
+        if ("lmi-dist".equals(rollingBatch)) {
+            lmiProperties.setProperty(
+                    "option.pythonExecutable", "/opt/djl/lmi_dist_venv/bin/python");
+        }
     }
 }
