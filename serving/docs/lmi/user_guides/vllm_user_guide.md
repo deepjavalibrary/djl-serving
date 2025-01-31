@@ -36,8 +36,12 @@ The following set of models are tested in our nightly tests
 
 The quantization techniques supported in vLLM 0.6.3.post1 are listed [here](https://docs.vllm.ai/en/v0.6.3.post1/quantization/supported_hardware.html).
 
-We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
-Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.
+We recommend that regardless of which quantization technique you are using that you pre-quantize the model.
+Runtime quantization adds additional overhead to the endpoint startup time.
+Depending on the quantization technique, this can be significant overhead.
+If you are using a pre-quantized model, you should not set any quantization specific configurations.
+vLLM will deduce the quantization from the model config, and apply optimizations at runtime.
+If you explicitly set the quantization configuration for a pre-quantized model, it limits the optimizations that vLLM can apply.
 
 ### Runtime Quantization
 
@@ -95,7 +99,13 @@ You can follow [this example](../deployment_guide/deploying-your-endpoint.md#con
 
 vLLM has support for LoRA adapters using the [adapters API](../../adapters.md).
 In order to use the adapters, you must begin by enabling them by setting `option.enable_lora=true`.
-Following that, you can configure the LoRA support through the additional settings `option.max_loras`, `option.max_lora_rank`, `option.lora_extra_vocab_size`, and `option.max_cpu_loras`.
+Following that, you can configure the LoRA support through the additional settings:
+
+  - `option.max_loras`
+  - `option.max_lora_rank`
+  - `option.lora_extra_vocab_size`
+  - `option.max_cpu_loras`
+  - 
 If you run into OOM by enabling adapter support, reduce the `option.gpu_memory_utilization`.
 
 ### Advanced vLLM Configurations
@@ -109,22 +119,35 @@ For `LMI` configurations, if we determine an issue with the configuration, we wi
 For `Pass Through` configurations it is possible that our investigation reveals an issue with the backend library.
 In that situation, there is nothing LMI can do until the issue is fixed in the backend library.
 
-| Item                                    | LMI Version | Configuration Type | Description                                                                                                                                                                                                                                                                                                                                                                  | Example value         |
-|-----------------------------------------|-------------|--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|
-| option.quantize                         | \>= 0.26.0  | LMI                | Quantize the model with the supported quantization methods. LMI uses this to set the right quantization configs in VLLM                                                                                                                                                                                                                                                      | `awq` Default: `None` |
-| option.max_rolling_batch_prefill_tokens | \>= 0.26.0  | LMI                | Limits the number of tokens for prefill(a.k.a prompt processing). This needs to be tuned based on GPU memory available and request lengths. Setting this value too high can limit the number of kv cache blocks or run into OOM. If you don't set this, `vllm` will default to max model length from Hugging Face config(also accounts for rope scaling if applicable).      | Default: `None`       |
-| option.max_model_len                    | \>= 0.26.0  | Pass Through       | the maximum length (input+output) vLLM should preserve memory for. If not specified, will use the default length the model is capable in config.json. Sometimes model's maximum length could go to 32k (Mistral 7B) and way beyond the supported KV token size. In that case to deploy on a small instance, we need to adjust this value within the range of KV Cache limit. | Default: `None`       |
-| option.load_format                      | \>= 0.26.0  | Pass Through       | The checkpoint format of the model. Default is auto and means bin/safetensors will be used if found.                                                                                                                                                                                                                                                                         | Default: `auto`       |
-| option.enforce_eager                    | \>= 0.27.0  | Pass Through       | vLLM by default will run with CUDA graph optimization to reach to the best performance. However, in the situation of very less GPU memory, having CUDA graph enabled will cause OOM. So if you set this option to true, we will use PyTorch Eager mode and disable CUDA graph to save some GBs of memory.                                                                    | Default: `False`      |
-| option.gpu_memory_utilization           | \>= 0.27.0  | Pass Through       | This config controls the amount of GPU memory allocated to KV cache. Setting higher value will allocate more memory for KV cache.Default is 0.9. It recommended to reduce this value if GPU OOM's are encountered.                                                                                                                                                           | Default: `0.9`        |
-| option.enable_lora                      | \>= 0.27.0  | Pass Through       | This config enables support for LoRA adapters.                                                                                                                                                                                                                                                                                                                               | Default: `false`      |
-| option.max_loras                        | \>= 0.27.0  | Pass Through       | This config determines the maximum number of LoRA adapters that can be run at once. Allocates GPU memory for those number of adapters.                                                                                                                                                                                                                                       | Default: `4`          |
-| option.max_lora_rank                    | \>= 0.27.0  | Pass Through       | This config determines the maximum rank allowed for a LoRA adapter. Set this value to maximum rank of your adapters. Setting a larger value will enable more adapters at a greater memory usage cost.                                                                                                                                                                        | Default: `16`         |
-| option.lora_extra_vocab_size            | \>= 0.27.0  | Pass Through       | This config determines the maximum additional vocabulary that can be added through a LoRA adapter.                                                                                                                                                                                                                                                                           | Default: `256`        |
-| option.max_cpu_loras                    | \>= 0.27.0  | Pass Through       | This config determines the maximum number of LoRA adapters to cache in memory. All others will be evicted to disk.                                                                                                                                                                                                                                                           | Default: `None`       |
-| option.enable_chunked_prefill           | \>= 0.29.0  | Pass Through       | This config enables chunked prefill support. With chunked prefill, longer prompts will be chunked and batched with decode requests to reduce inter token latency. This option is EXPERIMENTAL and tested for llama and falcon models only. This does not work with LoRA and speculative decoding yet.                                                                        | Default: `None`       |
-| option.cpu_offload_gb_per_gpu           | \>= 0.29.0  | Pass Through       | This config allows offloading model weights into CPU to enable large model running with limited GPU memory.                                                                                                                                                                                                                                                                  | Default: `0`          |
-| option.enable_prefix_caching            | \>= 0.29.0  | Pass Through       | This config allows the engine to cache the context memory and reuse to speed up inference.                                                                                                                                                                                                                                                                                   | Default: `False`      |
-| option.disable_sliding_window           | \>= 0.30.0  | Pass Through       | This config disables sliding window, capping to sliding window size inference.                                                                                                                                                                                                                                                                                               | Default: `False`      |
-| option.tokenizer_mode                   | \>= 0.30.0  | Pass Through       | This config sets the tokenizer mode for vllm. When using mistral models with mistral tokenizers, you must set this to `mistral` explicitly.                                                                                                                                                                                                                                  | Default: `auto`       |
+The following table lists the set of LMI configurations.
+In some situations, the equivalent vLLM configuration can be used interchangeably. 
+Those situations will be called out specifically.
 
+| Item                                    | LMI Version | vLLM alias                    | Example Value | Default Value                              | Description                                                                                                  |                                                                                               
+|-----------------------------------------|-------------|-------------------------------|---------------|--------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| option.quantize                         | \>= 0.23.0  | option.quantization           | awq           | None                                       | The quantization algorithm to use. See "Quantization Support" for more details                               |
+| option.max_rolling_batch_prefill_tokens | \>= 0.24.0  | option.max_num_batched_tokens | 32768         | None                                       | Maximum number of tokens that the engine can process in a single batch iteration (includes prefill + decode) |
+| option.cpu_offload_gb_per_gpu           | \>= 0.29.0  | option.cpu_offload_gb | 4 (GB)        | 0                                          | The space in GiB to offload to CPU, per GPU. Default is 0, which means no offloading. |
+
+In addition to the configurations specified in the table above, LMI supports all additional vLLM EngineArguments in Pass-Through mode.
+Pass-Through configurations are not processed or validated by LMI.
+You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.6.3.post1/models/engine_args.html#engine-args).
+
+You can specify these pass-through configurations in the serving.properties file by prefixing the configuration with `option.<config>`,
+or as environment variables by prefixing the configuration with `OPTION_<CONFIG>`.
+
+We will consider two examples: a boolean configuration, and a string configuration.
+
+**Boolean Configuration**
+
+If you want to set the Engine Argument `enable_prefix_caching`, you can do:
+
+* `option.enable_prefix_caching=true` in serving.properties
+* `OPTION_ENABLE_PREFIX_CACHING=true` as an environment variable
+
+**String configuration**
+
+If you want to set the Engine Argument `tokenizer_mode`, you can do:
+
+* `option.tokenizer_mode=mistral` in serving.properties
+* `OPTION_TOKENIZER_MODE=true` in serving.properties

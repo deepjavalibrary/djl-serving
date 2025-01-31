@@ -11,70 +11,76 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import ast
-from typing import Optional, Any, Mapping, Tuple, Dict
-
-from pydantic import field_validator, model_validator
+import logging
+from typing import Optional, Any, Dict, Tuple
+from pydantic import field_validator, model_validator, ConfigDict, Field
+from vllm import EngineArgs
+from vllm.utils import FlexibleArgumentParser
+from vllm.engine.arg_utils import StoreBoolean
 
 from djl_python.properties_manager.properties import Properties
+
+DTYPE_MAPPER = {
+    "float32": "float32",
+    "fp32": "float32",
+    "float16": "float16",
+    "fp16": "float16",
+    "bfloat16": "bfloat16",
+    "bf16": "bfloat16",
+    "auto": "auto"
+}
+
+
+def construct_vllm_args_list(vllm_engine_args: dict,
+                             parser: FlexibleArgumentParser):
+    # Modified from https://github.com/vllm-project/vllm/blob/v0.6.4/vllm/utils.py#L1258
+    args_list = []
+    store_boolean_arguments = {
+        action.dest
+        for action in parser._actions if isinstance(action, StoreBoolean)
+    }
+    for engine_arg, engine_arg_value in vllm_engine_args.items():
+        if str(engine_arg_value).lower() in {
+                'true', 'false'
+        } and engine_arg not in store_boolean_arguments:
+            if str(engine_arg_value).lower() == 'true':
+                args_list.append(f"--{engine_arg}")
+        else:
+            args_list.append(f"--{engine_arg}={engine_arg_value}")
+    return args_list
 
 
 class VllmRbProperties(Properties):
     engine: Optional[str] = None
-    dtype: Optional[str] = "auto"
-    load_format: Optional[str] = "auto"
-    quantize: Optional[str] = None
+    # The following configs have different names in DJL compared to vLLM, we only accept DJL name currently
     tensor_parallel_degree: int = 1
     pipeline_parallel_degree: int = 1
-    max_rolling_batch_prefill_tokens: Optional[int] = None
-    # Adjustable prefix model length for certain 32k or longer model
-    max_model_len: Optional[int] = None
-    enforce_eager: Optional[bool] = False
-    # TODO: this default may change with different vLLM versions
-    # TODO: try to get good default from vLLM to prevent revisiting
-    # TODO: last time check: vllm 0.3.1
-    gpu_memory_utilization: Optional[float] = 0.9
-    enable_lora: Optional[bool] = False
-    max_loras: Optional[int] = 4
-    max_lora_rank: Optional[int] = 16
-    fully_sharded_loras: bool = False
-    lora_extra_vocab_size: int = 256
+    # The following configs have different names in DJL compared to vLLM, either is accepted
+    quantize: Optional[str] = Field(alias="quantization",
+                                    default=EngineArgs.quantization)
+    max_rolling_batch_prefill_tokens: Optional[int] = Field(
+        alias="max_num_batched_tokens",
+        default=EngineArgs.max_num_batched_tokens)
+    cpu_offload_gb_per_gpu: float = Field(alias="cpu_offload_gb",
+                                          default=EngineArgs.cpu_offload_gb)
+    # The following configs have different defaults, or additional processing in DJL compared to vLLM
+    dtype: str = "auto"
+    max_loras: int = 4
+    # The following configs have broken processing in vllm via the FlexibleArgumentParser
     long_lora_scaling_factors: Optional[Tuple[float, ...]] = None
-    lora_dtype: Optional[str] = 'auto'
-    max_cpu_loras: Optional[int] = None
+    use_v2_block_manager: bool = True
+    # Tool calling properties
+    enable_auto_tool_choice: bool = False
+    tool_call_parser: Optional[str] = None
 
     # Neuron vLLM properties
-    device: Optional[str] = None
+    device: str = 'auto'
     preloaded_model: Optional[Any] = None
     generation_config: Optional[Any] = None
     override_neuron_config: Optional[Dict] = None
 
-    max_logprobs: Optional[int] = 20
-    enable_chunked_prefill: Optional[bool] = None
-    cpu_offload_gb_per_gpu: Optional[int] = 0
-    enable_prefix_caching: Optional[bool] = False
-    disable_sliding_window: Optional[bool] = False
-    limit_mm_per_prompt: Optional[Mapping[str, int]] = None
-    use_v2_block_manager: bool = False
-    tokenizer_mode: str = 'auto'
-
-    # Speculative decoding configuration.
-    speculative_model: Optional[str] = None
-    speculative_model_quantization: Optional[str] = None
-    speculative_draft_tensor_parallel_size: Optional[int] = None
-    num_speculative_tokens: Optional[int] = None
-    speculative_max_model_len: Optional[int] = None
-    speculative_disable_by_batch_size: Optional[int] = None
-    ngram_prompt_lookup_max: Optional[int] = None
-    ngram_prompt_lookup_min: Optional[int] = None
-    spec_decoding_acceptance_method: str = 'rejection_sampler'
-    typical_acceptance_sampler_posterior_threshold: Optional[float] = None
-    typical_acceptance_sampler_posterior_alpha: Optional[float] = None
-    qlora_adapter_name_or_path: Optional[str] = None
-    disable_logprobs_during_spec_decoding: Optional[bool] = None
-
-    # Tool calling properties
-    enable_auto_tool_choice: Optional[bool] = False
-    tool_call_parser: Optional[str] = None
+    # This allows generic vllm engine args to be passed in and set with vllm
+    model_config = ConfigDict(extra='allow', populate_by_name=True)
 
     @field_validator('engine')
     def validate_engine(cls, engine):
@@ -83,64 +89,13 @@ class VllmRbProperties(Properties):
                 f"Need python engine to start vLLM RollingBatcher")
         return engine
 
-    @field_validator('long_lora_scaling_factors', mode='before')
-    def validate_long_lora_scaling_factors(cls, val):
-        if isinstance(val, str):
-            val = ast.literal_eval(val)
-        if not isinstance(val, tuple):
-            if isinstance(val, list):
-                val = tuple(float(v) for v in val)
-            elif isinstance(val, float):
-                val = (val, )
-            elif isinstance(val, int):
-                val = (float(val), )
-            else:
-                raise ValueError(
-                    "long_lora_scaling_factors must be convertible to a tuple of floats."
-                )
-        return val
-
-    @field_validator('limit_mm_per_prompt', mode="before")
-    def validate_limit_mm_per_prompt(cls, val) -> Mapping[str, int]:
-        out_dict: Dict[str, int] = {}
-        for item in val.split(","):
-            kv_parts = [part.lower().strip() for part in item.split("=")]
-            if len(kv_parts) != 2:
-                raise ValueError("Each item should be in the form key=value")
-            key, value = kv_parts
-
-            try:
-                parsed_value = int(value)
-            except ValueError as e:
-                raise ValueError(
-                    f"Failed to parse value of item {key}={value}") from e
-
-            if key in out_dict and out_dict[key] != parsed_value:
-                raise ValueError(
-                    f"Conflicting values specified for key: {key}")
-            out_dict[key] = parsed_value
-        return out_dict
-
-    @field_validator('override_neuron_config', mode="before")
-    def validate_override_neuron_config(cls, val):
-        if isinstance(val, str):
-            neuron_config = ast.literal_eval(val)
-            if not isinstance(neuron_config, dict):
-                raise ValueError(
-                    f"Invalid json format for override_neuron_config")
-            return neuron_config
-        elif isinstance(val, Dict):
-            return val
-        else:
-            raise ValueError("Invalid json format for override_neuron_config")
-
-    @model_validator(mode='after')
-    def validate_speculative_model(self):
-        if self.speculative_model is not None and not self.use_v2_block_manager:
+    @field_validator('dtype')
+    def validate_dtype(cls, val):
+        if val not in DTYPE_MAPPER:
             raise ValueError(
-                "Speculative decoding requires usage of the V2 block manager. Enable it with option.use_v2_block_manager=true."
+                f"Invalid dtype={val} provided. Must be one of {DTYPE_MAPPER.keys()}"
             )
-        return self
+        return DTYPE_MAPPER[val]
 
     @model_validator(mode='after')
     def validate_pipeline_parallel(self):
@@ -159,3 +114,110 @@ class VllmRbProperties(Properties):
                 raise ValueError(
                     f"Invalid tool call parser: {self.tool_call_parser} "
                     f"(chose from {{ {','.join(valid_tool_parses)} }})")
+
+    @field_validator('override_neuron_config', mode="before")
+    def validate_override_neuron_config(cls, val):
+        if isinstance(val, str):
+            neuron_config = ast.literal_eval(val)
+            if not isinstance(neuron_config, dict):
+                raise ValueError(
+                    f"Invalid json format for override_neuron_config")
+            return neuron_config
+        elif isinstance(val, Dict):
+            return val
+        else:
+            raise ValueError("Invalid json format for override_neuron_config")
+
+    # TODO: processing of this field is broken in vllm via from_cli_args
+    # we should upstream a fix for this to vllm
+    @field_validator('long_lora_scaling_factors', mode='before')
+    def validate_long_lora_scaling_factors(cls, val):
+        if isinstance(val, str):
+            val = ast.literal_eval(val)
+        if not isinstance(val, tuple):
+            if isinstance(val, list):
+                val = tuple(float(v) for v in val)
+            elif isinstance(val, float):
+                val = (val, )
+            elif isinstance(val, int):
+                val = (float(val), )
+            else:
+                raise ValueError(
+                    "long_lora_scaling_factors must be convertible to a tuple of floats."
+                )
+        return val
+
+    def handle_lmi_vllm_config_conflicts(self, additional_vllm_engine_args):
+
+        def validate_potential_lmi_vllm_config_conflict(
+                lmi_config_name, vllm_config_name):
+            lmi_config_val = self.__getattribute__(lmi_config_name)
+            vllm_config_val = additional_vllm_engine_args.get(vllm_config_name)
+            if vllm_config_val is not None and lmi_config_val is not None:
+                if vllm_config_val != lmi_config_val:
+                    raise ValueError(
+                        f"Both the DJL {lmi_config_val}={lmi_config_val} and vLLM {vllm_config_name}={vllm_config_val} configs have been set with conflicting values."
+                        f"We currently only accept the DJL config {lmi_config_name}, please remove the vllm {vllm_config_name} configuration."
+                    )
+
+        validate_potential_lmi_vllm_config_conflict("tensor_parallel_degree",
+                                                    "tensor_parallel_size")
+        validate_potential_lmi_vllm_config_conflict("pipeline_parallel_degree",
+                                                    "pipeline_parallel_size")
+        validate_potential_lmi_vllm_config_conflict("max_rolling_batch_size",
+                                                    "max_num_seqs")
+
+    def generate_vllm_engine_arg_dict(self,
+                                      passthrough_vllm_engine_args) -> dict:
+        vllm_engine_args = {
+            'model': self.model_id_or_path,
+            'tensor_parallel_size': self.tensor_parallel_degree,
+            'pipeline_parallel_size': self.pipeline_parallel_degree,
+            'max_num_seqs': self.max_rolling_batch_size,
+            'dtype': DTYPE_MAPPER[self.dtype],
+            'revision': self.revision,
+            'max_loras': self.max_loras,
+            'enable_lora': self.enable_lora,
+            'trust_remote_code': self.trust_remote_code,
+            'cpu_offload_gb': self.cpu_offload_gb_per_gpu,
+            'use_v2_block_manager': self.use_v2_block_manager,
+            'quantization': self.quantize,
+            'device': self.device,
+        }
+        if self.max_rolling_batch_prefill_tokens is not None:
+            vllm_engine_args[
+                'max_num_batched_tokens'] = self.max_rolling_batch_prefill_tokens
+        if self.device == 'neuron':
+            vllm_engine_args['block_size'] = passthrough_vllm_engine_args.get(
+                "max_model_len")
+        vllm_engine_args.update(passthrough_vllm_engine_args)
+        return vllm_engine_args
+
+    def get_engine_args(self) -> EngineArgs:
+        additional_vllm_engine_args = self.get_additional_vllm_engine_args()
+        self.handle_lmi_vllm_config_conflicts(additional_vllm_engine_args)
+        vllm_engine_arg_dict = self.generate_vllm_engine_arg_dict(
+            additional_vllm_engine_args)
+        logging.debug(
+            f"Construction vLLM engine args from the following DJL configs: {vllm_engine_arg_dict}"
+        )
+        parser = EngineArgs.add_cli_args(FlexibleArgumentParser())
+        args_list = construct_vllm_args_list(vllm_engine_arg_dict, parser)
+        args = parser.parse_args(args=args_list)
+        engine_args = EngineArgs.from_cli_args(args)
+        # we have to do this separately because vllm converts it into a string
+        engine_args.long_lora_scaling_factors = self.long_lora_scaling_factors
+        # These neuron configs are not implemented in the vllm arg parser
+        if self.device == 'neuron':
+            setattr(engine_args, 'preloaded_model', self.preloaded_model)
+            setattr(engine_args, 'generation_config', self.generation_config)
+            setattr(engine_args, 'override_neuron_config',
+                    self.override_neuron_config)
+        return engine_args
+
+    def get_additional_vllm_engine_args(self) -> Dict[str, Any]:
+        return {
+            k: v
+            for k, v in self.__pydantic_extra__.items()
+            if k in EngineArgs.__annotations__
+        }
