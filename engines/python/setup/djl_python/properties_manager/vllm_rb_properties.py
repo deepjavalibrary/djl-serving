@@ -11,13 +11,12 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import ast
-import json
-from enum import Enum
 from typing import Optional, Any, Mapping, Tuple, Dict
 
 from pydantic import field_validator, model_validator
 
 from djl_python.properties_manager.properties import Properties
+from vllm.entrypoints.openai.tool_parsers import ToolParserManager
 
 
 class VllmRbProperties(Properties):
@@ -73,6 +72,10 @@ class VllmRbProperties(Properties):
     typical_acceptance_sampler_posterior_alpha: Optional[float] = None
     qlora_adapter_name_or_path: Optional[str] = None
     disable_logprobs_during_spec_decoding: Optional[bool] = None
+
+    # Tool calling properties
+    enable_auto_tool_choice: Optional[bool] = False
+    tool_call_parser: Optional[str] = None
 
     @field_validator('engine')
     def validate_engine(cls, engine):
@@ -147,3 +150,12 @@ class VllmRbProperties(Properties):
                 "Pipeline parallelism is not supported in vLLM's LLMEngine used in rolling_batch implementation"
             )
         return self
+
+    @model_validator(mode='after')
+    def validate_tool_call_parser(self):
+        valid_tool_parses = ToolParserManager.tool_parsers.keys()
+        if self.enable_auto_tool_choice \
+                and self.tool_call_parser not in valid_tool_parses:
+            raise ValueError(
+                f"Invalid tool call parser: {self.tool_call_parser} "
+                f"(chose from {{ {','.join(valid_tool_parses)} }})")

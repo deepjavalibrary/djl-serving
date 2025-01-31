@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Union
 
 from djl_python.chat_completions.vllm_chat_properties import ChatProperties
 from djl_python.properties_manager.properties import Properties
+from djl_python.rolling_batch.rolling_batch_vllm_utils import maybe_serialize_tool_calls
 from vllm.entrypoints.chat_utils import (ChatCompletionMessageParam,
                                          apply_hf_chat_template,
                                          apply_mistral_chat_template,
@@ -30,7 +31,6 @@ def parse_chat_completions_request_vllm(
     rolling_batch,
     tokenizer,
     chat_template: Optional[str] = None,
-    image_token: Optional[str] = None,
     configs: Properties = None,
     is_mistral_tokenizer: bool = False,
 ):
@@ -47,9 +47,29 @@ def parse_chat_completions_request_vllm(
             f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
             f"please ensure that your tokenizer supports chat templates.")
 
+    tool_parser = rolling_batch.get_tool_parser()
     chat_params = ChatProperties(**input_map)
+
+    if chat_params.tool_choice == "required":
+        raise ValueError("tool_choice = \"required\" is not supported!")
+
+    if is_mistral_tokenizer:
+        maybe_serialize_tool_calls(chat_params)
+    elif chat_params.tool_choice == "auto" and tool_parser is None:
+        raise ValueError(
+            "\"auto\" tool choice requires tool_call_parser to be available")
+
+    should_parse_tools = tool_parser is not None and (hasattr(
+        chat_params, "tool_choice") and chat_params.tool_choice != "none")
+    if should_parse_tools:
+        chat_params = tool_parser.adjust_request(request=chat_params)
+
     exclude = {"messages"}
     param = chat_params.model_dump(exclude_none=True, exclude=exclude)
+
+    tool_dicts = None if chat_params.tools is None else [
+        tool.model_dump() for tool in chat_params.tools
+    ]
 
     conversation, mm_data = parse_chat_messages(
         chat_params.messages, rolling_batch.get_model_config(), tokenizer)
@@ -61,6 +81,7 @@ def parse_chat_completions_request_vllm(
             messages=chat_params.messages,
             chat_template=chat_template,
             add_generation_prompt=True,
+            tools=tool_dicts,
         )
     else:
         text_inputs = apply_hf_chat_template(
@@ -68,11 +89,14 @@ def parse_chat_completions_request_vllm(
             conversation=conversation,
             chat_template=chat_template,
             add_generation_prompt=True,
+            tools=tool_dicts,
         )
 
     param["details"] = True  # Enable details for chat completions
     param[
         "output_formatter"] = "jsonlines_chat" if chat_params.stream else "json_chat"
+    param["tool_parser"] = tool_parser
+    param["chat_params"] = chat_params
 
     if mm_data:
         param["mm_data"] = mm_data

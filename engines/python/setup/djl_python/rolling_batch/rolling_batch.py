@@ -120,6 +120,12 @@ class RollingBatch(ABC):
         """
         return False
 
+    def get_tool_parser(self):
+        """
+        :return: the tool call parser if available
+        """
+        return None
+
     @abstractmethod
     def inference(self, new_requests: List[Request]) -> List:
         """

@@ -601,7 +601,20 @@ vllm_chat_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
-    }
+    },
+}
+
+vllm_tool_model_spec = {
+    "llama3-1-8b-instruct-tool": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "unsloth/Meta-Llama-3.1-8B-Instruct"
+    },
+    "mistral-7b-instruct-v03-tool": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "unsloth/mistral-7b-instruct-v0.3"
+    },
 }
 
 lmi_dist_aiccl_model_spec = {
@@ -1281,6 +1294,111 @@ def batch_generation_pair(batch_size):
     return data[:batch_size]
 
 
+def batch_generation_tool(batch_size):
+    data = [{
+        "messages": [{
+            "role": "user",
+            "content": "Hi! How are you doing today?"
+        }, {
+            "role": "assistant",
+            "content": "I'm doing well! How can I help you?"
+        }, {
+            "role":
+            "user",
+            "content":
+            "Can you tell me what the temperate will be in Dallas, in fahrenheit?"
+        }],
+        "tools": [{
+            "type": "function",
+            "function": {
+                "name": "get_current_weather",
+                "description": "Get the current weather in a given location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "city": {
+                            "type":
+                            "string",
+                            "description":
+                            "The city to find the weather for, e.g. 'San Francisco'"
+                        },
+                        "state": {
+                            "type":
+                            "string",
+                            "description":
+                            "the two-letter abbreviation for the state that the city is in, e.g. 'CA' which would mean 'California'"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "description":
+                            "The unit to fetch the temperature in",
+                            "enum": ["celsius", "fahrenheit"]
+                        }
+                    },
+                    "required": ["city", "state", "unit"]
+                }
+            }
+        }],
+        "tool_choice":
+        "auto"
+    }, {
+        "messages": [{
+            "role": "user",
+            "content": "Hi! How are you doing today?"
+        }, {
+            "role": "assistant",
+            "content": "I'm doing well! How can I help you?"
+        }, {
+            "role":
+            "user",
+            "content":
+            "Can you tell me what the temperate will be in Dallas, in fahrenheit?"
+        }],
+        "tools": [{
+            "type": "function",
+            "function": {
+                "name": "get_current_weather",
+                "description": "Get the current weather in a given location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "city": {
+                            "type":
+                            "string",
+                            "description":
+                            "The city to find the weather for, e.g. 'San Francisco'"
+                        },
+                        "state": {
+                            "type":
+                            "string",
+                            "description":
+                            "the two-letter abbreviation for the state that the city is in, e.g. 'CA' which would mean 'California'"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "description":
+                            "The unit to fetch the temperature in",
+                            "enum": ["celsius", "fahrenheit"]
+                        }
+                    },
+                    "required": ["city", "state", "unit"]
+                }
+            }
+        }],
+        "tool_choice": {
+            "type": "function",
+            "function": {
+                "name": "get_current_weather"
+            }
+        },
+    }]
+
+    if batch_size > len(data):
+        # dynamically extend to support larger bs by repetition
+        data *= math.ceil(batch_size / len(data))
+    return data[:batch_size]
+
+
 def t5_batch_generation(batch_size):
     input_sentences = [
         "translate English to German: The house is wonderful.",
@@ -1526,6 +1644,36 @@ def test_handler_rolling_batch_chat(model, model_spec):
     stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = {"messages": batch_generation_chat(1)[0]}
+    seq_length = 100
+    req["max_tokens"] = seq_length
+    req["logprobs"] = True
+    req["top_logprobs"] = 1
+    if "adapters" in spec:
+        req["adapters"] = spec.get("adapters")[0]
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        LOGGER.info(f"res: {res.content}")
+        # awscurl little benchmark phase
+        for i, batch_size in enumerate(spec["batch_size"]):
+            for seq_length in spec["seq_length"]:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["max_tokens"] = seq_length
+                awscurl_run(req, spec.get("tokenizer", None), batch_size)
+
+
+def test_handler_rolling_batch_tool(model, model_spec):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
+    # dryrun phase
+    req = batch_generation_tool(1)[0]
     seq_length = 100
     req["max_tokens"] = seq_length
     req["logprobs"] = True
@@ -1920,6 +2068,8 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
+    elif args.handler == "vllm_tool":
+        test_handler_rolling_batch_tool(args.model, vllm_tool_model_spec)
     elif args.handler == "vllm_neo":
         test_handler_rolling_batch(args.model, vllm_neo_model_spec)
     elif args.handler == "handler_performance":

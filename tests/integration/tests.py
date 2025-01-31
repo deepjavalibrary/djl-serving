@@ -630,6 +630,18 @@ class TestVllm1:
             r.launch()
             client.run("vllm llama-68m-speculative-eagle".split())
 
+    def test_llama3_1_8b_instruct_tool(self):
+        with Runner('lmi', 'llama3-1-8b-instruct-tool') as r:
+            prepare.build_vllm_model("llama3-1-8b-instruct-tool")
+            r.launch()
+            client.run("vllm_tool llama3-1-8b-instruct-tool".split())
+
+    def test_mistral_7b_instruct_v03_tool(self):
+        with Runner('lmi', 'mistral-7b-instruct-v03-tool') as r:
+            prepare.build_vllm_model("mistral-7b-instruct-v03-tool")
+            r.launch()
+            client.run("vllm_tool mistral-7b-instruct-v03-tool".split())
+
 
 @pytest.mark.vllm
 @pytest.mark.lora
