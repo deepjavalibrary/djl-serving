@@ -21,16 +21,11 @@ from vllm.entrypoints.chat_utils import (apply_hf_chat_template,
                                          resolve_chat_template_content_format)
 
 
-def is_chat_completions_request(inputs: Dict) -> bool:
-    return "messages" in inputs
-
-
 def parse_chat_completions_request_vllm(
     input_map: Dict,
     is_rolling_batch: bool,
     rolling_batch,
     tokenizer,
-    chat_template: Optional[str] = None,
     configs: Properties = None,
     is_mistral_tokenizer: bool = False,
 ):
@@ -40,12 +35,6 @@ def parse_chat_completions_request_vllm(
             "chat completions support is not currently available for dynamic batching. "
             "You must enable rolling batch to use the chat completions format."
         )
-
-    if not is_mistral_tokenizer and not hasattr(tokenizer,
-                                                "apply_chat_template"):
-        raise AttributeError(
-            f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
-            f"please ensure that your tokenizer supports chat templates.")
 
     tool_parser = rolling_batch.get_tool_parser()
     chat_params = ChatProperties(**input_map)
@@ -85,16 +74,15 @@ def parse_chat_completions_request_vllm(
     if is_mistral_tokenizer:
         text_inputs = apply_mistral_chat_template(
             tokenizer,
-            messages=chat_params.messages,
-            chat_template=chat_template,
-            add_generation_prompt=True,
+            chat_params.messages,
+            None,
             tools=tool_dicts,
         )
     else:
         text_inputs = apply_hf_chat_template(
             tokenizer,
-            conversation=conversation,
-            chat_template=chat_template,
+            conversation,
+            None,
             add_generation_prompt=True,
             tools=tool_dicts,
         )

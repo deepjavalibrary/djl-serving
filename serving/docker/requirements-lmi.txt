@@ -1,4 +1,5 @@
 -r requirements-common.txt
+llmcompressor
 # flash infer kernels for vllm/lmi-dist
 https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl
 # vllm wheel built with pt2.5.1

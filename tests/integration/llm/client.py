@@ -602,6 +602,11 @@ vllm_chat_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
     },
+    "mistral-7b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16",
+    }
 }
 
 vllm_tool_model_spec = {
