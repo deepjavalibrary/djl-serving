@@ -144,7 +144,7 @@ class Connection {
             int localSize = worldSize / clusterSize;
 
             String cudaDevices = getVisibleDevices(workerId, localSize);
-            logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
+            logger.info("Set before mpirun eee CUDA_VISIBLE_DEVICES={}", cudaDevices);
             logger.info(
                     "Received: pp degree: {} and tp depgree: {} and cluster size: {}",
                     pipelineParallelDegree,
@@ -160,7 +160,7 @@ class Connection {
                 }
                 sb.append(host).append(':').append(localSize);
             }
-            String[] args = new String[50];
+            String[] args = new String[53];
             args[0] = "mpirun";
             args[1] = "-np";
             args[2] = String.valueOf(worldSize);
@@ -173,45 +173,47 @@ class Connection {
             args[9] = "orte_keep_fqdn_hostnames";
             args[10] = "t";
             args[11] = "--tag-output";
-            args[12] = "-x";
-            args[13] = "FI_PROVIDER=efa";
-            args[14] = "-x";
-            args[15] = "RDMAV_FORK_SAFE=1";
-            args[16] = "-x";
-            args[17] = "FI_EFA_USE_DEVICE_RDMA=1";
-            args[18] = "-x";
-            args[19] = "LD_LIBRARY_PATH";
-            args[20] = "-x";
-            args[21] = "PYTHONPATH";
-            args[22] = "-x";
-            args[23] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
-            args[24] = "-x";
-            args[25] = "MASTER_ADDR=" + pyEnv.getMasterAddr();
-            args[26] = "-x";
-            args[27] = "MKL_DYNAMIC=FALSE";
-            args[28] = pyEnv.getPythonExecutable();
-            args[29] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
-            args[30] = "--model-dir";
-            args[31] = model.getModelPath().toAbsolutePath().toString();
-            args[32] = "--entry-point";
-            args[33] = entryPoint == null ? "" : entryPoint;
-            // TODO: Use mix of Unix and TCP sockets for local/remote processes
-            args[34] = "--sock-type";
-            args[35] = "tcp";
-            args[36] = "--sock-name";
-            args[37] = "0.0.0.0";
-            args[38] = "--port";
-            args[39] = String.valueOf(port);
-            args[40] = "--tensor-parallel-degree";
-            args[41] = String.valueOf(tensorParallelDegree);
-            args[42] = "--pipeline-parallel-degree";
-            args[43] = String.valueOf(pipelineParallelDegree);
-            args[44] = "--cluster-size";
-            args[45] = String.valueOf(clusterSize);
-            args[46] = "--recommended-entry-point";
-            args[47] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
-            args[48] = "--log-level";
-            args[49] = pythonLogLevel;
+            args[12] = "--mca"; // New
+            args[13] = "btl_tcp_if_include"; // New
+            args[14] = "enp39s0"; // New
+            args[15] = "-x";
+            args[16] = "FI_PROVIDER=efa";
+            args[17] = "-x";
+            args[18] = "RDMAV_FORK_SAFE=1";
+            args[19] = "-x";
+            args[20] = "FI_EFA_USE_DEVICE_RDMA=1";
+            args[21] = "-x";
+            args[22] = "LD_LIBRARY_PATH";
+            args[23] = "-x";
+            args[24] = "PYTHONPATH";
+            args[25] = "-x";
+            args[26] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
+            args[27] = "-x";
+            args[28] = "MASTER_ADDR=" + pyEnv.getMasterAddr();
+            args[29] = "-x";
+            args[30] = "MKL_DYNAMIC=FALSE";
+            args[31] = pyEnv.getPythonExecutable();
+            args[32] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
+            args[33] = "--model-dir";
+            args[34] = model.getModelPath().toAbsolutePath().toString();
+            args[35] = "--entry-point";
+            args[36] = entryPoint == null ? "" : entryPoint;
+            args[37] = "--sock-type";
+            args[38] = "tcp";
+            args[39] = "--sock-name";
+            args[40] = "0.0.0.0";
+            args[41] = "--port";
+            args[42] = String.valueOf(port);
+            args[43] = "--tensor-parallel-degree";
+            args[44] = String.valueOf(tensorParallelDegree);
+            args[45] = "--pipeline-parallel-degree";
+            args[46] = String.valueOf(pipelineParallelDegree);
+            args[47] = "--cluster-size";
+            args[48] = String.valueOf(clusterSize);
+            args[49] = "--recommended-entry-point";
+            args[50] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[51] = "--log-level";
+            args[52] = "debug";
             return args;
         } else if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, worldSize);
