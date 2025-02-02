@@ -60,11 +60,18 @@ fi
 
 if [[ "$1" = "serve" ]]; then
   shift 1
-  code=77
-  while [[ code -eq 77 ]]; do
-    /usr/bin/djl-serving "$@"
-    code=$?
-  done
+  echo "LMI_DEBUG_NSYS_ENABLED=$LMI_DEBUG_NSYS_ENABLED"
+  if [[ -n "$LMI_DEBUG_NSYS_ENABLED" ]]; then
+    set -e
+    source /opt/djl/scripts/install_debug_tools.sh
+    /opt/djl/scripts/start_debug_tools.sh "$@"
+  else
+    code=77
+    while [[ code -eq 77 ]]; do
+      /usr/bin/djl-serving "$@"
+      code=$?
+    done
+  fi
 elif [[ "$1" = "partition" ]] || [[ "$1" = "train" ]]; then
   shift 1
   /usr/bin/python3 /opt/djl/partition/partition.py "$@"

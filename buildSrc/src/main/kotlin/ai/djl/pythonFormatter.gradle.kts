@@ -1,11 +1,12 @@
 package ai.djl
 
-import org.gradle.kotlin.dsl.registering
+open class Cmd @Inject constructor(@Internal val execOperations: ExecOperations) : DefaultTask()
 
 tasks {
-    register("formatPython") {
+    register<Cmd>("formatPython") {
         doLast {
-            project.exec {
+            execOperations.exec {
+                workingDir = projectDir
                 commandLine(
                     "bash",
                     "-c",
@@ -15,10 +16,11 @@ tasks {
         }
     }
 
-    val verifyPython by registering {
+    register<Cmd>("verifyPython") {
         doFirst {
             try {
-                project.exec {
+                execOperations.exec {
+                    workingDir = projectDir
                     commandLine(
                         "bash",
                         "-c",

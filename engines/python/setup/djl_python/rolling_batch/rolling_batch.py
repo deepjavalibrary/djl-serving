@@ -101,12 +101,30 @@ class RollingBatch(ABC):
         """
         raise RuntimeError("get_tokenizer function not supported")
 
+    def get_model_config(self):
+        """
+        :return: the model config if available
+        """
+        raise RuntimeError("get_model_config must be implemented by subclass")
+
     def get_huggingface_model_config(self):
         """
         :return: the huggingface pretrained config if available
         """
         raise RuntimeError(
             "get_huggingface_model_config must be implemented by subclass")
+
+    def use_vllm_chat_completions(self):
+        """
+        :return: whether to use the vllm chat completions.
+        """
+        return False
+
+    def get_tool_parser(self):
+        """
+        :return: the tool call parser if available
+        """
+        return None
 
     @abstractmethod
     def inference(self, new_requests: List[Request]) -> List:

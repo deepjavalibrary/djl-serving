@@ -10,23 +10,21 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
 from vllm import LLMEngine, SamplingParams
+from vllm.sampling_params import RequestOutputKind
 from vllm.utils import random_uuid, AtomicCounter
 
 from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, create_lora_request, get_lora_request,
-    get_engine_args_from_config, get_prompt_inputs)
+    get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
-from typing import List, Optional
+from typing import Callable, List, Optional
 
-# FIXME: Once all vllm versions are past 0.6.0 we can move to just struct_fields
-VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__) if hasattr(
-    SamplingParams(), "__struct_fields__") else set(
-        SamplingParams().__dict__.keys())
+VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__)
 
 
 class VLLMRollingBatch(RollingBatch):
@@ -47,18 +45,37 @@ class VLLMRollingBatch(RollingBatch):
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(self.vllm_configs)
-        args = get_engine_args_from_config(self.vllm_configs)
+        args = self.vllm_configs.get_engine_args()
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
-        self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
+        self.is_mistral_tokenizer = args.tokenizer_mode == 'mistral'
+        self.tool_parser = None
+        if self.vllm_configs.enable_auto_tool_choice:
+            from vllm.entrypoints.openai.tool_parsers import ToolParserManager
+            try:
+                self.tool_parser = ToolParserManager.get_tool_parser(
+                    self.vllm_configs.tool_call_parser)
+                self.tool_parser = self.tool_parser(
+                    self.engine.tokenizer.tokenizer)
+            except Exception as e:
+                raise TypeError("Error in tool parser creation.") from e
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
 
+    def get_model_config(self):
+        return self.engine.model_config
+
     def get_huggingface_model_config(self):
         return self.engine.model_config.hf_config
+
+    def use_vllm_chat_completions(self):
+        return True
+
+    def get_tool_parser(self):
+        return self.tool_parser
 
     def reset(self) -> None:
         """
@@ -78,32 +95,31 @@ class VLLMRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
+        parameters["output_kind"] = RequestOutputKind.DELTA
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
-        if "seed" in parameters.keys():
+        do_sample = parameters.pop("do_sample", None)
+        if do_sample is not None and do_sample is False:
+            parameters["temperature"] = 0.0
+        if do_sample is None and parameters.get("temperature") is None:
+            parameters["temperature"] = 0.0
+        if "seed" in parameters:
             parameters["seed"] = int(parameters["seed"])
-
-        # If `do_sample` is not provided, force temperature=0.0, i.e. greedy
-        # else set to user-provided value or default to 1.0
-        if not parameters.pop('do_sample', False):
-            parameters['temperature'] = 0.0
-        else:
-            parameters['temperature'] = parameters.get('temperature', 1.0)
-        if "stop_sequences" in parameters.keys():
+        if "stop_sequences" in parameters:
             parameters["stop"] = parameters.pop("stop_sequences")
-        if "ignore_eos_token" in parameters.keys():
+        if "ignore_eos_token" in parameters:
             parameters["ignore_eos"] = parameters.pop("ignore_eos_token")
-        if "num_beams" in parameters.keys():
+        if "num_beams" in parameters:
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
 
         # if n is not explicitly set when best_of is set, we return `best_of` values sequences for tgi compatibility.
-        if "best_of" in parameters.keys():
+        if "best_of" in parameters:
             if "n" not in "best_of":
                 parameters["n"] = parameters["best_of"]
 
-        if "top_n_tokens" in parameters.keys():
+        if "top_n_tokens" in parameters:
             parameters["logprobs"] = parameters.pop("top_n_tokens")
         else:
             parameters["logprobs"] = parameters.get("logprobs", 1)

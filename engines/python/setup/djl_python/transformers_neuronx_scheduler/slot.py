@@ -29,8 +29,7 @@ NEURON_GENERATION_PARAMS = set(GENERATION_PARAMS + TOKEN_SELECTION_PARAMS)
 
 def translate_neuronx_params(parameters: dict) -> dict:
     # TODO: Remove this once presence_penalty is supported
-    if "presence_penalty" in parameters.keys(
-    ) and "repetition_penalty" not in parameters.keys():
+    if "presence_penalty" in parameters and "repetition_penalty" not in parameters:
         parameters["repetition_penalty"] = float(
             parameters.pop("presence_penalty")) + 2.0
     return parameters

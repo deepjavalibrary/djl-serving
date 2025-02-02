@@ -239,6 +239,8 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.rolling_batch": "auto",
         "option.model_loading_timeout": 3600,
+        # TODO: Remove this once neuron 2.21 issue if fixed.
+        "option.tensor_parallel_degree": 2,
     },
     "tiny-llama-rb-aot": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
@@ -256,6 +258,37 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 1024,
         "option.max_rolling_batch_size": 4,
         "option.model_loading_timeout": 1200,
+    },
+    "llama-3-1-8b-instruct-vllm-nxdi": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "vllm",
+        "option.model_loader": "nxdi",
+        "option.max_rolling_batch_size": 1,
+        "option.model_loading_timeout": 1200,
+        "option.override_neuron_config": {
+            "on_device_sampling_config": {
+                "global_topk": 64,
+                "dynamic": True,
+                "deterministic": False
+            }
+        }
+    },
+    "llama-3-2-1b-instruct-vllm-nxdi-aot": {
+        "option.model_id": "s3://djl-llm/llama-3-2-1b-instruct/",
+        "option.tensor_parallel_degree": 2,
+        "option.rolling_batch": "vllm",
+        "option.model_loading_timeout": 1200,
+        "option.model_loader": "nxdi",
+        "option.override_neuron_config": {
+            "on_device_sampling_config": {
+                "global_topk": 64,
+                "dynamic": True,
+                "deterministic": False
+            }
+        },
+        "option.n_positions": 128,
+        "option.max_rolling_batch_size": 1,
     }
 }
 
@@ -1041,7 +1074,21 @@ vllm_model_list = {
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
         "option.enforce_eager": True,
-    }
+    },
+    "llama3-1-8b-instruct-tool": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+        "option.enable_auto_tool_choice": True,
+        "option.tool_call_parser": "llama3_json",
+    },
+    "mistral-7b-instruct-v03-tool": {
+        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+        "option.enable_auto_tool_choice": True,
+        "option.tool_call_parser": "mistral",
+    },
 }
 
 vllm_neo_model_list = {

@@ -1,6 +1,5 @@
 import sys
 import unittest
-import uuid
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Union
 from collections import OrderedDict
@@ -12,8 +11,8 @@ from transformers import AutoTokenizer
 import djl_python
 from djl_python.output_formatter import _json_output_formatter
 from djl_python.request import Request
-from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token, RequestInput
-'''These Mock classes are in compliance with vllm RequestOutput version 0.5.3.post1'''
+from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token
+'''These Mock classes are in compliance with vllm RequestOutput version 0.6.3.post1'''
 
 
 @dataclass
@@ -148,23 +147,10 @@ example_request_output = [
         ],
         outputs=[
             MockCompletionOutput(index=1,
-                                 text=' member of',
-                                 token_ids=[4292, 302],
+                                 text=' of',
+                                 token_ids=[302],
                                  cumulative_logprob=-4.3041129764169455,
                                  logprobs=[{
-                                     4292:
-                                     MockLogprob(logprob=-4.2740092277526855,
-                                                 rank=4,
-                                                 decoded_token=' member'),
-                                     2032:
-                                     MockLogprob(logprob=-3.0240092277526855,
-                                                 rank=1,
-                                                 decoded_token=' big'),
-                                     888:
-                                     MockLogprob(logprob=-4.4099884033203125,
-                                                 rank=3,
-                                                 decoded_token=' new'),
-                                 }, {
                                      302:
                                      MockLogprob(logprob=-0.03010374866425991,
                                                  rank=1,
@@ -181,27 +167,10 @@ example_request_output = [
                                  finish_reason=None,
                                  stop_reason=None),
             MockCompletionOutput(index=0,
-                                 text=' consolidated',
-                                 token_ids=[22968, 601],
+                                 text='ated',
+                                 token_ids=[601],
                                  cumulative_logprob=-13.402491569519043,
                                  logprobs=[{
-                                     22968:
-                                     MockLogprob(logprob=-12.117759704589844,
-                                                 rank=5308,
-                                                 decoded_token=' consolid'),
-                                     2032:
-                                     MockLogprob(logprob=-3.0240092277526855,
-                                                 rank=1,
-                                                 decoded_token=' big'),
-                                     17372:
-                                     MockLogprob(logprob=-13.409988403320312,
-                                                 rank=10489,
-                                                 decoded_token=' crown'),
-                                     888:
-                                     MockLogprob(logprob=-4.4099884033203125,
-                                                 rank=3,
-                                                 decoded_token=' new'),
-                                 }, {
                                      601:
                                      MockLogprob(logprob=-1.2847318649291992,
                                                  rank=2,
@@ -235,37 +204,10 @@ example_request_output = [
         ],
         outputs=[
             MockCompletionOutput(index=1,
-                                 text=' member of the',
-                                 token_ids=[4292, 302,
-                                            272],
+                                 text=' the',
+                                 token_ids=[272],
                                  cumulative_logprob=-4.815703457221389,
                                  logprobs=[{
-                                     4292:
-                                     MockLogprob(logprob=-4.2740092277526855,
-                                                 rank=4,
-                                                 decoded_token=' member'),
-                                     2032:
-                                     MockLogprob(logprob=-3.0240092277526855,
-                                                 rank=1,
-                                                 decoded_token=' big'),
-                                     888:
-                                     MockLogprob(logprob=-4.4099884033203125,
-                                                 rank=3,
-                                                 decoded_token=' new'),
-                                 }, {
-                                     302:
-                                     MockLogprob(logprob=-0.03010374866425991,
-                                                 rank=1,
-                                                 decoded_token=' of'),
-                                     235290:
-                                     MockLogprob(logprob=-2.2026185989379883,
-                                                 rank=1,
-                                                 decoded_token='-'),
-                                     578:
-                                     MockLogprob(logprob=-2.2026185989379883,
-                                                 rank=2,
-                                                 decoded_token=' and')
-                                 }, {
                                      272:
                                      MockLogprob(logprob=-0.5115904808044434,
                                                  rank=1,
@@ -282,40 +224,10 @@ example_request_output = [
                                  finish_reason='length',
                                  stop_reason=None),
             MockCompletionOutput(index=0,
-                                 text=' consolidated or',
-                                 token_ids=[22968, 601, 442],
+                                 text=' or',
+                                 token_ids=[442],
                                  cumulative_logprob=-20.4010648727417,
                                  logprobs=[{
-                                     22968:
-                                     MockLogprob(logprob=-12.117759704589844,
-                                                 rank=5308,
-                                                 decoded_token=' consolid'),
-                                     2032:
-                                     MockLogprob(logprob=-3.0240092277526855,
-                                                 rank=1,
-                                                 decoded_token=' big'),
-                                     17372:
-                                     MockLogprob(logprob=-13.409988403320312,
-                                                 rank=10489,
-                                                 decoded_token=' crown'),
-                                     888:
-                                     MockLogprob(logprob=-4.4099884033203125,
-                                                 rank=3,
-                                                 decoded_token=' new'),
-                                 }, {
-                                     601:
-                                     MockLogprob(logprob=-1.2847318649291992,
-                                                 rank=2,
-                                                 decoded_token='ated'),
-                                     1028:
-                                     MockLogprob(logprob=-0.909731924533844,
-                                                 rank=1,
-                                                 decoded_token='ator'),
-                                     1162:
-                                     MockLogprob(logprob=-0.8929234743118286,
-                                                 rank=2,
-                                                 decoded_token=' year')
-                                 }, {
                                      442:
                                      MockLogprob(logprob=-6.998573303222656,
                                                  rank=188,

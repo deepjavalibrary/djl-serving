@@ -74,7 +74,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
                 request_output.prompt_tokens_details.append(prompt_token)
 
     # sets the details of all sequences
-    update_multiple_sequences(cache, request_output, vllm_request_output)
+    update_multiple_sequences(request_output, vllm_request_output)
 
     # remove finished requests from cache
     if vllm_request_output.finished:
@@ -89,49 +89,28 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     return request_cache
 
 
-def update_multiple_sequences(cache, request_output, vllm_request_output):
+def update_multiple_sequences(request_output, vllm_request_output):
     for completion_output in vllm_request_output.outputs:
-
         sequence_index = completion_output.index
-        if f"sequence_index_{sequence_index}" not in cache:
-            cache[f"sequence_index_{sequence_index}"] = {
-                "curr_length": 0,
-                "num_generated_tokens": 0
-            }
 
         if sequence_index not in request_output.sequences:
             request_output.sequences[sequence_index] = Sequence()
 
-        # set token of the sequence
-        # previous length of token ids generated
-        prev_len = cache[f"sequence_index_{sequence_index}"][
-            'num_generated_tokens']
-        # curr length of the token ids generated so far
-        cur_len = len(completion_output.token_ids)
-        cache[f"sequence_index_{sequence_index}"][
-            "num_generated_tokens"] = cur_len
-
         # get the newly generated token_ids
-        new_token_ids = completion_output.token_ids[
-            prev_len:
-            cur_len] if prev_len < cur_len else completion_output.token_ids
+        new_token_ids = completion_output.token_ids
 
         # get the newly generated token texts for speculative decoding
         output_token_texts = []
         if hasattr(completion_output, "output_token_texts"):
-            output_token_texts = completion_output.output_token_texts[
-                prev_len:
-                cur_len] if prev_len < cur_len else completion_output.output_token_texts
+            output_token_texts = completion_output.output_token_texts
 
         top_tokens = []
         token_texts = []
         # calculate log probs and token_texts
         if completion_output.logprobs:
-            new_logprobs_list = completion_output.logprobs[
-                prev_len:
-                cur_len] if prev_len < cur_len else completion_output.logprobs
             new_logprobs = []
-            for token_id, logprobs in zip(new_token_ids, new_logprobs_list):
+            for token_id, logprobs in zip(new_token_ids,
+                                          completion_output.logprobs):
                 new_logprobs.append(logprobs[token_id].logprob)
                 decoded_token = logprobs[token_id].decoded_token if logprobs[
                     token_id].decoded_token else ""
@@ -141,13 +120,10 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
                         Token(id=token_id_key,
                               text=logprob.decoded_token,
                               log_prob=logprob.logprob))
-
         elif new_token_ids:
             # TODO: Test and remove this. logprobs is always set 1. This case should never happen.
             new_logprobs = [None] * len(new_token_ids)
-            curr_length = cache[f"sequence_index_{sequence_index}"][
-                "curr_length"]
-            token_texts.append(completion_output.text[curr_length:])
+            token_texts.append(completion_output.text)
 
         if not output_token_texts:
             if len(token_texts) != len(new_token_ids):
@@ -185,9 +161,6 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
 
         request_output.sequences[sequence_index].set_next_top_tokens(
             top_tokens)
-
-        cache[f"sequence_index_{sequence_index}"]["curr_length"] = len(
-            completion_output.text)
 
 
 def get_speculative_decoding_metrics_record(
@@ -235,87 +208,9 @@ def get_lora_request(lora_name: str, lora_requests: dict) -> dict:
     return lora_requests[lora_name]
 
 
-def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
-    if config.device == "neuron":
-        return EngineArgs(model=config.model_id_or_path,
-                          preloaded_model=config.preloaded_model,
-                          tensor_parallel_size=config.tensor_parallel_degree,
-                          dtype=DTYPE_MAPPER[config.dtype],
-                          seed=0,
-                          max_model_len=config.max_model_len,
-                          max_num_seqs=config.max_rolling_batch_size,
-                          block_size=config.max_model_len,
-                          trust_remote_code=config.trust_remote_code,
-                          revision=config.revision,
-                          device=config.device,
-                          generation_config=config.generation_config)
-    else:
-        return EngineArgs(
-            model=config.model_id_or_path,
-            tensor_parallel_size=config.tensor_parallel_degree,
-            pipeline_parallel_size=config.pipeline_parallel_degree,
-            dtype=DTYPE_MAPPER[config.dtype],
-            seed=0,
-            max_model_len=config.max_model_len,
-            enforce_eager=config.enforce_eager,
-            gpu_memory_utilization=config.gpu_memory_utilization,
-            max_num_batched_tokens=config.max_rolling_batch_prefill_tokens,
-            trust_remote_code=config.trust_remote_code,
-            load_format=config.load_format,
-            quantization=config.quantize,
-            enable_lora=config.enable_lora,
-            max_loras=config.max_loras,
-            max_lora_rank=config.max_lora_rank,
-            fully_sharded_loras=config.fully_sharded_loras,
-            lora_extra_vocab_size=config.lora_extra_vocab_size,
-            long_lora_scaling_factors=config.long_lora_scaling_factors,
-            lora_dtype=config.lora_dtype,
-            max_cpu_loras=config.max_cpu_loras,
-            revision=config.revision,
-            max_logprobs=config.max_logprobs,
-            enable_chunked_prefill=config.enable_chunked_prefill,
-            cpu_offload_gb=config.cpu_offload_gb_per_gpu,
-            enable_prefix_caching=config.enable_prefix_caching,
-            disable_sliding_window=config.disable_sliding_window,
-            max_num_seqs=config.max_rolling_batch_size,
-            use_v2_block_manager=config.use_v2_block_manager,
-            speculative_model=config.speculative_model,
-            speculative_model_quantization=config.
-            speculative_model_quantization,
-            speculative_draft_tensor_parallel_size=config.
-            speculative_draft_tensor_parallel_size,
-            num_speculative_tokens=config.num_speculative_tokens,
-            speculative_max_model_len=config.speculative_max_model_len,
-            speculative_disable_by_batch_size=config.
-            speculative_disable_by_batch_size,
-            ngram_prompt_lookup_max=config.ngram_prompt_lookup_max,
-            ngram_prompt_lookup_min=config.ngram_prompt_lookup_min,
-            spec_decoding_acceptance_method=config.
-            spec_decoding_acceptance_method,
-            typical_acceptance_sampler_posterior_threshold=config.
-            typical_acceptance_sampler_posterior_threshold,
-            typical_acceptance_sampler_posterior_alpha=config.
-            typical_acceptance_sampler_posterior_alpha,
-            qlora_adapter_name_or_path=config.qlora_adapter_name_or_path,
-            disable_logprobs_during_spec_decoding=config.
-            disable_logprobs_during_spec_decoding,
-            limit_mm_per_prompt=config.limit_mm_per_prompt,
-            tokenizer_mode=config.tokenizer_mode,
-        )
-
-
-def get_multi_modal_data(request: Request) -> Optional[dict]:
-    parameters = request.parameters
-    images = parameters.pop("images", None)
-    multi_modal_data = None
-    if images:
-        multi_modal_data = {"image": images}
-    return multi_modal_data
-
-
 def get_prompt_inputs(request: Request):
     text_prompt = request.request_input.input_text
-    multi_modal_data = get_multi_modal_data(request)
+    multi_modal_data = request.parameters.pop("mm_data", None)
     # TODO: In chat cases, we need to apply the chat template to the messages object to get a string
     # In both HuggingFace and mistral cases, that process can also yield token-ids directly
     # that we may want to consider passing directly to the engine
@@ -327,3 +222,19 @@ def get_prompt_inputs(request: Request):
     if multi_modal_data is not None:
         prompt["multi_modal_data"] = multi_modal_data
     return prompt
+
+
+def maybe_serialize_tool_calls(request):
+    # Adapted from https://github.com/vllm-project/vllm/blob/v0.7.0/vllm/transformers_utils/tokenizers/mistral.py#L34-L68
+    for i, message in enumerate(request.messages):
+        if message.get("role") == 'assistant':
+            tool_calls_validator = message.get("tool_calls", ().__iter__())
+            validated_tool_calls = []
+            while True:
+                try:
+                    tool_call = next(tool_calls_validator)  # type: ignore
+                    validated_tool_calls.append(tool_call)
+                except StopIteration:
+                    break
+
+            request.messages[i]["tool_calls"] = validated_tool_calls

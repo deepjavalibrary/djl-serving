@@ -69,7 +69,7 @@ def is_best_of(parameters: dict) -> bool:
     :param parameters: parameters dictionary
     :return: boolean
     """
-    return "best_of" in parameters.keys() and parameters.get("best_of") > 1
+    return "best_of" in parameters and parameters.get("best_of") > 1
 
 
 def is_beam_search(parameters: dict) -> bool:
@@ -78,7 +78,7 @@ def is_beam_search(parameters: dict) -> bool:
     :param parameters: parameters dictionary
     :return: boolean
     """
-    return "num_beams" in parameters.keys() and parameters.get("num_beams") > 1
+    return "num_beams" in parameters and parameters.get("num_beams") > 1
 
 
 def is_multiple_sequences(parameters: dict) -> bool:
@@ -88,7 +88,7 @@ def is_multiple_sequences(parameters: dict) -> bool:
     :param parameters: parameters dictionary
     :return: boolean
     """
-    return "n" in parameters.keys() and parameters.get("n") > 1
+    return "n" in parameters and parameters.get("n") > 1
 
 
 def is_streaming(parameters: dict) -> bool:
@@ -97,7 +97,7 @@ def is_streaming(parameters: dict) -> bool:
     :param parameters: parameters dictionary
     :return: boolean
     """
-    return "stream" in parameters.keys() and parameters.get("stream")
+    return "stream" in parameters and parameters.get("stream")
 
 
 def wait_till_generation_finished(parameters):

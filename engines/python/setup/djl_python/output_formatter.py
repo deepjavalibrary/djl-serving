@@ -110,7 +110,7 @@ def _json_output_formatter(request_output: TextGenerationOutput):
         request_output.best_sequence_index]
     # TODO: Fix this so it is not required. Right now, this call is needed to
     # advance the token iterator, which is needed for rolling batch to work properly
-    next_token, _, is_last_token = best_sequence.get_next_token()
+    next_token, _, _, is_last_token = best_sequence.get_next_token()
     if not request_output.finished:
         return ""
     details = get_details_dict(request_output, include_tokens=True)
@@ -141,7 +141,7 @@ def _json_3p_output_formatter(request_output: TextGenerationOutput):
         request_output.best_sequence_index]
     # TODO: Fix this so it is not required. Right now, this call is needed to
     # advance the token iterator, which is needed for rolling batch to work properly
-    next_token, first_token, last_token = best_sequence.get_next_token()
+    next_token, index, first_token, last_token = best_sequence.get_next_token()
     if not request_output.finished:
         return ""
 
@@ -221,7 +221,7 @@ def _jsonlines_output_formatter(request_output: TextGenerationOutput):
     parameters = request_output.input.parameters
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
-    next_token, _, last_token = best_sequence.get_next_token()
+    next_token, _, _, last_token = best_sequence.get_next_token()
     # with chunked prefill, we don't generate any tokens until the full prompt has been processed.
     # that means we sometimes don't have a token to return
     if next_token is None:
@@ -242,7 +242,7 @@ def _jsonlines_output_formatter(request_output: TextGenerationOutput):
 def _jsonlines_3p_output_formatter(request_output: TextGenerationOutput):
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
-    next_token, first_token, last_token = best_sequence.get_next_token()
+    next_token, index, first_token, last_token = best_sequence.get_next_token()
     # with chunked prefill, we don't generate any tokens until the full prompt has been processed.
     # that means we sometimes don't have a token to return
     if next_token is None:
@@ -282,6 +282,8 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
     :return: formatted output
     """
     parameters = request_output.input.parameters
+    chat_params = parameters.get("chat_params")
+    tool_parser = parameters.get("tool_parser")
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
     generated_text = get_generated_text(best_sequence, request_output)
@@ -299,6 +301,46 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
         "logprobs": None,
         "finish_reason": best_sequence.finish_reason,
     }
+    if chat_params and chat_params.tool_choice and type(
+            chat_params.tool_choice
+    ).__name__ == "ChatCompletionNamedToolChoiceParam":
+        tool_calls = [{
+            "id": f"chatcmpl-tool-{id(request_output)}",
+            "type": "function",
+            "function": {
+                "name": chat_params.tool_choice.function.name,
+                "arguments": generated_text
+            }
+        }]
+        choice = {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "",
+            },
+            "tool_calls": tool_calls,
+            "logprobs": None,
+            "finish_reason": best_sequence.finish_reason,
+        }
+    elif parameters.get("tools") and (parameters.get("tool_choice") == "auto"
+                                      or parameters.get("tool_choice") is None
+                                      ) and parameters.get("tool_parser"):
+        tool_call_info = tool_parser.extract_tool_calls(generated_text,
+                                                        request=chat_params)
+        auto_tools_called = tool_call_info.tools_called
+        if auto_tools_called:
+            tool_calls = [t.model_dump() for t in tool_call_info.tool_calls]
+            choice = {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": tool_call_info.content,
+                },
+                "tool_calls": tool_calls,
+                "logprobs": None,
+                "finish_reason": "tool_calls",
+            }
+
     if parameters.get("logprobs"):
         logprobs = {
             "content": [
@@ -317,6 +359,7 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
             ]
         }
         choice["logprobs"] = logprobs
+
     prompt_tokens = len(request_output.prompt_tokens_details)
     completion_tokens = len(best_sequence.tokens)
     usage = {
@@ -341,16 +384,52 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
     :return: formatted output
     """
     parameters = request_output.input.parameters
+    chat_params = parameters.get("chat_params")
+    tool_parser = parameters.get("tool_parser")
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
-    next_token, first_token, last_token = best_sequence.get_next_token()
+    next_token, index, first_token, last_token = best_sequence.get_next_token()
     # with chunked prefill, we don't generate any tokens until the full prompt has been processed.
     # that means we sometimes don't have a token to return
     if next_token is None:
         return ""
 
     created = int(time.time())
-    delta = {"content": next_token.text}
+
+    if chat_params and chat_params.tool_choice and type(
+            chat_params.tool_choice
+    ).__name__ == "ChatCompletionNamedToolChoiceParam":
+        tool_calls = [{
+            "index": 0,
+            "function": {
+                "name": chat_params.tool_choice.function.name,
+                "arguments": next_token.text
+            }
+        }]
+        delta = {"tool_calls": tool_calls}
+    elif parameters.get("tools") and (parameters.get("tool_choice") == "auto"
+                                      or parameters.get("tool_choice") is None
+                                      ) and parameters.get("tool_parser"):
+        current_text = get_generated_text(best_sequence, request_output)
+        previous_text = current_text[0:-len(next_token.text)]
+        current_token_ids = [t.id for t in best_sequence.tokens]
+        previous_token_ids = current_token_ids[:-1]
+        tool_call_info = tool_parser.extract_tool_calls_streaming(
+            previous_text=previous_text,
+            current_text=current_text,
+            delta_text=next_token.text,
+            previous_token_ids=previous_token_ids,
+            current_token_ids=current_token_ids,
+            delta_token_ids=[next_token.id],
+            request=chat_params)
+        if tool_call_info is None:
+            return ""
+        tool_calls = [
+            t.model_dump(exclude_none=True) for t in tool_call_info.tool_calls
+        ]
+        delta = {"tool_calls": tool_calls}
+    else:
+        delta = {"content": next_token.text}
     if first_token:
         delta["role"] = "assistant"
 
@@ -423,7 +502,8 @@ def adapt_legacy_output_formatter(request_output: TextGenerationOutput) -> str:
         elif best_sequence.finish_reason == "error":
             details_dict["finish_reason"] = best_sequence.finish_reason
 
-        next_token, first_token, last_token = best_sequence.get_next_token()
+        next_token, index, first_token, last_token = best_sequence.get_next_token(
+        )
         if last_token:
             for token in best_sequence.tokens:
                 generated_text += token.text
