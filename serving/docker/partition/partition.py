@@ -20,7 +20,6 @@ import subprocess
 
 from pathlib import Path
 
-import utils
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 from datasets import load_dataset
@@ -196,12 +195,10 @@ class PartitionService(object):
         logging.info(proc)
         if proc.returncode == 0:
             logging.info("Partitioning done.")
-            self.properties_manager.validate_and_correct_checkpoints_json()
             self.properties_manager.generate_properties_file()
             if not self.properties_manager.skip_copy:
                 logging.info("Copying config files...")
                 self.copy_config_files()
-            self.load_the_generated_checkpoints()
             self.upload_checkpoints_to_s3()
             self.cleanup()
             return partition_stdout
@@ -211,36 +208,6 @@ class PartitionService(object):
             raise Exception(
                 f"Partitioning exited with return code: {proc.returncode}. Details: {partition_stderr}"
             )
-
-    def load_the_generated_checkpoints(self):
-        if self.properties['engine'] == 'DeepSpeed':
-            saved_checkpoints_dir = self.properties[
-                "option.save_mp_checkpoint_path"]
-            properties = utils.load_properties(saved_checkpoints_dir)
-            if not self.properties_manager.skip_copy:
-                properties['model_dir'] = saved_checkpoints_dir
-            properties['option.entryPoint'] = self.properties[
-                'option.entryPoint']
-            properties['partition_handler'] = 'handle'
-
-            entry_point_file = None
-            if properties['option.entryPoint'] == 'model.py':
-                entry_point_file = os.path.join(
-                    self.properties_manager.properties_dir, 'model.py')
-                shutil.copy(entry_point_file, saved_checkpoints_dir)
-
-            commands = get_partition_cmd(True, properties)
-            self.set_environmental_vars()
-            result = subprocess.run(commands)
-            logging.info(result)
-            if result.returncode == 0:
-                logging.info(
-                    "Successfully loaded the partitioned checkpoints.")
-            else:
-                raise Exception("DeepSpeed does not support partitioning. "
-                                "Please use a different engine")
-            if entry_point_file:
-                os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
 
     def run_quantization(self):
         quant_method = self.properties['option.quantize']

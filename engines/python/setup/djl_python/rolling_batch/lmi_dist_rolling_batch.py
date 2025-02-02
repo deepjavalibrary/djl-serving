@@ -19,7 +19,7 @@ from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
 from lmi_dist.seq2seq_engine import Seq2SeqPreprocessor
-from vllm import SamplingParams
+from vllm.sampling_params import RequestOutputKind
 from vllm.utils import AtomicCounter
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
@@ -126,6 +126,15 @@ class LmiDistRollingBatch(RollingBatch):
             return self.engine.preprocessor.tokenizer
         return self.engine.preprocessor.tokenizer.tokenizer
 
+    def get_model_config(self):
+        # TODO: this is a hack right now to get the model config from the engine. We should expose this as
+        # an interface method and retrieve it from there after v12
+        return self.engine.preprocessor.model_config if not self.is_t5_model else None
+
+    def use_vllm_chat_completions(self):
+        # vllm chat parsing requires 0.7.0 currently, lmi-dist is on 0.6.3.post1
+        return False
+
     def get_huggingface_model_config(self):
         # TODO: this is a hack right now to get the model config from the engine. We should expose this as
         # an interface method and retrieve it from there after v12
@@ -140,29 +149,29 @@ class LmiDistRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with lmi-dist style parameter names.
         """
+        parameters["output_kind"] = RequestOutputKind.DELTA
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
-        # If `do_sample` is not provided, force temperature=0.0, i.e. greedy
-        # else set to user-provided value or default to 1.0
-        if not parameters.pop('do_sample', False):
-            parameters['temperature'] = 0.0
-        else:
-            parameters['temperature'] = parameters.get('temperature', 1.0)
+        do_sample = parameters.pop("do_sample", None)
+        if do_sample is not None and do_sample is False:
+            parameters["temperature"] = 0.0
+        if do_sample is None and parameters.get("temperature") is None:
+            parameters["temperature"] = 0.0
         if "seed" in parameters.keys():
             parameters["seed"] = int(parameters["seed"])
-        if "stop_sequences" in parameters.keys():
+        if "stop_sequences" in parameters:
             parameters["stop"] = parameters.pop("stop_sequences")
-        if "ignore_eos_token" in parameters.keys():
+        if "ignore_eos_token" in parameters:
             parameters["ignore_eos"] = parameters.pop("ignore_eos_token")
-        if "num_beams" in parameters.keys():
+        if "num_beams" in parameters:
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
-        if "best_of" in parameters.keys():
+        if "best_of" in parameters:
             # if n is not explicitly set, we return `best_of` values sequences.
             if "n" not in "best_of":
                 parameters["n"] = parameters["best_of"]
-        if "top_n_tokens" in parameters.keys():
+        if "top_n_tokens" in parameters:
             parameters["logprobs"] = parameters.pop("top_n_tokens")
         else:
             parameters["logprobs"] = parameters.get("logprobs", 1)

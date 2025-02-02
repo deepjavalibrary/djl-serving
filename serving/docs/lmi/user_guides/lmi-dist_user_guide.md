@@ -97,6 +97,8 @@ LMI-Dist supports the same quantization techniques as [vllm 0.6.3.post1](https:/
 We highly recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time, and depending on the quantization technique, this can be significant overhead.
 
+### Runtime Quantization
+
 The following quantization techniques are supported for runtime quantization:
 
 - fp8

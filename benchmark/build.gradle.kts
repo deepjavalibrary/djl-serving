@@ -83,10 +83,13 @@ tasks {
         mainClass = "ai.djl.benchmark.Benchmark"
     }
 
-    register("prepareDeb") {
+    open class Cmd @Inject constructor(@Internal val execOperations: ExecOperations) : DefaultTask()
+
+    register<Cmd>("prepareDeb") {
         dependsOn(distTar)
         doFirst {
-            exec {
+            execOperations.exec {
+                workingDir = projectDir
                 commandLine(
                     "tar",
                     "xvf",

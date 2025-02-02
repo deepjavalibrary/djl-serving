@@ -140,14 +140,28 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     if configs is not None:
         is_bedrock = configs.bedrock_compat
     if is_chat_completions_request(input_map):
-        inputs, param = parse_chat_completions_request(
-            input_map,
-            kwargs.get("is_rolling_batch"),
-            tokenizer,
-            image_token=image_token,
-            configs=configs,
-            is_mistral_tokenizer=is_mistral_tokenizer,
-        )
+        rolling_batch = kwargs.get("rolling_batch")
+        if rolling_batch is not None and rolling_batch.use_vllm_chat_completions(
+        ):
+            # we only import this here as we know we're in a vllm context - ensures no bad imports for trtllm
+            from djl_python.chat_completions.vllm_chat_utils import parse_chat_completions_request_vllm
+            inputs, param = parse_chat_completions_request_vllm(
+                input_map,
+                kwargs.get("is_rolling_batch"),
+                rolling_batch,
+                tokenizer,
+                configs=configs,
+                is_mistral_tokenizer=is_mistral_tokenizer,
+            )
+        else:
+            inputs, param = parse_chat_completions_request(
+                input_map,
+                kwargs.get("is_rolling_batch"),
+                tokenizer,
+                image_token=image_token,
+                configs=configs,
+                is_mistral_tokenizer=is_mistral_tokenizer,
+            )
     elif is_bedrock:
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),

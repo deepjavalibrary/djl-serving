@@ -36,10 +36,14 @@ jobs:
         working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
-      - name: install awscli
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
+          python -m pip install --upgrade pip
+          pip install awscli
       - name: Pull and sync nightly docker image
         working-directory: serving/docker
         run: |

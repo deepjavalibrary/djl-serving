@@ -61,9 +61,9 @@ class Properties(BaseModel):
     input_formatter: Optional[Callable] = None
     waiting_steps: Optional[int] = None
     mpi_mode: bool = False
-    tgi_compat: Optional[bool] = False
-    bedrock_compat: Optional[bool] = False
-    enable_lora: Optional[bool] = False
+    tgi_compat: bool = False
+    bedrock_compat: bool = False
+    enable_lora: bool = False
 
     # Spec_dec
     draft_model_id: Optional[str] = None

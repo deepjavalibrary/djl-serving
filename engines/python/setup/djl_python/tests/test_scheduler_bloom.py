@@ -1,6 +1,6 @@
 import unittest
 
-from djl_python.seq_scheduler.lm_block import BloomBlock, FalconBlock, HuggingfaceBlock
+from djl_python.seq_scheduler.lm_block import BloomBlock, HuggingfaceBlock, LlamaBlock
 from djl_python.seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
 from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.seq_scheduler.search_config import SearchConfig
@@ -140,7 +140,7 @@ class TestSchedulerBloom(unittest.TestCase):
             device_map="auto" if global_device.type == "cuda" else "cpu")
         device = model.device
 
-        lm_block = HuggingfaceBlock(model)
+        lm_block = LlamaBlock(model)
 
         tokenizer.pad_token_id = 0
         search_config = SearchConfig(pad_token_id=tokenizer.pad_token_id)

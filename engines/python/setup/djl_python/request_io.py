@@ -118,8 +118,8 @@ class Sequence:
             index = self._tokens_iterator.next_index()
             first_token = index == 0
             last_token = index == self._last_token_index
-            return self.tokens[index], first_token, last_token
-        return None, False, False
+            return self.tokens[index], index, first_token, last_token
+        return None, 0, False, False
 
     def get_last_token(self) -> Optional[Token]:
         if self._last_token_index is not None:

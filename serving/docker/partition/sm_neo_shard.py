@@ -23,7 +23,6 @@ from sm_neo_utils import (OptimizationFatalError, write_error_to_file,
 from utils import (update_kwargs_with_env_vars, load_properties)
 
 import torch
-import sagemaker_fast_model_loader_rust as sm_fml
 from mpi4py import MPI
 
 from lmi_dist.init_engine import engine_from_args
@@ -50,6 +49,7 @@ class NeoShardingService():
 
     def save_configs(self, pp_degree: int, tp_degree: int, input_dir: str,
                      output_dir: str, configs: list) -> None:
+        import sagemaker_fast_model_loader_rust as sm_fml
         py_version = "{}.{}.{}".format(*sys.version_info[:3])
         conf = sm_fml.ModelConfig(
             pipeline_parallel_size=pp_degree,
@@ -167,6 +167,8 @@ class NeoShardingService():
         engine_configs = engine_args.create_engine_configs()
         engine_worker = load_model_for_sharding(engine_configs, pp_rank=pp_rank)
 
+        # Lazy import to avoid MPI not-inited errors
+        import sagemaker_fast_model_loader_rust as sm_fml
         model_dir = os.path.join(output_dir, sm_fml.MODEL_DIR_NAME)
         os.makedirs(model_dir, exist_ok=True)
 
