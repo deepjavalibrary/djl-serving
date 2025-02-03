@@ -187,9 +187,6 @@ class VllmRbProperties(Properties):
         if self.max_rolling_batch_prefill_tokens is not None:
             vllm_engine_args[
                 'max_num_batched_tokens'] = self.max_rolling_batch_prefill_tokens
-        if self.device == 'neuron':
-            vllm_engine_args['block_size'] = passthrough_vllm_engine_args.get(
-                "max_model_len")
         vllm_engine_args.update(passthrough_vllm_engine_args)
         return vllm_engine_args
 
