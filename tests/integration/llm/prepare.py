@@ -763,7 +763,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 4
     },
     "mistral-7b": {
-        "option.model_id": "s3://djl-llm/mistral-7b",
+        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
