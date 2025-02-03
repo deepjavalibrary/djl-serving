@@ -35,6 +35,8 @@ from huggingface_hub import hf_hub_download
 logging.getLogger("NEURON_CC_WRAPPER").disabled = False
 logging.getLogger("NEURON_CACHE").disabled = False
 
+NXDI_COMPILED_MODEL_FILE_NAME = "model.pt"
+
 
 class ModelLoader(ABC):
 
@@ -887,3 +889,34 @@ class TNXVllmModelLoader(ModelLoader):
     def partition(self, save_path, **kwargs):
         kwargs['download_dir'] = save_path
         self.load_model(**kwargs)
+
+
+class NxdiVllmModelLoader(ModelLoader):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        os.environ['VLLM_NEURON_FRAMEWORK'] = "neuronx-distributed-inference"
+        djl_neuron_compiled_artifacts_path = os.path.join(
+            os.getenv("DJL_CACHE_DIR", "/tmp/.djl.ai"),
+            "neuron-compiled-artifacts")
+        nxdi_compiled_model_path = os.path.join(self.config.model_id_or_path,
+                                                NXDI_COMPILED_MODEL_FILE_NAME)
+        if self.config.save_mp_checkpoint_path:
+            # If the compilation path is given by the user
+            os.environ[
+                "NEURON_COMPILED_ARTIFACTS"] = self.config.save_mp_checkpoint_path
+        elif os.path.isfile(nxdi_compiled_model_path):
+            # if the compilation path already exists
+            os.environ[
+                "NEURON_COMPILED_ARTIFACTS"] = self.config.model_id_or_path
+        else:
+            os.environ[
+                "NEURON_COMPILED_ARTIFACTS"] = djl_neuron_compiled_artifacts_path
+
+    def load_model(self, **kwargs):
+        # Offloading loading model to vLLM
+        return None
+
+    def partition(self, save_path, **kwargs):
+        # Offloading partition of model to vLLM.
+        return None
