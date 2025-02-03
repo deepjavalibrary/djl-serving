@@ -91,6 +91,7 @@ COPY lmi-container-requirements-common.txt ./requirements-common.txt
 COPY requirements-lmi.txt ./requirements-lmi.txt
 COPY requirements-vllm.txt ./requirements-vllm.txt
 RUN pip3 install -r requirements-common.txt \
+    && pip3 install ${djl_converter_wheel} --no-deps \
     && scripts/create_virtual_env.sh /opt/djl/vllm_venv requirements-vllm.txt \
     && scripts/create_virtual_env.sh /opt/djl/lmi_dist_venv requirements-lmi.txt
 
