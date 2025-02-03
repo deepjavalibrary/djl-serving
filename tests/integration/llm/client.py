@@ -912,10 +912,7 @@ correctness_model_spec = {
         "num_run": 4,
         "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.01,
-        "parameters": {
-            "return_full_text": True
-        }
+        "score": 0.01
     },
     "trtllm-llama3-8b": {
         "batch_size": [213],
@@ -933,13 +930,13 @@ correctness_model_spec = {
         "dataset": "mmlu",
         "score": 0.6
     },
-    "neuronx-llama3-1-8b": {
-        "batch_size": [213],
+    "neuronx-llama3-2-1b": {
+        "batch_size": [32],
         "seq_length": [1],
         "num_run": 66,
-        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "tokenizer": "NousResearch/Llama-3.2-1B",
         "dataset": "mmlu",
-        "score": 0.6
+        "score": 0.45
     },
     "trtllm-meta-llama3-8b-fp8": {
         "batch_size": [213],
