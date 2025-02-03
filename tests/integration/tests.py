@@ -571,6 +571,7 @@ class TestVllm1:
             prepare.build_vllm_model("mistral-7b")
             r.launch()
             client.run("vllm mistral-7b".split())
+            client.run("vllm_chat mistral-7b".split())
 
     def test_phi2(self):
         with Runner('lmi', 'phi-2') as r:
