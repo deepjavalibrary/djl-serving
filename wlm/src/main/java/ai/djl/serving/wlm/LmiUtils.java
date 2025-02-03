@@ -286,7 +286,9 @@ public final class LmiUtils {
      * @return the Huggingface config.json file URI
      */
     public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId) {
-        String[] possibleConfigFiles = {"config.json", "adapter_config.json", "model_index.json"};
+        String[] possibleConfigFiles = {
+            "config.json", "adapter_config.json", "model_index.json", "params.json"
+        };
         URI configUri;
         for (String configFile : possibleConfigFiles) {
             configUri = findHuggingFaceConfigUriForConfigFile(modelInfo, modelId, configFile);
@@ -369,8 +371,12 @@ public final class LmiUtils {
         if (hubToken != null) {
             headers.put("Authorization", "Bearer " + hubToken);
         }
-
         try (InputStream is = Utils.openUrl(modelConfigUri.toURL(), headers)) {
+            if (modelConfigUri.toString().endsWith("params.json")) {
+                MistralModelConfig mistralConfig =
+                        JsonUtils.GSON.fromJson(Utils.toString(is), MistralModelConfig.class);
+                return new HuggingFaceModelConfig(mistralConfig);
+            }
             return JsonUtils.GSON.fromJson(Utils.toString(is), HuggingFaceModelConfig.class);
         } catch (IOException | JsonSyntaxException e) {
             throw new ModelNotFoundException("Invalid huggingface model id: " + modelId, e);
@@ -518,6 +524,17 @@ public final class LmiUtils {
 
         private Set<String> allArchitectures;
 
+        HuggingFaceModelConfig(MistralModelConfig mistralModelConfig) {
+            this.modelType = "mistral";
+            this.configArchitectures = List.of("MistralForCausalLM");
+            this.hiddenSize = mistralModelConfig.dim;
+            this.intermediateSize = mistralModelConfig.hiddenDim;
+            this.numAttentionHeads = mistralModelConfig.nHeads;
+            this.numHiddenLayers = mistralModelConfig.nLayers;
+            this.numKeyValueHeads = mistralModelConfig.nKvHeads;
+            this.vocabSize = mistralModelConfig.vocabSize;
+        }
+
         /**
          * Returns the model type of this HuggingFace model.
          *
@@ -658,5 +675,36 @@ public final class LmiUtils {
                 allArchitectures.addAll(autoMap.keySet());
             }
         }
+    }
+
+    /**
+     * This represents a Mistral Model Config. Mistral artifacts are different from HuggingFace
+     * artifacts. Some Mistral vended models only come in Mistral artifact form.
+     */
+    static final class MistralModelConfig {
+
+        @SerializedName("dim")
+        private int dim;
+
+        @SerializedName("n_layers")
+        private int nLayers;
+
+        @SerializedName("head_dim")
+        private int headDim;
+
+        @SerializedName("hidden_dim")
+        private int hiddenDim;
+
+        @SerializedName("n_heads")
+        private int nHeads;
+
+        @SerializedName("n_kv_heads")
+        private int nKvHeads;
+
+        @SerializedName("vocab_size")
+        private int vocabSize;
+
+        @SerializedName("vision_encoder")
+        private Map<String, String> visionEncoder;
     }
 }
