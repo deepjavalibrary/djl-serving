@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import ast
 import logging
-from typing import Optional, Any, Dict, Tuple
+from typing import Optional, Any, Dict, Tuple, Literal
 from pydantic import field_validator, model_validator, ConfigDict, Field
 from vllm import EngineArgs
 from vllm.utils import FlexibleArgumentParser
@@ -79,6 +79,10 @@ class VllmRbProperties(Properties):
     preloaded_model: Optional[Any] = None
     generation_config: Optional[Any] = None
     override_neuron_config: Optional[Dict] = None
+
+    # Non engine arg properties
+    chat_template: Optional[str] = None
+    chat_template_content_format: Literal["auto", "string", "openai"] = "auto"
 
     # This allows generic vllm engine args to be passed in and set with vllm
     model_config = ConfigDict(extra='allow', populate_by_name=True)
