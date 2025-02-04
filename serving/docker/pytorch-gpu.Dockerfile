@@ -18,11 +18,11 @@ ARG djl_serving_version
 ARG cuda_version=cu124
 ARG torch_version=2.5.1
 ARG torch_vision_version=0.20.1
-ARG onnx_version=1.19.0
-ARG python_version=3.10
+ARG onnx_version=1.20.0
+ARG python_version=3.11
 ARG numpy_version=1.26.4
 ARG pydantic_version=2.8.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_version//-*/}-py3-none-any.whl"
 
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
@@ -36,8 +36,8 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HF_HOME=/tmp/.cache/huggingface
 # set cudnn9 library path
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python${python_version}/dist-packages/nvidia/cudnn/lib/"
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu124-precxx11
