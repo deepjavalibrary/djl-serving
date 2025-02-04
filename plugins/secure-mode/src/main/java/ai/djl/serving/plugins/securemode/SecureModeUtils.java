@@ -150,6 +150,14 @@ final class SecureModeUtils {
                         "Installing additional dependencies is prohibited in Secure Mode.");
             }
         }
+        String pythonExecutable = prop.getProperty("option.pythonExecutable");
+        if (pythonExecutable != null
+                && !SecureModeAllowList.PYTHON_EXECUTABLE_ALLOWLIST.contains(pythonExecutable)) {
+            throw new IllegalConfigurationException(
+                    "Custom Python executable path is prohibited in Secure Mode. "
+                            + "Only the following paths are allowed: "
+                            + SecureModeAllowList.PYTHON_EXECUTABLE_ALLOWLIST);
+        }
     }
 
     /**
