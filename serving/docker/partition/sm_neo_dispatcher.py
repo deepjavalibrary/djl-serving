@@ -136,10 +136,10 @@ class NeoDispatcher:
                         python_exec = VLLM_VENV_EXEC
                     else:
                         python_exec = LMI_DIST_VENV_EXEC
-                    print(f"Sharding Model...")
+                    print("Sharding Model...")
                     self.run_task(NeoTask.SHARDING, python_exec)
                 else:
-                    self.run_task(NeoTask.QUANTIZATION, LMI_DIST_VENV_EXEC)
+                    self.run_task(NeoTask.QUANTIZATION, VLLM_VENV_EXEC)
             case "trtllm":
                 self.run_task(NeoTask.TENSORRT_LLM, SYSTEM_PY_EXEC)
             case "vllm,lmi-dist,tnx":
