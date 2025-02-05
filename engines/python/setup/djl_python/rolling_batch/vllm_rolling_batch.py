@@ -52,6 +52,7 @@ class VLLMRollingBatch(RollingBatch):
         self.lora_requests = {}
         self.is_mistral_tokenizer = args.tokenizer_mode == 'mistral'
         self.tool_parser = None
+        self.reasoning_parser = None
         if self.vllm_configs.enable_auto_tool_choice:
             from vllm.entrypoints.openai.tool_parsers import ToolParserManager
             try:
@@ -61,6 +62,15 @@ class VLLMRollingBatch(RollingBatch):
                     self.engine.tokenizer.tokenizer)
             except Exception as e:
                 raise TypeError("Error in tool parser creation.") from e
+        if self.vllm_configs.enable_reasoning:
+            from vllm.entrypoints.openai.reasoning_parsers import ReasoningParserManager
+            try:
+                self.reasoning_parser = ReasoningParserManager.get_reasoning_parser(
+                    self.vllm_configs.reasoning_parser)
+                self.reasoning_parser = self.reasoning_parser(
+                    self.engine.tokenizer.tokenizer)
+            except Exception as e:
+                raise TypeError("Error in reasoning parser creation.") from e
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
@@ -76,6 +86,9 @@ class VLLMRollingBatch(RollingBatch):
 
     def get_tool_parser(self):
         return self.tool_parser
+
+    def get_reasoning_parser(self):
+        return self.reasoning_parser
 
     def get_chat_template(self):
         if self.is_mistral_tokenizer:

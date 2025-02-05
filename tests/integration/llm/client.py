@@ -606,7 +606,12 @@ vllm_chat_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16",
-    }
+    },
+    "deepseek-r1-distill-qwen-1-5b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    },
 }
 
 vllm_tool_model_spec = {
@@ -1423,6 +1428,24 @@ def batch_generation_tool(batch_size):
     return data[:batch_size]
 
 
+def batch_generation_reasoning(batch_size):
+    messages = [
+        [{
+            "role": "user",
+            "content": "9.11 and 9.8, which is greater?"
+        }],
+        [{
+            "role": "user",
+            "content": "How many Rs are there in the word 'strawberry'?"
+        }],
+    ]
+
+    if batch_size > len(messages):
+        # dynamically extend to support larger bs by repetition
+        messages *= math.ceil(batch_size / len(messages))
+    return messages[:batch_size]
+
+
 def t5_batch_generation(batch_size):
     input_sentences = [
         "translate English to German: The house is wonderful.",
@@ -1667,7 +1690,10 @@ def test_handler_rolling_batch_chat(model, model_spec):
         check_worker_number(spec["worker"])
     stream_values = spec.get("stream", [False, True])
     # dryrun phase
-    req = {"messages": batch_generation_chat(1)[0]}
+    if spec.get("enable_reasoning", False):
+        req = {"messages": batch_generation_reasoning(1)[0]}
+    else:
+        req = {"messages": batch_generation_chat(1)[0]}
     seq_length = 100
     req["max_tokens"] = seq_length
     req["logprobs"] = True
