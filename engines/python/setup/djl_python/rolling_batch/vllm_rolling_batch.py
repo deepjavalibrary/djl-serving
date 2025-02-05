@@ -22,7 +22,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, create_lora_request, get_lora_request,
     get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__)
 
@@ -57,8 +57,6 @@ class VLLMRollingBatch(RollingBatch):
             try:
                 self.tool_parser = ToolParserManager.get_tool_parser(
                     self.vllm_configs.tool_call_parser)
-                self.tool_parser = self.tool_parser(
-                    self.engine.tokenizer.tokenizer)
             except Exception as e:
                 raise TypeError("Error in tool parser creation.") from e
 
@@ -76,6 +74,18 @@ class VLLMRollingBatch(RollingBatch):
 
     def get_tool_parser(self):
         return self.tool_parser
+
+    def get_chat_template(self):
+        if self.is_mistral_tokenizer:
+            # Mistral tokenizer chat template cannot be overridden
+            return None
+        return self.vllm_configs.chat_template
+
+    def get_chat_template_content_format(self):
+        return self.vllm_configs.chat_template_content_format
+
+    def get_default_sampling_params(self):
+        return self.engine.model_config.get_diff_sampling_param()
 
     def reset(self) -> None:
         """
@@ -142,9 +152,16 @@ class VLLMRollingBatch(RollingBatch):
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
-            prompt_inputs = get_prompt_inputs(request)
-            params = self.translate_vllm_params(request.parameters)
-            sampling_params = SamplingParams(**params)
+            # Chat completions request route
+            if request.parameters.get("sampling_params") is not None:
+                prompt_inputs = request.parameters.get("engine_prompt")
+                sampling_params = request.parameters.get("sampling_params")
+                sampling_params.output_kind = RequestOutputKind.DELTA
+            # LMI request route
+            else:
+                prompt_inputs = get_prompt_inputs(request)
+                params = self.translate_vllm_params(request.parameters)
+                sampling_params = SamplingParams(**params)
             request_params = dict()
             if request.adapter is not None:
                 adapter_name = request.adapter.get_property("name")
