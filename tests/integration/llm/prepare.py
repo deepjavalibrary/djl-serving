@@ -1073,14 +1073,14 @@ vllm_model_list = {
         "option.enforce_eager": True,
     },
     "llama3-1-8b-instruct-tool": {
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.model_id": "unsloth/Meta-Llama-3.1-8B-Instruct",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
         "option.enable_auto_tool_choice": True,
         "option.tool_call_parser": "llama3_json",
     },
     "mistral-7b-instruct-v03-tool": {
-        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
+        "option.model_id": "unsloth/mistral-7b-instruct-v0.3",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
         "option.enable_auto_tool_choice": True,
