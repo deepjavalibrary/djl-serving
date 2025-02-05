@@ -248,7 +248,8 @@ public class ModelInfoTest {
                         "NousResearch/Hermes-2-Pro-Mistral-7B", "lmi-dist",
                         "src/test/resources/local-hf-model", "lmi-dist",
                         "HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable",
-                        "THUDM/chatglm3-6b", "lmi-dist");
+                        "THUDM/chatglm3-6b", "lmi-dist",
+                        "src/test/resources/local-mistral-model", "lmi-dist");
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
         Path prop = modelDir.resolve("serving.properties");
