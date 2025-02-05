@@ -88,7 +88,9 @@ def parse_chat_completions_request_vllm(
         "sampling_params": sampling_params,
         "conversation": conversation,
         "request_prompts": request_prompt,
-        "engine_prompt": engine_prompt
+        "engine_prompt": engine_prompt,
+        "tool_parser": tool_parser,
+        "chat_params": chat_params,
     }
     return input_text, params
 
@@ -136,7 +138,7 @@ def _preprocess_chat(
 
     should_parse_tools = tool_parser is not None and request.tool_choice != "none"
     if should_parse_tools:
-        request = tool_parser(tokenizer).adjust_request(request=request)
+        request = tool_parser.adjust_request(request=request)
 
     if isinstance(request_prompt, str):
         # Hf tokenizer case
