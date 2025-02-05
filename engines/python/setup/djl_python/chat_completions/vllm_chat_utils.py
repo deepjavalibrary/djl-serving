@@ -38,6 +38,7 @@ def parse_chat_completions_request_vllm(
 ):
 
     tool_parser = rolling_batch.get_tool_parser()
+    reasoning_parser = rolling_batch.get_reasoning_parser()
     model = input_map.pop("model", "lmi")
     chat_params = ChatCompletionRequest(**input_map, model=model)
 
@@ -90,6 +91,7 @@ def parse_chat_completions_request_vllm(
         "request_prompts": request_prompt,
         "engine_prompt": engine_prompt,
         "tool_parser": tool_parser,
+        "reasoning_parser": reasoning_parser,
         "chat_params": chat_params,
     }
     return input_text, params

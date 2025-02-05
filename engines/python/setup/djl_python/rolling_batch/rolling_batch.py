@@ -126,6 +126,12 @@ class RollingBatch(ABC):
         """
         return None
 
+    def get_reasoning_parser(self):
+        """
+        :return: the reasoning parser if available
+        """
+        return None
+
     @abstractmethod
     def inference(self, new_requests: List[Request]) -> List:
         """

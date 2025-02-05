@@ -74,6 +74,10 @@ class VllmRbProperties(Properties):
     enable_auto_tool_choice: bool = False
     tool_call_parser: Optional[str] = None
 
+    # Reasoning properties
+    enable_reasoning: bool = False
+    reasoning_parser: Optional[str] = None
+
     # Neuron vLLM properties
     device: str = 'auto'
     preloaded_model: Optional[Any] = None
@@ -127,6 +131,18 @@ class VllmRbProperties(Properties):
                 raise ValueError(
                     f"Invalid tool call parser: {self.tool_call_parser} "
                     f"(chose from {{ {','.join(valid_tool_parses)} }})")
+        return self
+
+    @model_validator(mode='after')
+    def validate_reasoning_parser(self):
+        if self.enable_reasoning:
+            from vllm.entrypoints.openai.reasoning_parsers import ReasoningParserManager
+            valid_reasoning_parses = ReasoningParserManager.reasoning_parsers.keys(
+            )
+            if self.reasoning_parser not in valid_reasoning_parses:
+                raise ValueError(
+                    f"Invalid reasoning parser: {self.reasoning_parser} "
+                    f"(chose from {{ {','.join(valid_reasoning_parses)} }})")
         return self
 
     @field_validator('override_neuron_config', mode="before")
