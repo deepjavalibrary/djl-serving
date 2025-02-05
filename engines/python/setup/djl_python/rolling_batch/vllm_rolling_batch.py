@@ -57,6 +57,8 @@ class VLLMRollingBatch(RollingBatch):
             try:
                 self.tool_parser = ToolParserManager.get_tool_parser(
                     self.vllm_configs.tool_call_parser)
+                self.tool_parser = self.tool_parser(
+                    self.engine.tokenizer.tokenizer)
             except Exception as e:
                 raise TypeError("Error in tool parser creation.") from e
 

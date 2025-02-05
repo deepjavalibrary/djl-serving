@@ -322,9 +322,10 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
             "logprobs": None,
             "finish_reason": best_sequence.finish_reason,
         }
-    elif parameters.get("tools") and (parameters.get("tool_choice") == "auto"
-                                      or parameters.get("tool_choice") is None
-                                      ) and parameters.get("tool_parser"):
+    elif chat_params and chat_params.tools and (
+            parameters.get("tool_choice") == "auto"
+            or parameters.get("tool_choice")
+            is None) and parameters.get("tool_parser"):
         tool_call_info = tool_parser.extract_tool_calls(generated_text,
                                                         request=chat_params)
         auto_tools_called = tool_call_info.tools_called
