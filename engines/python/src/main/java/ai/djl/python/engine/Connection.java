@@ -175,7 +175,8 @@ class Connection {
             args[11] = "--tag-output";
             args[12] = "--mca"; // New
             args[13] = "btl_tcp_if_include"; // New
-            args[14] = "enp39s0"; // New
+            // args[14] = "enp39s0"; // New
+            args[14] = "ens32"; // New
             args[15] = "-x";
             args[16] = "FI_PROVIDER=efa";
             args[17] = "-x";

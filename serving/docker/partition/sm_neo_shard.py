@@ -32,6 +32,7 @@ from lmi_dist.vllm_engine import load_model_for_sharding
 
 CHUNK_MB = 8
 
+CONFIG_FILENAME = "sagemaker-fast-model-loader-manifest.json"
 
 class NeoShardingService():
 
@@ -46,31 +47,34 @@ class NeoShardingService():
 
         self.properties: dict = update_kwargs_with_env_vars({})
         self.properties.update(load_properties(self.INPUT_MODEL_DIRECTORY))
-
-    def save_configs(self, pp_degree: int, tp_degree: int, input_dir: str,
-                     output_dir: str, configs: list) -> None:
         import sagemaker_fast_model_loader_rust as sm_fml
         py_version = "{}.{}.{}".format(*sys.version_info[:3])
-        conf = sm_fml.ModelConfig(
-            pipeline_parallel_size=pp_degree,
-            tensor_parallel_size=tp_degree,
+
+        self.pp_degree = int(self.properties.get("option.pipeline_parallel_degree", 1))
+        self.tp_degree = int(self.properties["option.tensor_parallel_degree"])
+        self.shard_config =  sm_fml.ModelConfig(
+            pipeline_parallel_size=self.pp_degree,
+            tensor_parallel_size=self.tp_degree,
             framework=sm_fml.ModelFramework.Vllm,
             framework_version=version("vllm"),
             python_version=py_version,
         )
+
+    def save_configs(self, input_dir: str, output_dir: str, configs: list, pp_rank: int=0) -> None:
         for entry in configs:
-            #XXX
-            conf.add_shard(
+            if entry["pp"] != pp_rank:
+                continue
+            self.shard_config.add_shard(
                 pipeline_parallel_degree=int(entry["pp"]),
                 tensor_parallel_degree=int(entry["tp"]),
                 shard_config=entry["config"],
             )
-
-        conf.save(output_dir=output_dir)
-        logging.info(
-            f"SageMaker Fast Model Loader config file saved to {output_dir}")
-        self.copy_non_safetensors_files(input_dir, output_dir)
-        logging.info(f"Other non-Safetensors files copied to {output_dir}")
+        if pp_rank == self.pp_degree -1:
+            self.shard_config.save(output_dir=output_dir)
+            logging.info(
+                f"SageMaker Fast Model Loader config file saved to {output_dir}")
+            self.copy_non_safetensors_files(input_dir, output_dir)
+            logging.info(f"Other non-Safetensors files copied to {output_dir}")
 
     def copy_non_safetensors_files(self, input_dir: str, output_dir: str):
         """
@@ -108,7 +112,7 @@ class NeoShardingService():
     def shard_lmi_dist_model(self, input_dir: str, output_dir: str,
                              pp_degree: int, tp_degree: int,
                              chunk_mb: int,
-                             pp_rank: int
+                             pp_rank_to_shard: int
                             ) -> None:
         # For engine args which can affect GPU memory utilization, use LMI defaults
         # unless specified otherwise by the customer
@@ -165,7 +169,7 @@ class NeoShardingService():
         )
 
         engine_configs = engine_args.create_engine_configs()
-        engine_worker = load_model_for_sharding(engine_configs, pp_rank=pp_rank)
+        engine_worker = load_model_for_sharding(engine_configs, pp_rank_to_shard)
 
         # Lazy import to avoid MPI not-inited errors
         import sagemaker_fast_model_loader_rust as sm_fml
@@ -173,39 +177,36 @@ class NeoShardingService():
         os.makedirs(model_dir, exist_ok=True)
 
         config_for_current_rank = engine_worker.save_chunked_shard(
-            output_dir=model_dir, chunk_mb=chunk_mb, pp_rank=pp_rank
+            output_dir=model_dir, chunk_mb=chunk_mb, target_pp_rank=pp_rank_to_shard
         )
 
         # Gather results from all ranks to driver process
         configs = MPI.COMM_WORLD.gather(config_for_current_rank, root=0)
 
         # Driver process saves configs of current rank to disk
-        # if comms.rank == 0:
-        #     self.save_configs(
-        #         pp_degree=pp_degree,
-        #         tp_degree=tp_degree,
-        #         input_dir=input_dir,
-        #         output_dir=output_dir,
-        #         configs=configs,
-        #     )
-        
+        if comms.rank == 0:
+            self.save_configs(
+                input_dir=input_dir,
+                output_dir=output_dir,
+                configs=configs,
+                pp_rank=pp_rank_to_shard
+            )
+
         del engine_worker
         torch.cuda.empty_cache()
-        print(torch.cuda.memory_allocated())
+        MPI.COMM_WORLD.Barrier()
+        print(f"Memory after cleaning {torch.cuda.memory_allocated()/(1024**3)} GB")
 
     def run_sharding(self):
         try:
-            pp_degree = int(
-                self.properties.get("option.pipeline_parallel_degree", 1))
-            for i in pp_degree:
+            for i in range(self.pp_degree):
                 self.shard_lmi_dist_model(
                     input_dir=self.INPUT_MODEL_DIRECTORY,
                     output_dir=self.OUTPUT_MODEL_DIRECTORY,
-                    pp_degree=pp_degree,
-                    tp_degree=int(
-                        self.properties["option.tensor_parallel_degree"]),
+                    pp_degree=self.pp_degree,
+                    tp_degree=self.tp_degree,
                     chunk_mb=CHUNK_MB,
-                    pp_rank=i
+                    pp_rank_to_shard=i
                 )
         except Exception as exc:
             raise OptimizationFatalError(
@@ -221,7 +222,7 @@ def main():
     try:
         neo_sharding_service = NeoShardingService()
         neo_sharding_service.run_sharding()
-        # neo_sharding_service.generate_properties_file()
+        neo_sharding_service.generate_properties_file()
 
     except Exception as exc:
         MPI.COMM_WORLD.Barrier()
