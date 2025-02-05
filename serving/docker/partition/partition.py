@@ -22,7 +22,6 @@ from pathlib import Path
 
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
-from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
                    get_python_executable, get_download_dir,
@@ -217,8 +216,8 @@ class PartitionService(object):
             self.properties_manager.generate_properties_file()
             self.upload_checkpoints_to_s3()
         elif quant_method == 'fp8':
-            logging.info("Running AutoFP8 quantization")
-            self.autofp8_quantize()
+            logging.info("Running FP8 quantization")
+            self.fp8_quantize()
             self.properties_manager.generate_properties_file()
             self.upload_checkpoints_to_s3()
         else:
@@ -266,67 +265,52 @@ class PartitionService(object):
             raise ImportError(
                 "AutoAWQ is not installed. Failing during quantization.")
 
-    def autofp8_quantize(self):
+    def fp8_quantize(self):
         """
-        Quantizes model using AutoFP8.
+        Quantizes model using llm-compressor.
+        Recipe: Simple PTQ + FP8 weight & activation quantization.
         """
-        # initialize configs
+        from llmcompressor.modifiers.quantization import QuantizationModifier
+        from llmcompressor.transformers import oneshot
+        from transformers import AutoModelForCausalLM
+
+        # initialize configs and model
         hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
-        if not tokenizer.pad_token:
-            tokenizer.pad_token = tokenizer.eos_token
+        output_path = self.properties['option.save_mp_checkpoint_path']
+        model = AutoModelForCausalLM.from_pretrained(
+            hf_configs.model_id_or_path, **hf_configs.kwargs)
 
-        quant_config = {
-            "activation_scheme":
-            self.properties.get("option.fp8_activation_scheme", "static"),
+        # parse options and define quantization recipe
+        quant_config = {"targets": "Linear"}
+        quant_config["scheme"] = self.properties.get("option.fp8_scheme",
+                                                     "FP8")
+        quant_config["ignore"] = [
+            s.strip() for s in self.properties.get("option.fp8_ignore",
+                                                   "lm_head").split(',')
+        ]
+        recipe = QuantizationModifier(**quant_config)
+
+        # calibration dataset options
+        oneshot_kwargs = {
+            "model": model,
+            "recipe": recipe,
         }
-        if self.properties.get("option.fp8_kv_cache_quant_targets"):
-            quant_config["kv_cache_quant_targets"] = tuple([
-                s.strip() for s in self.properties.get(
-                    "option.fp8_kv_cache_quant_targets").split(',')
-            ])
-        if self.properties.get("option.fp8_ignore_patterns"):
-            quant_config["ignore_patterns"] = [
-                s.strip() for s in self.properties.get(
-                    "option.fp8_ignore_patterns").split(',')
-            ]
-
-        # create samples for calibrating scaling factors
-        if quant_config["activation_scheme"] == "dynamic":
-            # If using dynamic activation scales, a calibration dataset is not required
-            examples = []
+        if "dynamic" in recipe.scheme:
+            pass
         else:
-            calib_size = int(self.properties.get("option.calib_size", 512))
-            # Tokenize dataset for calibrating static activation scales
-            ds = load_dataset("abisee/cnn_dailymail",
-                              "3.0.0",
-                              split="validation").shuffle(seed=42).select(
-                                  range(calib_size))
-            examples = [batch["article"] for batch in ds]
-            examples = tokenizer(examples,
-                                 padding=True,
-                                 truncation=True,
-                                 return_tensors="pt").to("cuda")
+            oneshot_kwargs["dataset"] = "cnn_dailymail"
+            oneshot_kwargs["num_calibration_samples"] = int(
+                self.properties.get("option.calib_size", 512))
+            oneshot_kwargs["max_seq_length"] = int(
+                self.properties.get("option.max_model_len", 2048))
 
-        # quantization
-        try:
-            from auto_fp8 import AutoFP8ForCausalLM, BaseQuantizeConfig
-            quantize_config = BaseQuantizeConfig(**quant_config)
-            logging.info(
-                f"Using the following configurations for fp8 quantization: {vars(quantize_config)}"
-            )
-            model = AutoFP8ForCausalLM.from_pretrained(
-                hf_configs.model_id_or_path, quantize_config,
-                **hf_configs.kwargs)
-            model.quantize(examples)
-            output_path = self.properties['option.save_mp_checkpoint_path']
-            logging.info(
-                f"Quantization complete. Saving model to: {output_path}")
-            model.save_quantized(output_path)
-        except ImportError:
-            logging.error(
-                "AutoFP8 is not installed. Failing during quantization.")
-            raise ImportError(
-                "AutoFP8 is not installed. Failing during quantization.")
+        logging.info(
+            f"Using the following configuartions for fp8 quantization: {oneshot_kwargs}"
+        )
+        oneshot(**oneshot_kwargs)
+        logging.info(f"Quantization complete. Saving model to: {output_path}")
+        model.save_pretrained(output_path)
+        tokenizer.save_pretrained(output_path)
 
 
 def main():

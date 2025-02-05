@@ -66,6 +66,7 @@ class VllmRbProperties(Properties):
     # The following configs have different defaults, or additional processing in DJL compared to vLLM
     dtype: str = "auto"
     max_loras: int = 4
+    task: str = 'auto'
     # The following configs have broken processing in vllm via the FlexibleArgumentParser
     long_lora_scaling_factors: Optional[Tuple[float, ...]] = None
     use_v2_block_manager: bool = True
@@ -88,6 +89,14 @@ class VllmRbProperties(Properties):
             raise AssertionError(
                 f"Need python engine to start vLLM RollingBatcher")
         return engine
+
+    @field_validator('task')
+    def validate_task(cls, task):
+        # TODO: conflicts between HF and VLLM tasks, need to separate these.
+        # for backwards compatibility, max text-generation to generate
+        if task == 'text-generation':
+            task = 'generate'
+        return task
 
     @field_validator('dtype')
     def validate_dtype(cls, val):
@@ -114,6 +123,7 @@ class VllmRbProperties(Properties):
                 raise ValueError(
                     f"Invalid tool call parser: {self.tool_call_parser} "
                     f"(chose from {{ {','.join(valid_tool_parses)} }})")
+        return self
 
     @field_validator('override_neuron_config', mode="before")
     def validate_override_neuron_config(cls, val):
@@ -187,9 +197,6 @@ class VllmRbProperties(Properties):
         if self.max_rolling_batch_prefill_tokens is not None:
             vllm_engine_args[
                 'max_num_batched_tokens'] = self.max_rolling_batch_prefill_tokens
-        if self.device == 'neuron':
-            vllm_engine_args['block_size'] = passthrough_vllm_engine_args.get(
-                "max_model_len")
         vllm_engine_args.update(passthrough_vllm_engine_args)
         return vllm_engine_args
 

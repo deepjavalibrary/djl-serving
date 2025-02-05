@@ -57,10 +57,6 @@ class PropertiesManager(object):
 
         self.set_and_validate_model_dir()
 
-        if self.is_mpi_mode:
-            self.validate_tp_degree()
-            self.validate_pp_degree()
-
         self.set_and_validate_entry_point()
         self.set_and_validate_save_mp_checkpoint_path()
 

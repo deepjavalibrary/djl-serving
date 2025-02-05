@@ -602,6 +602,11 @@ vllm_chat_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
     },
+    "mistral-7b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16",
+    }
 }
 
 vllm_tool_model_spec = {
@@ -835,10 +840,7 @@ correctness_model_spec = {
         "num_run": 4,
         "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.01,
-        "parameters": {
-            "return_full_text": True
-        }
+        "score": 0.01
     },
     "trtllm-llama3-8b": {
         "batch_size": [213],
@@ -856,13 +858,13 @@ correctness_model_spec = {
         "dataset": "mmlu",
         "score": 0.6
     },
-    "neuronx-llama3-1-8b": {
-        "batch_size": [213],
+    "neuronx-llama3-2-1b": {
+        "batch_size": [32],
         "seq_length": [1],
         "num_run": 66,
-        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "tokenizer": "NousResearch/Llama-3.2-1B",
         "dataset": "mmlu",
-        "score": 0.6
+        "score": 0.45
     },
     "trtllm-meta-llama3-8b-fp8": {
         "batch_size": [213],
@@ -1196,15 +1198,21 @@ def batch_generation(batch_size):
 def batch_generation_chat(batch_size):
     messages = [
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "What is deep learning?"
         }],
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "Who won the world series in 2020?"
@@ -1216,45 +1224,61 @@ def batch_generation_chat(batch_size):
             "content": "Where was it played?"
         }],
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "How do I build a car from cardboard and paper clips?"
         }],
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "Hello!"
         }],
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "Who are you?"
         }],
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "Hello world!"
         }],
         [{
-            "role":
-            "system",
-            "content":
-            "You're a helpful assistant! Answer the users question best you can."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
             "content": "What is the weather like in Brooklyn, New York?"
         }],
         [{
-            "role": "system",
-            "content": "You are a helpful assistant."
+            "role": "user",
+            "content": "hello, can you help me?"
+        }, {
+            "role": "assistant",
+            "content": "Hi, what can i help you with today?"
         }, {
             "role":
             "user",

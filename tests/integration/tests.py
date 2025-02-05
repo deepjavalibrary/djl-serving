@@ -571,6 +571,7 @@ class TestVllm1:
             prepare.build_vllm_model("mistral-7b")
             r.launch()
             client.run("vllm mistral-7b".split())
+            client.run("vllm_chat mistral-7b".split())
 
     def test_phi2(self):
         with Runner('lmi', 'phi-2') as r:
@@ -902,16 +903,6 @@ class TestNeuronxRollingBatch:
                 "transformers_neuronx_rolling_batch llama-speculative-compiled-rb"
                 .split())
 
-    def test_llama_vllm_nxdi(self):
-        # For neuron, handler is names as transformers_neuronx, but this handler supports, TNX, NXDI and optimum.
-        with Runner('pytorch-inf2', 'llama-3-1-8b-instruct-vllm-nxdi') as r:
-            prepare.build_transformers_neuronx_handler_model(
-                "llama-3-1-8b-instruct-vllm-nxdi")
-            r.launch(container='pytorch-inf2-4')
-            client.run(
-                "transformers_neuronx_rolling_batch llama-3-1-8b-instruct-vllm-nxdi"
-            )
-
     def test_llama_vllm_nxdi_aot(self):
         with Runner('pytorch-inf2',
                     'llama-3-2-1b-instruct-vllm-nxdi-aot') as r:
@@ -920,13 +911,13 @@ class TestNeuronxRollingBatch:
             r.launch(
                 container="pytorch-inf2-1",
                 cmd=
-                "partition --model-dir /opt/ml/input/data/training --save-mp-checkpoint-path /opt/ml/input/data/training/aot --skip-copy"
+                "partition --model-dir /opt/ml/input/data/training --save-mp-checkpoint-path /opt/ml/input/data/training/aot"
             )
             r.launch(container="pytorch-inf2-1",
                      cmd="serve -m test=file:/opt/ml/model/test/aot")
             client.run(
                 "transformers_neuronx_rolling_batch llama-3-2-1b-instruct-vllm-nxdi-aot"
-            )
+                .split())
 
 
 @pytest.mark.correctness
@@ -992,14 +983,14 @@ class TestCorrectnessNeuronx:
     def test_codestral_22b(self):
         with Runner('pytorch-inf2', 'codestral-22b') as r:
             prepare.build_correctness_model("neuronx-codestral-22b")
-            r.launch(container='pytorch-inf2-6')
+            r.launch(container='pytorch-inf2-4')
             client.run("correctness neuronx-codestral-22b".split())
 
-    def test_llama3_1_8b(self):
-        with Runner('pytorch-inf2', 'llama3-1-8b') as r:
-            prepare.build_correctness_model("neuronx-llama3-1-8b")
-            r.launch(container='pytorch-inf2-6')
-            client.run("correctness neuronx-llama3-1-8b".split())
+    def test_llama3_2_1b(self):
+        with Runner('pytorch-inf2', 'llama3-2-1b') as r:
+            prepare.build_correctness_model("neuronx-llama3-2-1b")
+            r.launch(container='pytorch-inf2-1')
+            client.run("correctness neuronx-llama3-2-1b".split())
 
 
 class TestMultiModalLmiDist:

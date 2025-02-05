@@ -107,5 +107,12 @@ interface SecureModeAllowList {
                     "option.enable_prefix_caching",
                     "option.disable_sliding_window",
                     "option.enable_streaming",
-                    "option.tgi_compat");
+                    "option.tgi_compat",
+                    "option.pythonExecutable");
+
+    public static final Set<String> PYTHON_EXECUTABLE_ALLOWLIST =
+            Set.of(
+                    "/opt/djl/lmi_dist_venv/bin/python",
+                    "/opt/djl/vllm_venv/bin/python",
+                    "/usr/bin/python3");
 }

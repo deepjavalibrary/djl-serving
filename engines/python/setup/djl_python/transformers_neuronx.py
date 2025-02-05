@@ -25,7 +25,7 @@ from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum
-from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader, TNXVllmModelLoader
+from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader, TNXVllmModelLoader, NxdiVllmModelLoader
 from djl_python.neuron_utils.neuron_smart_default_utils import NeuronSmartDefaultUtils
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
@@ -36,7 +36,6 @@ model = None
 OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama", "mistral"}
 OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS = {"llama", "mistral"}
 VLLM_CONTINUOUS_BATCHING_MODELS = {"llama"}
-NXDI_COMPILED_MODEL_FILE_NAME = "model.pt"
 
 
 class TransformersNeuronXService(object):
@@ -140,24 +139,8 @@ class TransformersNeuronXService(object):
             return
 
         if self.config.model_loader == "nxdi":
-            os.environ[
-                'VLLM_NEURON_FRAMEWORK'] = "neuronx-distributed-inference"
-            djl_neuron_compiled_artifacts_path = os.path.join(
-                os.getenv("DJL_CACHE_DIR", "/tmp/.djl.ai"),
-                "neuron-compiled-artifacts")
-            nxdi_compiled_model_path = os.path.join(
-                self.config.model_id_or_path, NXDI_COMPILED_MODEL_FILE_NAME)
-            if self.config.save_mp_checkpoint_path:
-                # If the compilation path is given by the user
-                os.environ[
-                    "NEURON_COMPILED_ARTIFACTS"] = self.config.save_mp_checkpoint_path
-            elif os.path.isfile(nxdi_compiled_model_path):
-                # if the compilation path already exists
-                os.environ[
-                    "NEURON_COMPILED_ARTIFACTS"] = self.config.model_id_or_path
-            else:
-                os.environ[
-                    "NEURON_COMPILED_ARTIFACTS"] = djl_neuron_compiled_artifacts_path
+            self._model_loader_class = NxdiVllmModelLoader
+            logging.info("Loading model using Nxdi vLLM ")
             return
 
         if self.config.model_loader == "vllm":
