@@ -19,7 +19,7 @@ ARG djl_torch_version=2.5.1
 ARG djl_onnx_version=1.20.0
 
 # djl converter wheel for text-embedding use case
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_version//-*/}-py3-none-any.whl"
 
 EXPOSE 8080
 
@@ -34,7 +34,7 @@ ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 # set cudnn9 library path
-ENV LD_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/nvidia/cudnn/lib/
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python${python_version}/dist-packages/nvidia/cudnn/lib/"
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${djl_torch_version}
@@ -91,6 +91,7 @@ COPY lmi-container-requirements-common.txt ./requirements-common.txt
 COPY requirements-lmi.txt ./requirements-lmi.txt
 COPY requirements-vllm.txt ./requirements-vllm.txt
 RUN pip3 install -r requirements-common.txt \
+    && pip3 install ${djl_converter_wheel} --no-deps \
     && scripts/create_virtual_env.sh /opt/djl/vllm_venv requirements-vllm.txt \
     && scripts/create_virtual_env.sh /opt/djl/lmi_dist_venv requirements-lmi.txt
 

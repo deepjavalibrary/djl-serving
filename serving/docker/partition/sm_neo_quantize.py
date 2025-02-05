@@ -99,11 +99,16 @@ class NeoQuantizationService():
         """
         Updates outputted serving.properties.
 
+        ## tensor parallel degree & device_map
         We set option.tensor_parallel_degree & option.device_map for quantization.
         This function passes through these values to the outputted serving.properties if received from the customer.
         Otherwise, nothing is outputted for these values.
+
+        ## quantization
+        For FP8 quantization with llm-compressor, vllm requires quantization_method to be set to 'compressed-tensors'
         """
         passthrough_properties = {}
+        # checking if customer set property through envvar or serving.properties.
         passthrough_properties[
             "option.tensor_parallel_degree"] = os.environ.get(
                 "OPTION_TENSOR_PARALLEL_DEGREE") if os.environ.get(
@@ -126,6 +131,9 @@ class NeoQuantizationService():
                 logging.info(
                     f"User did not pass {k}. Outputted serving.properties "
                     "will not include this field.")
+
+        if output_properties.get("option.quantize") == "fp8":
+            output_properties["option.quantize"] = "compressed-tensors"
 
         self.properties_manager.properties = output_properties
         self.properties_manager.generate_properties_file()

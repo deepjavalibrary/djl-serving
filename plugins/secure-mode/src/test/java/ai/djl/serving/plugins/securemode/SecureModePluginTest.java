@@ -272,6 +272,22 @@ public class SecureModePluginTest {
                 "foo", TEST_MODEL_DIR.resolve("serving.properties"), "option.not_allowlisted=foo");
     }
 
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testInvalidPythonExecutablePath() throws IOException, ModelException {
+        mockSecurityEnv(
+                "foo",
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.pythonExecutable=/foo/bar/python3");
+    }
+
+    @Test
+    void testAllowedPythonExecutablePath() throws IOException, ModelException {
+        mockSecurityEnv(
+                "foo",
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.pythonExecutable=/opt/djl/lmi_dist_venv/bin/python");
+    }
+
     private void createFileWithContent(Path file, String content) throws IOException {
         if (Files.exists(file)) {
             return;

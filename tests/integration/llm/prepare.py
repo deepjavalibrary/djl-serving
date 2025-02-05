@@ -763,7 +763,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 4
     },
     "mistral-7b": {
-        "option.model_id": "s3://djl-llm/mistral-7b",
+        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
@@ -1253,8 +1253,9 @@ correctness_model_list = {
     "neuronx-codestral-22b": {
         "engine": "Python",
         "option.entryPoint": "djl_python.transformers_neuronx",
-        "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
-        "option.tensor_parallel_degree": 12,
+        "option.model_id": "s3://djl-llm/Codestral-22B-v0.1-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.block_size": 32,
         "option.n_positions": 1024,
         "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 41,
@@ -1276,15 +1277,16 @@ correctness_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 213
     },
-    "neuronx-llama3-1-8b": {
+    "neuronx-llama3-2-1b": {
         "engine": "Python",
         "option.entryPoint": "djl_python.transformers_neuronx",
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
-        "option.tensor_parallel_degree": 12,
-        "option.n_positions": 768,
-        "option.rolling_batch": "auto",
-        "option.max_rolling_batch_size": 213,
-        "option.model_loading_timeout": 1800
+        "option.model_id": "s3://djl-llm/llama-3-2-1b-instruct/",
+        "option.tensor_parallel_degree": 2,
+        "option.n_positions": 1024,
+        "option.block_size": 32,
+        "option.rolling_batch": "vllm",
+        "option.max_rolling_batch_size": 32,
+        "option.model_loading_timeout": 2400
     },
     "trtllm-meta-llama3-8b-fp8": {
         "engine": "Python",

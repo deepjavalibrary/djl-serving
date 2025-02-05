@@ -65,13 +65,14 @@ LABEL djl-serving-version=$djl_serving_version
 FROM base AS cpu-full
 
 ARG torch_version=2.5.1
+ARG onnx_version=1.20.0
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
-    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.19.0 && \
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime:$onnx_version && \
     scripts/patch_oss_dlc.sh python && \
     echo "${djl_serving_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
