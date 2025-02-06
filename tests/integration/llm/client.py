@@ -610,6 +610,7 @@ vllm_chat_model_spec = {
     "deepseek-r1-distill-qwen-1-5b": {
         "batch_size": [1, 4],
         "seq_length": [256],
+        "enable_reasoning": True,
         "tokenizer": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     },
 }
@@ -1587,7 +1588,7 @@ def test_handler_rolling_batch(model, model_spec):
     stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = {"inputs": batch_generation(1)[0]}
-    seq_length = 100
+    seq_length = spec["seq_length"][0]
     params = {"do_sample": True, "max_new_tokens": seq_length, "details": True}
     req["parameters"] = params
     if "parameters" in spec:
@@ -1626,7 +1627,7 @@ def test_handler_adapters(model, model_spec):
     inputs = batch_generation(len(spec.get("adapters")))
     for i, adapter in enumerate(spec.get("adapters")):
         req = {"inputs": inputs[i]}
-        seq_length = 100
+        seq_length = spec["seq_length"][0]
         params = {
             "do_sample": True,
             "max_new_tokens": seq_length,
@@ -1694,8 +1695,7 @@ def test_handler_rolling_batch_chat(model, model_spec):
         req = {"messages": batch_generation_reasoning(1)[0]}
     else:
         req = {"messages": batch_generation_chat(1)[0]}
-    seq_length = 100
-    req["max_tokens"] = seq_length
+    req["max_tokens"] = spec["seq_length"][0]
     req["logprobs"] = True
     req["top_logprobs"] = 1
     if "adapters" in spec:
@@ -1724,8 +1724,7 @@ def test_handler_rolling_batch_tool(model, model_spec):
     stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = batch_generation_tool(1)[0]
-    seq_length = 100
-    req["max_tokens"] = seq_length
+    req["max_tokens"] = spec["seq_length"][0]
     req["logprobs"] = True
     req["top_logprobs"] = 1
     if "adapters" in spec:
