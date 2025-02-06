@@ -342,7 +342,7 @@ class RollingBatch implements Runnable {
                         break;
                 }
             }
-            if ((nextToken == null || nextToken.isEmpty()) && code == null) {
+            if ((nextToken == null || nextToken.isEmpty()) && !last) {
                 // in non-streaming cases, we do not return content until generation is finished
                 return;
             }
