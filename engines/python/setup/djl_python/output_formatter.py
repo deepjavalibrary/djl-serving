@@ -284,6 +284,7 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
     parameters = request_output.input.parameters
     chat_params = parameters.get("chat_params")
     tool_parser = parameters.get("tool_parser")
+    reasoning_parser = parameters.get("reasoning_parser")
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
     generated_text = get_generated_text(best_sequence, request_output)
@@ -301,7 +302,24 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
         "logprobs": None,
         "finish_reason": best_sequence.finish_reason,
     }
-    if chat_params and chat_params.tool_choice and type(
+
+    if reasoning_parser:
+        reasoning_content, content = (
+            reasoning_parser.extract_reasoning_content(generated_text,
+                                                       request=chat_params))
+
+        if reasoning_content:
+            choice = {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "reasoning_content": reasoning_content,
+                    "content": content,
+                },
+                "logprobs": None,
+                "finish_reason": best_sequence.finish_reason,
+            }
+    elif chat_params and chat_params.tool_choice and type(
             chat_params.tool_choice
     ).__name__ == "ChatCompletionNamedToolChoiceParam":
         tool_calls = [{
@@ -322,9 +340,9 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
             "logprobs": None,
             "finish_reason": best_sequence.finish_reason,
         }
-    elif parameters.get("tools") and (parameters.get("tool_choice") == "auto"
-                                      or parameters.get("tool_choice") is None
-                                      ) and parameters.get("tool_parser"):
+    elif chat_params and chat_params.tools and (
+            chat_params.tool_choice == "auto"
+            or chat_params.tool_choice is None) and tool_parser:
         tool_call_info = tool_parser.extract_tool_calls(generated_text,
                                                         request=chat_params)
         auto_tools_called = tool_call_info.tools_called
@@ -386,6 +404,7 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
     parameters = request_output.input.parameters
     chat_params = parameters.get("chat_params")
     tool_parser = parameters.get("tool_parser")
+    reasoning_parser = parameters.get("reasoning_parser")
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
     next_token, index, first_token, last_token = best_sequence.get_next_token()
@@ -396,7 +415,23 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
 
     created = int(time.time())
 
-    if chat_params and chat_params.tool_choice and type(
+    if reasoning_parser:
+        current_text = get_generated_text(best_sequence, request_output)
+        previous_text = current_text[0:-len(next_token.text)]
+        current_token_ids = [t.id for t in best_sequence.tokens]
+        previous_token_ids = current_token_ids[:-1]
+        delta = reasoning_parser.extract_reasoning_content_streaming(
+            previous_text=previous_text,
+            current_text=current_text,
+            delta_text=next_token.text,
+            previous_token_ids=previous_token_ids,
+            current_token_ids=current_token_ids,
+            delta_token_ids=[next_token.id],
+        )
+        if delta is None:
+            return ""
+        delta = delta.model_dump(exclude_unset=True)
+    elif chat_params and chat_params.tool_choice and type(
             chat_params.tool_choice
     ).__name__ == "ChatCompletionNamedToolChoiceParam":
         tool_calls = [{
@@ -407,9 +442,9 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
             }
         }]
         delta = {"tool_calls": tool_calls}
-    elif parameters.get("tools") and (parameters.get("tool_choice") == "auto"
-                                      or parameters.get("tool_choice") is None
-                                      ) and parameters.get("tool_parser"):
+    elif chat_params and chat_params.tools and (
+            chat_params.tool_choice == "auto"
+            or chat_params.tool_choice is None) and tool_parser:
         current_text = get_generated_text(best_sequence, request_output)
         previous_text = current_text[0:-len(next_token.text)]
         current_token_ids = [t.id for t in best_sequence.tokens]

@@ -238,6 +238,7 @@ jobs:
           wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
+          neuron-ls >/dev/null 2>&1 && ! command -v java >/dev/null 2>&1 && sudo apt-get install -y openjdk-17-jdk
       - name: Configure AWS Credentials
         if: matrix.test.instance == 'ubuntu-latest'
         uses: aws-actions/configure-aws-credentials@v4
