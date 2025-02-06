@@ -81,7 +81,6 @@ class VllmRbProperties(Properties):
     # Neuron vLLM properties
     device: str = 'auto'
     preloaded_model: Optional[Any] = None
-    generation_config: Optional[Any] = None
     override_neuron_config: Optional[Dict] = None
 
     # Non engine arg properties
@@ -237,7 +236,6 @@ class VllmRbProperties(Properties):
         # These neuron configs are not implemented in the vllm arg parser
         if self.device == 'neuron':
             setattr(engine_args, 'preloaded_model', self.preloaded_model)
-            setattr(engine_args, 'generation_config', self.generation_config)
             setattr(engine_args, 'override_neuron_config',
                     self.override_neuron_config)
         return engine_args
