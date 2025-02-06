@@ -313,9 +313,9 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
                 "index": 0,
                 "message": {
                     "role": "assistant",
+                    "reasoning_content": reasoning_content,
                     "content": content,
                 },
-                "reasoning_content": reasoning_content,
                 "logprobs": None,
                 "finish_reason": best_sequence.finish_reason,
             }
