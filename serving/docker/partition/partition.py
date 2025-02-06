@@ -22,6 +22,7 @@ from pathlib import Path
 
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
+from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
                    get_python_executable, get_download_dir,
@@ -295,18 +296,33 @@ class PartitionService(object):
             "model": model,
             "recipe": recipe,
         }
-        if "dynamic" in recipe.scheme:
-            pass
-        else:
-            oneshot_kwargs["dataset"] = "cnn_dailymail"
-            oneshot_kwargs["num_calibration_samples"] = int(
-                self.properties.get("option.calib_size", 512))
-            oneshot_kwargs["max_seq_length"] = int(
+
+        # no dataset necessary if using dynamic activation scales
+        if "dynamic" not in recipe.scheme.lower():
+            calib_size = int(self.properties.get("option.calib_size", 512))
+            max_seq_length = int(
                 self.properties.get("option.max_model_len", 2048))
 
+            ds = load_dataset("abisee/cnn_dailymail",
+                              "3.0.0",
+                              split="validation")
+            ds = ds.shuffle(seed=42).select(range(calib_size))
+
+            def tokenize(sample):
+                return tokenizer(sample["article"],
+                                 padding=False,
+                                 truncation=True,
+                                 max_length=max_seq_length)
+
+            ds = ds.map(tokenize,
+                        remove_columns=ds.column_names,
+                        desc="Tokenizing calibration samples")
+            oneshot_kwargs["max_seq_length"] = max_seq_length
+            oneshot_kwargs["num_calibration_samples"] = calib_size
         logging.info(
-            f"Using the following configuartions for fp8 quantization: {oneshot_kwargs}"
+            f"Using the following options for fp8 quantization: {oneshot_kwargs}"
         )
+        oneshot_kwargs["dataset"] = ds
         oneshot(**oneshot_kwargs)
         logging.info(f"Quantization complete. Saving model to: {output_path}")
         model.save_pretrained(output_path)

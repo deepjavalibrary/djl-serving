@@ -643,6 +643,12 @@ class TestVllm1:
             r.launch()
             client.run("vllm_tool mistral-7b-instruct-v03-tool".split())
 
+    def test_deepseek_r1_distill_qwen_1_5b(self):
+        with Runner('lmi', 'deepseek-r1-distill-qwen-1-5b') as r:
+            prepare.build_vllm_model("deepseek-r1-distill-qwen-1-5b")
+            r.launch()
+            client.run("vllm_chat deepseek-r1-distill-qwen-1-5b".split())
+
 
 @pytest.mark.vllm
 @pytest.mark.lora

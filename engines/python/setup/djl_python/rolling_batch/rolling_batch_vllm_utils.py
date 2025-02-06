@@ -60,16 +60,17 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     if not request_output.prompt_tokens_details:
         # TODO: Temp check adding the check for T5.
         if isinstance(vllm_request_output.prompt_token_ids, list):
-            converted_texts_from_ids = tokenizer.convert_ids_to_tokens(
-                vllm_request_output.prompt_token_ids)
             for index, prompt_token_id in enumerate(
                     vllm_request_output.prompt_token_ids):
                 log_prob = None
                 if vllm_request_output.prompt_logprobs and index > 0:
                     log_prob = vllm_request_output.prompt_logprobs[index][
                         prompt_token_id].logprob
+                # TODO: this is inefficient, but it works for now. There are implications for multimodal
+                # and mistral models (mistral tokenizer) when doing batch decodes.
+                text = tokenizer.decode(prompt_token_id)
                 prompt_token = Token(id=prompt_token_id,
-                                     text=converted_texts_from_ids[index],
+                                     text=text,
                                      log_prob=log_prob)
                 request_output.prompt_tokens_details.append(prompt_token)
 
@@ -208,9 +209,18 @@ def get_lora_request(lora_name: str, lora_requests: dict) -> dict:
     return lora_requests[lora_name]
 
 
+def get_multi_modal_data(request: Request) -> Optional[dict]:
+    parameters = request.parameters
+    images = parameters.pop("images", None)
+    multi_modal_data = None
+    if images:
+        multi_modal_data = {"image": images}
+    return multi_modal_data
+
+
 def get_prompt_inputs(request: Request):
     text_prompt = request.request_input.input_text
-    multi_modal_data = request.parameters.pop("mm_data", None)
+    multi_modal_data = get_multi_modal_data(request)
     # TODO: In chat cases, we need to apply the chat template to the messages object to get a string
     # In both HuggingFace and mistral cases, that process can also yield token-ids directly
     # that we may want to consider passing directly to the engine

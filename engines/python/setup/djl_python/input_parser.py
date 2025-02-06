@@ -147,11 +147,8 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
             from djl_python.chat_completions.vllm_chat_utils import parse_chat_completions_request_vllm
             inputs, param = parse_chat_completions_request_vllm(
                 input_map,
-                kwargs.get("is_rolling_batch"),
                 rolling_batch,
                 tokenizer,
-                configs=configs,
-                is_mistral_tokenizer=is_mistral_tokenizer,
             )
         else:
             inputs, param = parse_chat_completions_request(

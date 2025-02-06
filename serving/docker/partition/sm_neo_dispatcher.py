@@ -136,10 +136,17 @@ class NeoDispatcher:
                         python_exec = VLLM_VENV_EXEC
                     else:
                         python_exec = LMI_DIST_VENV_EXEC
-                    print(f"Sharding Model...")
+                    print("Sharding Model...")
                     self.run_task(NeoTask.SHARDING, python_exec)
                 else:
-                    self.run_task(NeoTask.QUANTIZATION, LMI_DIST_VENV_EXEC)
+                    if self.properties.get("option.quantize",
+                                           "").lower() == "fp8":
+                        python_exec = VLLM_VENV_EXEC
+                    else:
+                        # run awq quantization with lmi-dist venv b/c AutoAWQ
+                        # is incompatible with newer transformers
+                        python_exec = LMI_DIST_VENV_EXEC
+                    self.run_task(NeoTask.QUANTIZATION, python_exec)
             case "trtllm":
                 self.run_task(NeoTask.TENSORRT_LLM, SYSTEM_PY_EXEC)
             case "vllm,lmi-dist,tnx":

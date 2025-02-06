@@ -683,12 +683,11 @@ lmi_dist_model_list = {
         "option.max_model_len": 8192,
     },
     "pixtral-12b": {
-        "option.model_id": "s3://djl-llm/pixtral-12b/",
+        "option.model_id": "s3://djl-llm/pixtral-12b-2409/",
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
         "option.tokenizer_mode": "mistral",
         "option.limit_mm_per_prompt": "image=4",
-        "option.entryPoint": "djl_python.huggingface"
     },
     "llama32-11b-multimodal": {
         "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
@@ -1061,13 +1060,11 @@ vllm_model_list = {
         "option.max_model_len": 8192,
     },
     "pixtral-12b": {
-        "option.model_id": "s3://djl-llm/pixtral-12b/",
+        "option.model_id": "s3://djl-llm/pixtral-12b-2409/",
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
         "option.tokenizer_mode": "mistral",
         "option.limit_mm_per_prompt": "image=4",
-        "option.entryPoint": "djl_python.huggingface",
-        "option.tensor_parallel_degree": "max"
     },
     "llama32-11b-multimodal": {
         "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
@@ -1088,6 +1085,13 @@ vllm_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.enable_auto_tool_choice": True,
         "option.tool_call_parser": "mistral",
+    },
+    "deepseek-r1-distill-qwen-1-5b": {
+        "option.model_id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
+        "option.enable_reasoning": True,
+        "option.reasoning_parser": "deepseek_r1",
     },
 }
 
@@ -1120,7 +1124,7 @@ vllm_neo_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.quantize": "fp8",
         "option.tensor_parallel_degree": "4",
-        "option.fp8_activation_scheme": "dynamic"
+        "option.fp8_scheme": "FP8_DYNAMIC"
     }
 }
 
