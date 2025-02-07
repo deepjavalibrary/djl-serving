@@ -451,7 +451,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 }
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             } catch (InterruptedException | IllegalStateException e) {
-                logger.warn("Chunk reading interrupted", e);
+                String requestId = NettyUtils.getRequestId(ctx.channel());
+                logger.warn("RequestId=[{}] Chunk reading interrupted", requestId, e);
                 ctx.disconnect();
                 ctx.newFailedFuture(e);
             }
