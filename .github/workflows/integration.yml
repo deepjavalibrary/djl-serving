@@ -224,6 +224,11 @@ jobs:
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: 17
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
@@ -238,7 +243,6 @@ jobs:
           wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
-          neuron-ls >/dev/null 2>&1 && ! command -v java >/dev/null 2>&1 && sudo apt-get install -y openjdk-17-jdk
       - name: Configure AWS Credentials
         if: matrix.test.instance == 'ubuntu-latest'
         uses: aws-actions/configure-aws-credentials@v4
