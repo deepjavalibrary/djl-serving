@@ -1,4 +1,5 @@
 peft==0.14.0
-llmcompressor==0.4.0
-vllm==0.7.1
+llmcompressor @ git+https://github.com/vllm-project/llm-compressor.git@1094c38c5962c94825f20694082dfef1f16fa3fd
+vllm==0.7.2
+pynvml>=12.0.0
 https://github.com/flashinfer-ai/flashinfer/releases/download/v0.2.0.post2/flashinfer_python-0.2.0.post2+cu124torch2.5-cp311-cp311-linux_x86_64.whl
