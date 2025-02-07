@@ -15,6 +15,7 @@ override_image_tag_suffix = os.environ.get('OVERRIDE_IMAGE_TAG_SUFFIX',
 image_repo = os.environ.get('IMAGE_REPO', '').strip()
 
 
+
 def is_applicable_cuda_capability(arch: int) -> bool:
     import torch
     if not torch.cuda.is_available():
@@ -39,7 +40,7 @@ class Runner:
         elif djl_version == "temp":
             flavor = f"{container}-temp-{os.environ['GITHUB_SHA']}"
         else:
-            flavor = f"{container}-{djl_version}-{os.environ['GITHUB_SHA']}"
+            flavor = f"{djl_version}-{container}"
 
         if override_image_tag_suffix:
             flavor = f"{container}-{override_image_tag_suffix}"

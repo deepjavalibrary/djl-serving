@@ -11,7 +11,12 @@ on:
         description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
         required: false
         type: string
-        default: 'nightly'
+        default: ''
+      image_repo:
+        description: 'The repository to pull the image from'
+        required: false
+        type: string
+        default: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
   workflow_call:
     inputs:
       djl-version:
@@ -254,10 +259,10 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
           OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
-          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+          IMAGE_REPO: ${{ inputs.image_repo }}
         run: |
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          ECR_REGION=$(echo "${IMAGE_REPO}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${IMAGE_REPO}
           python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
