@@ -130,6 +130,10 @@ class RollingBatch implements Runnable {
                         String key = prefix + entry.getKey();
                         batch.addProperty(key, entry.getValue());
                     }
+                    if (req.isCancelled()) {
+                        String key = prefix + "cancelled";
+                        batch.addProperty(key, "true");
+                    }
 
                     batch.add(prefix + "data", req.getRequest());
                     String seed = req.getSeed();
@@ -223,12 +227,16 @@ class RollingBatch implements Runnable {
     }
 
     public Output addInput(Input input, int timeout) throws TranslateException {
+        String requestId = input.getProperty("requestId", "");
+        String requestIdLogPrefix = "RequestId=[" + requestId + "]";
+        if (input.isCancelled()) {
+            logger.warn("{} has been cancelled, not processing request", requestIdLogPrefix);
+            return new Output(499, "request has been cancelled due to client disconnect");
+        }
         try {
             lock.lock();
             if (list.size() >= maxRollingBatchSize) {
                 // Input always reflects a single request here
-                String requestId = input.getProperty("requestId", "");
-                String requestIdLogPrefix = "RequestId=[" + requestId + "]";
                 logger.debug(
                         "{} exceed max_rolling_batch_size: {}",
                         requestIdLogPrefix,
@@ -369,6 +377,10 @@ class RollingBatch implements Runnable {
                 }
                 data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
             }
+        }
+
+        boolean isCancelled() {
+            return input.isCancelled();
         }
     }
 }

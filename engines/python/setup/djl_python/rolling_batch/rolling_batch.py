@@ -171,7 +171,7 @@ class RollingBatch(ABC):
             req = self.active_requests[i]
             res = {
                 "data": req.get_next_token(),
-                "last": req.is_last_token(),
+                "last": req.is_last_token() or req.is_cancelled(),
                 "content_type": req.get_content_type(),
                 "request_id": req.get_client_request_id(),
             }
@@ -179,6 +179,9 @@ class RollingBatch(ABC):
                 res["error"] = req.get_error_message()
             if req.get_error_code():
                 res["code"] = req.get_error_code()
+            if req.is_cancelled():
+                res["error"] = res.get("error", "request has been cancelled")
+                res["code"] = res.get("code", 499)
             req.reset_next_token()
             results.append(res)
 

@@ -202,6 +202,9 @@ def add_server_maintained_params(request_input: RequestInput,
         request_input.server_parameters["output_formatter"] = kwargs.get(
             "configs").output_formatter
 
+    if input_item.get_property("cancelled"):
+        request_input.is_cancelled = True
+
     output_formatter = request_input.server_parameters["output_formatter"]
     if output_formatter == "json" or output_formatter == "sse":
         request_input.tgi_compat = kwargs.get("configs").tgi_compat

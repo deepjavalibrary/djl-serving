@@ -10,11 +10,12 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import logging
 from collections import OrderedDict
 
 from vllm import LLMEngine, SamplingParams
 from vllm.sampling_params import RequestOutputKind
-from vllm.utils import random_uuid, AtomicCounter
+from vllm.utils import AtomicCounter
 
 from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
@@ -154,6 +155,15 @@ class VLLMRollingBatch(RollingBatch):
                                                      remove_unused_params=True)
         return parameters
 
+    def cancel_requests(self):
+        for req in self.active_requests:
+            if req.is_cancelled():
+                self.engine.abort_request(req.get_client_request_id())
+                self.request_cache.pop(req.get_client_request_id(), None)
+                logging.info(
+                    f"RequestId[{req.get_client_request_id()}] has been cancelled"
+                )
+
     @stop_on_any_exception
     def inference(self, new_requests: List[Request]) -> List:
         """
@@ -164,9 +174,10 @@ class VLLMRollingBatch(RollingBatch):
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         self.add_new_requests(new_requests)
+        self.cancel_requests()
         # step 0: register new requests to engine
         for request in new_requests:
-            request_id = random_uuid()
+            request_id = request.get_client_request_id()
             # Chat completions request route
             if request.parameters.get("sampling_params") is not None:
                 prompt_inputs = request.parameters.get("engine_prompt")

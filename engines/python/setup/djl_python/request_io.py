@@ -149,6 +149,7 @@ class RequestInput:
     parameters: Dict = field(default_factory=lambda: {})
     server_parameters: Dict = field(default_factory=lambda: {})
     tgi_compat: bool = False
+    is_cancelled: bool = False
 
 
 @dataclass

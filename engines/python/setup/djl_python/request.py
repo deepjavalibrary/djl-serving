@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import inspect
+import json
 from typing import Union, Callable, Any, List, Dict, Optional
 
 from djl_python.output_formatter import get_output_formatter, adapt_legacy_output_formatter
@@ -108,6 +109,8 @@ class Request(object):
 
         :return: next_token
         """
+        if self.is_cancelled():
+            return ""
         if self.next_token_str:
             return self.next_token_str
         if self.legacy_formatter:
@@ -181,3 +184,11 @@ class Request(object):
         :return: the requestId specified in the HTTP request
         """
         return self.request_input.client_request_id
+
+    def is_cancelled(self) -> bool:
+        """
+        Returns whether the request has been cancelled by the client
+
+        :return: true if the request is cancelled
+        """
+        return self.request_input.is_cancelled
