@@ -109,10 +109,9 @@ class NeoShardingService():
             for key, value in self.properties.items():
                 f.write(f"{key}={value}\n")
 
-    # By setting pp_rank, only workers in that pp_rank will load the model
-    # i.e. in case pp=2, tp=4, the arg of pp_rank=1 will
-    #   call load model for those workers with local_rank [4,7]
-    #   And those workers with local_rank [0,3] will have empty layers
+    # By setting pp_rank and tp_rank_interval , only workers in those ranks will load the model
+    # i.e. in case pp=2, tp=4, the arg of pp_rank=1, tp_interval = [2,3,4]
+    #       only workers with rank 5, 6, 7 load the model
     def shard_lmi_dist_model(self, input_dir: str, output_dir: str,
                              pp_degree: int, tp_degree: int, chunk_mb: int,
                              target_pp_rank: int,
@@ -225,6 +224,13 @@ class NeoShardingService():
     def run_sharding(self):
         try:
             device_count = torch.cuda.device_count()
+            # This is to generate shards by batch
+            # Example 1: TP=4, PP=2 on 4-GPU instance
+            #   batch 1: PP=0, TP=[0,1,2,3]
+            #   batch 2: PP=1, TP=[0,1,2,3]
+            # Example 2: TP=8, PP=1 on 4-GPU instance
+            #   batch 1: PP=0, TP=[0,1,2,3]
+            #   batch 2: PP=0, TP=[4,5,6,7]
             for pp_rank in range(self.pp_degree):
                 for tp_interval in self.generate_tensor_parallel_intervals(
                         device_count, self.tp_degree):
