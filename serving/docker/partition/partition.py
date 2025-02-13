@@ -178,35 +178,31 @@ class PartitionService(object):
                                      self.properties)
         logging.info(f"cmd: {commands}")
         self.set_environmental_vars()
-        partition_stdout = ""
-        partition_stderr = ""
+        partition_stdout = []
         # Use Popen to capture stdout without delaying terminal output
         with subprocess.Popen(commands,
                               stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
                               bufsize=1,
                               text=True) as proc:
-            for line in proc.stdout:
-                partition_stdout += line
-                print(line, end='')
-            # Exception details are in the last line of stderr
-            for line in proc.stderr:
-                partition_stderr = line
-        logging.info(proc)
+            for line in iter(proc.stdout.readline, ''):
+                partition_stdout.append(line)
+                print(line, end='', flush=True)
+
         if proc.returncode == 0:
-            logging.info("Partitioning done.")
+            logging.info("Partitioning process is done.")
             self.properties_manager.generate_properties_file()
             if not self.properties_manager.skip_copy:
-                logging.info("Copying config files...")
                 self.copy_config_files()
+                logging.info("Copied config files to save_mp_checkpoint_path")
             self.upload_checkpoints_to_s3()
             self.cleanup()
-            return partition_stdout
+            return ''.join(partition_stdout)
         else:
             logging.error(
-                f"Partitioning was not successful: {partition_stderr}")
+                f"Partitioning was not successful.")
             raise Exception(
-                f"Partitioning exited with return code: {proc.returncode}. Details: {partition_stderr}"
+                f"Partitioning exited with return code: {proc.returncode}."
             )
 
     def run_quantization(self):
@@ -332,7 +328,8 @@ class PartitionService(object):
 def main():
     logging.basicConfig(stream=sys.stdout,
                         format="%(message)s",
-                        level=logging.INFO)
+                        level=logging.INFO,
+                        force=True)
 
     parser = argparse.ArgumentParser()
 
