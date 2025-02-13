@@ -67,7 +67,7 @@ jobs:
             --profile profiles/gpt_neox_20b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-gpt-neox-logs
           path: tests/integration/logs/
@@ -103,7 +103,7 @@ jobs:
           --profile profiles/bloom_7b1.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-bloom-7b-logs
           path: tests/integration/logs/
@@ -139,7 +139,7 @@ jobs:
             --profile profiles/llama_13b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-llama-logs
           path: tests/integration/logs/
@@ -175,7 +175,7 @@ jobs:
             --profile profiles/gpt_j_6b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-gpt-j-logs
           path: tests/integration/logs/
@@ -211,7 +211,7 @@ jobs:
             --profile profiles/opt_30b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-opt-30b-logs
           path: tests/integration/logs/

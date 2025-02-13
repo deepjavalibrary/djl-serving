@@ -153,7 +153,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hf-handler-${{ matrix.arch }}-logs
           path: tests/integration/logs/
@@ -268,7 +268,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trtllm-handler-logs
           path: tests/integration/logs/
@@ -361,7 +361,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trtllm-handler-quantization-logs
           path: tests/integration/logs/
@@ -432,7 +432,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rb-single-gpu-logs
           path: tests/integration/logs/
@@ -494,7 +494,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rb-multi-gpu-logs
           path: tests/integration/logs/
@@ -584,7 +584,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lmi-dist-logs-1
           path: tests/integration/logs/
@@ -702,7 +702,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lmi-dist-logs-2
           path: tests/integration/logs/
@@ -811,7 +811,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vllm-logs
           path: tests/integration/logs/
@@ -894,7 +894,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vllm-lora-logs
           path: tests/integration/logs/
@@ -976,7 +976,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lmi-dist-lora-logs
           path: tests/integration/logs/

@@ -161,7 +161,7 @@ jobs:
           ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: no-code-p4d-${{ matrix.container }}-logs
           path: tests/integration/logs/
@@ -308,7 +308,7 @@ jobs:
         run: |
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: no-code-${{ matrix.machine }}-${{ matrix.container }}-logs
           path: tests/integration/logs/
