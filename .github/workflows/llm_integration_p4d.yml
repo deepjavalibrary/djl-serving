@@ -104,7 +104,7 @@ jobs:
           ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lmi-dist-aiccl-logs
           path: tests/integration/logs/
@@ -163,7 +163,7 @@ jobs:
           ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trtllm-logs
           path: tests/integration/logs/
@@ -222,7 +222,7 @@ jobs:
           ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vllm-logs
           path: tests/integration/logs/

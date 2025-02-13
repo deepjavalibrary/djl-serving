@@ -197,7 +197,7 @@ jobs:
         run: |
           cat logs/serving.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pytorch-gpu-logs
           path: tests/integration/logs/

@@ -70,7 +70,7 @@ jobs:
           pip wheel . --no-deps
           cp vllm-*.whl ../build_artifacts
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: build_artifacts/
