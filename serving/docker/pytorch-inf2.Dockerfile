@@ -19,15 +19,15 @@ ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 
 # Neuron SDK components
-ARG neuronsdk_version=2.21.0
+ARG neuronsdk_version=2.21.1
 ARG torch_neuronx_version=2.1.2.2.4.0
-ARG transformers_neuronx_version=0.13.322
-ARG neuronx_distributed_version=0.10.0
-ARG neuronx_distributed_inference_version=0.1.0
-ARG neuronx_cc_version=2.16.345.0
-ARG neuronx_cc_stubs_version=2.16.345.0
+ARG transformers_neuronx_version=0.13.380
+ARG neuronx_distributed_version=0.10.1
+ARG neuronx_distributed_inference_version=0.1.1
+ARG neuronx_cc_version=2.16.372.0
+ARG neuronx_cc_stubs_version=2.16.372.0
 ARG torch_xla_version=2.1.6
-ARG libneuronxla_version=2.1.681.0
+ARG libneuronxla_version=2.1.714.0
 
 ARG transformers_version=4.45.2
 ARG tokenizers_version=0.20.3
