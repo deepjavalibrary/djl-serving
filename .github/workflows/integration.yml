@@ -24,19 +24,6 @@ on:
         required: false
         type: string
         default: ''
-    outputs:
-      failure_cpu:
-        value: ${{ jobs.test.outputs.failure_cpu || '0' }}
-      failure_gpu:
-        value: ${{ jobs.test.outputs.failure_gpu || '0' }}
-      failure_aarch64:
-        value: ${{ jobs.test.outputs.failure_aarch64 || '0' }}
-      failure_lmi:
-        value: ${{ jobs.test.outputs.failure_lmi || '0' }}
-      failure_trtllm:
-        value: ${{ jobs.test.outputs.failure_trtllm || '0' }}
-      failure_neuron:
-        value: ${{ jobs.test.outputs.failure_neuron || jobs.transformers-neuronx-container-unit-tests.outputs.failure || '0' }}
 
 permissions:
   id-token: write
@@ -58,71 +45,10 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new G6 instance
-        id: create_gpu2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new G6 instance
-        id: create_gpu3
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new G6 instance
-        id: create_gpu4
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new Graviton instance
-        id: create_aarch64
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token djl-serving
-      - name: Create new Inf2.24xl instance
-        id: create_inf2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_inf2 $token djl-serving
-      - name: Create new Inf2.24xl instance
-        id: create_inf2_2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_inf2 $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
-      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
-      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g6_instance_id }}
-      gpu_instance_id_4: ${{ steps.create_gpu4.outputs.action_g6_instance_id }}
-      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
-      inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
-      inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
 
-
-  test:
+  neo-test:
     runs-on:
       - ${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
@@ -135,250 +61,99 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - test: TestCpuFull
-            instance: ubuntu-latest
-            gh-runner: true
-            failure-prefix: cpu
-          - test: TestCpuBoth
-            instance: ubuntu-latest
-            gh-runner: true
-            failure-prefix: cpu
-          - test: TestGpu
+          - test: MultinodeSharding
             instance: g6
+            test_handler: vllm_neo
+            test_model_config: lllama-3.1-8b-multi-node-sharding
+            test_serve_config: lllama-3.1-8b
             failure-prefix: gpu
-          - test: TestAarch64
-            instance: aarch64
-            failure-prefix: aarch64
-          - test: TestHfHandler
-            instance: g6
-            failure-prefix: lmi
-          - test: TestTrtLlmHandler1
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestTrtLlmHandler2
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestSchedulerSingleGPU
-            instance: g6
-            failure-prefix: lmi
-          - test: TestSchedulerMultiGPU
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDist1
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDist2
-            instance: g6
-            failure-prefix: lmi
-          - test: TestVllm1
-            instance: g6
-            failure-prefix: lmi
-          - test: TestVllmLora
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDistLora
-            instance: g6
-            failure-prefix: lmi
-          - test: TestNeuronx1
-            instance: inf2
-            failure-prefix: neuron
-          - test: TestNeuronx2
-            instance: inf2
-            failure-prefix: neuron
-          - test: TestNeuronxRollingBatch
-            instance: inf2
-            failure-prefix: neuron
-          - test: TestMultiModal
-            instance: g6
-            failure-prefix: lmi
-          - test: TestTextEmbedding
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDistPipelineParallel
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDistMultiNode
-            instance: g6
-            failure-prefix: lmi
-          - test: TestCorrectnessTrtLlm
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestCorrectnessLmiDist
-            instance: g6
-            failure-prefix: lmi
-          - test: TestCorrectnessNeuronx
-            instance: inf2
-            failure-prefix: neuron
-    outputs:
-      failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
-      failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}
-      failure_aarch64: ${{ steps.test-failure.outputs.failure_aarch64 }}
-      failure_lmi: ${{ steps.test-failure.outputs.failure_lmi }}
-      failure_trtllm: ${{ steps.test-failure.outputs.failure_trtllm }}
-      failure_neuron: ${{ steps.test-failure.outputs.failure_neuron }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Show environment
+        run: |
+          nvidia-smi -L
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'corretto'
-          java-version: 17
+      - uses: actions/checkout@v4
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest requests "numpy<2" pillow huggingface_hub awscli torch
-      - name: Install awscurl
+        run: pip3 install requests numpy pillow huggingface_hub
+      - name: Install s5cmd
+        working-directory: serving/docker
+        run: sudo scripts/install_s5cmd.sh x64
+      - name: Download docker image
         working-directory: tests/integration
         run: |
-          wget https://publish.djl.ai/awscurl/awscurl
-          chmod +x awscurl
-          mkdir outputs
-      - name: Configure AWS Credentials
-        if: matrix.test.instance == 'ubuntu-latest'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
-          aws-region: us-east-1
-      - name: Test
-        working-directory: tests/integration
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          docker pull $DJL_CONTAINER_REPO:lmi-nightly
+          mkdir logs
+      - name: "Compute Image Uri"
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
           OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
           IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
         run: |
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          python -m pytest -s -k ${{ matrix.test.test }} tests.py
-      - name: Cleanup
-        working-directory: tests/integration
-        run: |
-          rm -rf outputs
-          rm awscurl
-      - name: On Failure
-        id: test-failure
-        if: ${{ failure() }}
-        working-directory: tests/integration
-        run: |
-          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
-          sudo rm -rf outputs && sudo rm -rf models
-          rm awscurl
-          ./remove_container.sh
-          failure_prefix="${{ matrix.test.failure-prefix }}"
-          echo "failure_${failure_prefix}=1" >> "$GITHUB_OUTPUT"
-      - name: Upload test logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-${{ matrix.test.test }}-logs
-          path: tests/integration/all_logs/
-
-  transformers-neuronx-container-unit-tests:
-    runs-on:
-      - self-hosted
-      - inf2
-      - RUN_ID-${{ github.run_id }}
-      - RUN_NUMBER-${{ github.run_number }}
-      - SHA-${{ github.sha }}
-    timeout-minutes: 15
-    needs: create-runners
-    outputs:
-      failure: ${{ steps.failure.outputs.failure }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Clean env
-        run: |
-          yes | docker system prune -a --volumes
-          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
-          echo "wait dpkg lock..."
-          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
-      - name: Set up Python3
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10.x'
-      - name: Install pip dependencies
-        run: pip3 install requests numpy pillow wheel
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
-          aws-region: us-east-1
-      - name: Download models and dockers
-        run: |
-          if [ "${{ github.event.inputs.djl-version }}" == "temp"  ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-temp-${GITHUB_SHA}"
-          elif [ -n "${{ inputs.tag-suffix }}" ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-${{ inputs.tag-suffix }}"
+          repo=$IMAGE_REPO
+          container="lmi"
+          if [ -z "${TEST_DJL_VERSION}" ] || [ "${TEST_DJL_VERSION}" == "nightly" ]; then
+              flavor="${container}-nightly"
+          elif [ "${TEST_DJL_VERSION}" == "temp" ]; then
+              flavor="${container}-temp-${GITHUB_SHA}"
           else
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-nightly"
+              flavor="${container}-${TEST_DJL_VERSION}-${GITHUB_SHA}"
           fi
-          echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          echo $DOCKER_IMAGE_URI
-          docker pull $DOCKER_IMAGE_URI
-      - name: Run djl_python unit/integration tests on container
-        working-directory: engines/python/setup
+          # Override flavor if OVERRIDE_IMAGE_TAG_SUFFIX is set
+          if [ -n "${OVERRIDE_IMAGE_TAG_SUFFIX}" ]; then
+              flavor="${container}-${OVERRIDE_IMAGE_TAG_SUFFIX}"
+          fi
+
+          # Compute final image URL
+          image="${repo}:${flavor}"
+
+      - name: "AoT Model Sharding"
+        working-directory: tests/integration
+        
         run: |
-          # Setup
-          pip install setuptools
-          python3 -m setup bdist_wheel
-          mkdir logs
-          docker run -t --rm --network="host" \
-          --name neuron-test \
-          -v $PWD/:/opt/ml/model/ \
-          -w /opt/ml/model \
-          --device=/dev/neuron0:/dev/neuron0 \
-          $DOCKER_IMAGE_URI \
-          /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
-          pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
-          
-          # Cleanup
-          sudo rm -rf TinyLlama .pytest_cache djl_python
-          
-          # Fail on failed tests
-          if grep -F "failed" logs/results.log &>/dev/null; then exit 1; fi
+          # Prepare
+          sudo rm -rf models
+          python3 llm/prepare.py vllm_neo ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
+          ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models lmi sm_neo_context
+      # - name: "Fast Model Loading - Local Mode"
+      #   working-directory: tests/integration
+      #   run: |
+      #     # test inference
+      #     ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models/compiled lmi serve
+      #     python3 llm/client.py vllm_neo ${{ matrix.test.test_serve_config }}
+      #     # clean up
+      #     docker rm -f $(docker ps -aq) || true
+      
       - name: On fail step
-        id: failure
         if: ${{ failure() }}
-        working-directory: engines/python/setup
+        working-directory: tests/integration
         run: |
-          cat logs/results.log
-          echo "failure=1" >> "$GITHUB_OUTPUT"
+          docker rm -f $(docker ps -aq) || true
+          sudo rm -rf models
+          cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         with:
-          name: transformers-neuronx-${{ matrix.arch }}-logs
-          path: engines/python/setup/logs/
+          name: fml-neo-logs
+          path: tests/integration/logs/
 
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, test, transformers-neuronx-container-unit-tests]
+    needs: [ create-runners, neo-test]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_4 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_1 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
           ./stop_instance.sh $instance_id

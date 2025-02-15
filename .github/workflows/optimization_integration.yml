@@ -1,4 +1,4 @@
-name: Integration tests
+name: Optimization Integration tests
 
 on:
   workflow_dispatch:
@@ -107,12 +107,32 @@ jobs:
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           docker pull $DJL_CONTAINER_REPO:lmi-nightly
           mkdir logs
-      - name: "AoT Model Sharding"
-        working-directory: tests/integration
+      - name: "Compute Image Uri"
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
           OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
           IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+        run: |
+          repo=$IMAGE_REPO
+          container="lmi"
+          if [ -z "${TEST_DJL_VERSION}" ] || [ "${TEST_DJL_VERSION}" == "nightly" ]; then
+              flavor="${container}-nightly"
+          elif [ "${TEST_DJL_VERSION}" == "temp" ]; then
+              flavor="${container}-temp-${GITHUB_SHA}"
+          else
+              flavor="${container}-${TEST_DJL_VERSION}-${GITHUB_SHA}"
+          fi
+          # Override flavor if OVERRIDE_IMAGE_TAG_SUFFIX is set
+          if [ -n "${OVERRIDE_IMAGE_TAG_SUFFIX}" ]; then
+              flavor="${container}-${OVERRIDE_IMAGE_TAG_SUFFIX}"
+          fi
+
+          # Compute final image URL
+          image="${repo}:${flavor}"
+
+      - name: "AoT Model Sharding"
+        working-directory: tests/integration
+        
         run: |
           # Prepare
           sudo rm -rf models
