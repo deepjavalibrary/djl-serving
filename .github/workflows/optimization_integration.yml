@@ -1,0 +1,145 @@
+name: Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL.'
+        required: false
+        default: ''
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: 'nightly'
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL.'
+        required: false
+        type: string
+        default: 'nightly'
+      tag-suffix:
+        description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      failure_gpu:
+        value: ${{ jobs.test.outputs.failure_gpu || '0' }}
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G6 instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
+        id: create_gpu2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+    outputs:
+      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
+      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
+
+  neo-tests:
+    runs-on:
+      - ${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_NUMBER-{0}', github.run_number) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('SHA-{0}', github.sha) }}
+      - ${{ matrix.test.instance }}
+    timeout-minutes: 120
+    needs: create-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test: MultinodeSharding
+            instance: g6
+            test_handler: vllm_neo
+            test_model_config: lllama-3.1-8b-multi-node-sharding
+            test_serve_config: lllama-3.1-8b
+            failure-prefix: gpu
+    steps:
+      - name: Show environment
+        run: |
+          nvidia-smi -L
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - uses: actions/checkout@v4
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy pillow huggingface_hub
+      - name: Install s5cmd
+        working-directory: serving/docker
+        run: sudo scripts/install_s5cmd.sh x64
+      - name: Download docker image
+        working-directory: tests/integration
+        run: |
+          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          docker pull $DJL_CONTAINER_REPO:lmi-nightly
+          mkdir logs
+      - name: "AoT Model Sharding"
+        working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+        run: |
+          # Prepare
+          sudo rm -rf models
+          python3 llm/prepare.py vllm_neo ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
+          ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models lmi sm_neo_context
+      # - name: "Fast Model Loading - Local Mode"
+      #   working-directory: tests/integration
+      #   run: |
+      #     # test inference
+      #     ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models/compiled lmi serve
+      #     python3 llm/client.py vllm_neo ${{ matrix.test.test_serve_config }}
+      #     # clean up
+      #     docker rm -f $(docker ps -aq) || true
+      
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          docker rm -f $(docker ps -aq) || true
+          sudo rm -rf models
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fml-neo-logs
+          path: tests/integration/logs/
+
+
+
+
