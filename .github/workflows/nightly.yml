@@ -55,6 +55,14 @@ jobs:
         secrets: inherit
         with:
             tag-suffix: ${{ needs.get_image_tag_suffix.outputs.test_image_tag_suffix }}
+
+    optimization-integration-test:
+        needs: [get_image_tag_suffix]
+        uses: ./.github/workflows/optimization_integration.yml
+        secrets: inherit
+        with:
+            tag-suffix: ${{ needs.get_image_tag_suffix.outputs.test_image_tag_suffix }}
+
     determine_images_to_publish:
         if: always()
         needs: [ integration-test ]
@@ -76,9 +84,9 @@ jobs:
                   if [[ "${{ needs.integration-test.outputs.failure_aarch64 }}" == "0" ]]; then
                     images+=("aarch64")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]]; then
+                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]] && [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]]; then
                     images+=("lmi")
-                    fi
+                  fi
                   if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" == "0" ]]; then
                     images+=("tensorrt-llm")
                   fi

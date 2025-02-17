@@ -1,4 +1,4 @@
-name: Integration tests
+name: Neo Integration tests
 
 on:
   workflow_dispatch:
@@ -24,6 +24,9 @@ on:
         required: false
         type: string
         default: ''
+    outputs:
+      failure_lmi:
+        value: ${{ jobs.neo-test.outputs.failure_lmi || '0' }}
 
 permissions:
   id-token: write
@@ -64,9 +67,11 @@ jobs:
           - test: MultinodeSharding
             instance: g6
             test_handler: vllm_neo
-            test_model_config: lllama-3.1-8b-multi-node-sharding
-            test_serve_config: lllama-3.1-8b
-            failure-prefix: gpu
+            test_model_config: llama-3.1-8b-multi-node-sharding
+            test_serve_config: llama-3.1-8b
+            failure-prefix: lmi
+    outputs:
+      failure_lmi: ${{ steps.test-failure.outputs.failure_lmi }}
     steps:
       - name: Show environment
         run: |
@@ -87,14 +92,18 @@ jobs:
       - name: Install s5cmd
         working-directory: serving/docker
         run: sudo scripts/install_s5cmd.sh x64
-      - name: Download docker image
+      - name: ECR Auth
         working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
         run: |
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          docker pull $DJL_CONTAINER_REPO:lmi-nightly
           mkdir logs
       - name: "Compute Image Uri"
+        id: compute-image-uri
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
           OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
@@ -116,36 +125,43 @@ jobs:
 
           # Compute final image URL
           image="${repo}:${flavor}"
+          echo $image
+          echo "TEST_IMAGE_URI=$image" >> $GITHUB_OUTPUT
 
-      - name: "AoT Model Sharding"
+      - name: "Model Optimization Step"
         working-directory: tests/integration
-        
         run: |
+          echo ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI}}
           # Prepare
           sudo rm -rf models
-          python3 llm/prepare.py vllm_neo ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
-          ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models lmi sm_neo_context
-      # - name: "Fast Model Loading - Local Mode"
-      #   working-directory: tests/integration
-      #   run: |
-      #     # test inference
-      #     ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models/compiled lmi serve
-      #     python3 llm/client.py vllm_neo ${{ matrix.test.test_serve_config }}
-      #     # clean up
-      #     docker rm -f $(docker ps -aq) || true
-      
-      - name: On fail step
+          python3 llm/prepare.py ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
+          ./launch_container.sh ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI }} $PWD/models lmi sm_neo_context
+      - name: "Local Serving Test"
+        working-directory: tests/integration
+        run: |
+          # test inference
+          ./launch_container.sh ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI }} $PWD/models/compiled lmi ${{ contains(matrix.test.test_model_config, 'multi-node') && 'multi_node' || '' }} serve
+          python3 llm/client.py ${{ matrix.test.test_handler }} ${{ matrix.test.test_serve_config }}
+          # clean up
+          docker rm -f $(docker ps -aq) || true
+
+      - name: On Failure
+        id: test-failure
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
-          docker rm -f $(docker ps -aq) || true
-          sudo rm -rf models
-          cat logs/serving.log
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          sudo rm -rf outputs && sudo rm -rf models
+          rm awscurl
+          ./remove_container.sh
+          failure_prefix="${{ matrix.test.failure-prefix }}"
+          echo "failure_${failure_prefix}=1" >> "$GITHUB_OUTPUT"
       - name: Upload test logs
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: fml-neo-logs
-          path: tests/integration/logs/
+          name: test-${{ matrix.test.test }}-logs
+          path: tests/integration/all_logs/
 
   stop-runners:
     if: always()
