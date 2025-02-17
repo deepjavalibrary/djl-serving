@@ -130,14 +130,14 @@ jobs:
           echo ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI}}
           # Prepare
           sudo rm -rf models
-          python3 llm/prepare.py vllm_neo ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
+          python3 llm/prepare.py ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
           ./launch_container.sh ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI }} $PWD/models lmi sm_neo_context
       # - name: "Fast Model Loading - Local Mode"
       #   working-directory: tests/integration
       #   run: |
       #     # test inference
       #     ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models/compiled lmi serve
-      #     python3 llm/client.py vllm_neo ${{ matrix.test.test_serve_config }}
+      #     python3 llm/client.py ${{ matrix.test.test_handler }} ${{ matrix.test.test_serve_config }}
       #     # clean up
       #     docker rm -f $(docker ps -aq) || true
       
