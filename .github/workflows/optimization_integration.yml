@@ -1,4 +1,4 @@
-name: Optimization Integration tests
+name: Integration tests
 
 on:
   workflow_dispatch:
@@ -24,9 +24,6 @@ on:
         required: false
         type: string
         default: ''
-    outputs:
-      failure_gpu:
-        value: ${{ jobs.test.outputs.failure_gpu || '0' }}
 
 permissions:
   id-token: write
@@ -48,20 +45,10 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new G6 instance
-        id: create_gpu2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g6 $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
-      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
 
-  neo-tests:
+  neo-test:
     runs-on:
       - ${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
@@ -160,6 +147,13 @@ jobs:
           name: fml-neo-logs
           path: tests/integration/logs/
 
-
-
-
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, neo-test]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id

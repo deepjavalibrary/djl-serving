@@ -89,10 +89,14 @@ jobs:
         run: sudo scripts/install_s5cmd.sh x64
       - name: Download docker image
         working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
         run: |
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          docker pull $DJL_CONTAINER_REPO:lmi-nightly
+          docker pull $IMAGE_REPO:lmi-nightly
           mkdir logs
       - name: "Compute Image Uri"
         env:
@@ -119,12 +123,11 @@ jobs:
 
       - name: "AoT Model Sharding"
         working-directory: tests/integration
-        
         run: |
           # Prepare
           sudo rm -rf models
           python3 llm/prepare.py vllm_neo ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
-          ./launch_container.sh $DJL_CONTAINER_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models lmi sm_neo_context
+          ./launch_container.sh $IMAGE_REPO:$lmi-$OVERRIDE_IMAGE_TAG_SUFFIX $PWD/models lmi sm_neo_context
       # - name: "Fast Model Loading - Local Mode"
       #   working-directory: tests/integration
       #   run: |
