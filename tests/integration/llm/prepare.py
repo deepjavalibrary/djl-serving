@@ -1118,6 +1118,7 @@ vllm_neo_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": "2",
         "option.pipeline_parallel_degree": "2",
+        "option.load_format": "sagemaker_fast_model_loader",
     },
     "llama-3.1-8b-awq-options": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
