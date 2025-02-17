@@ -64,7 +64,7 @@ jobs:
           - test: MultinodeSharding
             instance: g6
             test_handler: vllm_neo
-            test_model_config: lllama-3.1-8b-multi-node-sharding
+            test_model_config: llama-3.1-8b-multi-node-sharding
             test_serve_config: lllama-3.1-8b
             failure-prefix: gpu
     steps:
