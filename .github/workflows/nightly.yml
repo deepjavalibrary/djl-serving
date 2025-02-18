@@ -65,7 +65,7 @@ jobs:
 
     determine_images_to_publish:
         if: always()
-        needs: [ integration-test ]
+        needs: [ integration-test, optimization-integration-test ]
         runs-on: ubuntu-latest
         outputs:
             images: ${{ steps.generate-images.outputs.images }}
