@@ -1555,7 +1555,6 @@ def create_neo_input_model(properties):
               "w") as f:
         for key, value in properties.items():
             if key != "option.model_id":
-                print(f"{key}={value}")
                 f.write(f"{key}={value}\n")
 
     # create Neo files/dirs
