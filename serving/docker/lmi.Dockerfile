@@ -19,7 +19,8 @@ ARG djl_torch_version=2.5.1
 ARG djl_onnx_version=1.20.0
 
 # djl converter wheel for text-embedding use case
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.32.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_version//-*/}-py3-none-any.whl"
+
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -87,7 +88,6 @@ RUN scripts/patch_oss_dlc.sh python \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 COPY lmi-container-requirements-common.txt ./requirements-common.txt
-COPY ./wheels ./wheels
 COPY requirements-lmi.txt ./requirements-lmi.txt
 COPY requirements-vllm.txt ./requirements-vllm.txt
 RUN pip3 install -r requirements-common.txt \
