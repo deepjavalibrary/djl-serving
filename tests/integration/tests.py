@@ -911,7 +911,8 @@ class TestNeuronxRollingBatch:
 
     def test_llama_8b_vllm_nxdi_aot(self):
         with Runner('pytorch-inf2', 'llama-3-1-8b-instruct-vllm-nxdi') as r:
-            prepare.build_transformers_neuronx_handler_model("llama-3-1-8b-instruct-vllm-nxdi")
+            prepare.build_transformers_neuronx_handler_model(
+                "llama-3-1-8b-instruct-vllm-nxdi")
             r.launch(
                 container="pytorch-inf2-4",
                 cmd=

@@ -199,11 +199,9 @@ class PartitionService(object):
             self.cleanup()
             return ''.join(partition_stdout)
         else:
-            logging.error(
-                f"Partitioning was not successful.")
+            logging.error(f"Partitioning was not successful.")
             raise Exception(
-                f"Partitioning exited with return code: {proc.returncode}."
-            )
+                f"Partitioning exited with return code: {proc.returncode}.")
 
     def run_quantization(self):
         quant_method = self.properties['option.quantize']
