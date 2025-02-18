@@ -40,7 +40,7 @@ jobs:
     runs-on: [self-hosted, scheduler]
     steps:
       - name: Create new G6 instance
-        id: create_gpu
+        id: create_g6
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -48,8 +48,28 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
+        id: create_g6_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
+        id: create_p4d
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
     outputs:
-      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
+      gpu_instance_id_1: ${{ steps.create_g6.outputs.action_g6_instance_id }}
+      gpu_instance_id_2: ${{ steps.create_g6_2.outputs.action_g6_instance_id }}
+      gpu_instance_id_3: ${{ steps.create_p4d.outputs.action_lmic_p4d_instance_id }}
 
   neo-test:
     runs-on:
@@ -69,6 +89,34 @@ jobs:
             test_handler: vllm_neo
             test_model_config: llama-3.1-8b-multi-node-sharding
             test_serve_config: llama-3.1-8b
+            failure-prefix: lmi
+          - test: BasicSharding-g6
+            instance: g6
+            test_handler: vllm_neo
+            test_model_config: tiny-llama-fml
+            test_serve_config: tiny-llama-fml
+            include_fast_model_loading_s3_test: true
+            failure-prefix: lmi
+          - test: BasicSharding-p4d
+            instance: p4d
+            test_handler: vllm_neo
+            test_model_config: tiny-llama-fml
+            test_serve_config: tiny-llama-fml
+            include_fast_model_loading_s3_test: true
+            failure-prefix: lmi
+          - test: LoraSharding-g6
+            instance: g6
+            test_handler: vllm_neo
+            test_model_config: tiny-llama-lora-fml
+            test_serve_config: tiny-llama-lora-fml
+            include_fast_model_loading_s3_test: true
+            failure-prefix: lmi
+          - test: LoraSharding-p4d
+            instance: p4d
+            test_handler: vllm_neo
+            test_model_config: tiny-llama-lora-fml
+            test_serve_config: tiny-llama-lora-fml
+            include_fast_model_loading_s3_test: true
             failure-prefix: lmi
     outputs:
       failure_lmi: ${{ steps.test-failure.outputs.failure_lmi }}
@@ -136,12 +184,28 @@ jobs:
           sudo rm -rf models
           python3 llm/prepare.py ${{ matrix.test.test_handler }} ${{ matrix.test.test_model_config }}
           ./launch_container.sh ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI }} $PWD/models lmi sm_neo_context
+
       - name: "Local Serving Test"
         working-directory: tests/integration
         run: |
           # test inference
           ./launch_container.sh ${{ steps.compute-image-uri.outputs.TEST_IMAGE_URI }} $PWD/models/compiled lmi ${{ contains(matrix.test.test_model_config, 'multi-node') && 'multi_node' || '' }} serve
           python3 llm/client.py ${{ matrix.test.test_handler }} ${{ matrix.test.test_serve_config }}
+          # clean up
+          docker rm -f $(docker ps -aq) || true
+
+      - name: "Fast Model Loading S3 test"
+        if: ${{ matrix.test.include_fast_model_loading_s3_test == 'true' }}
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        working-directory: tests/integration
+        run: |
+          aws s3 sync $PWD/models/compiled s3://djl-scratch-001-gamma-us-west-2/github-workflows/$RUN_NUMBER/${{ matrix.test.test_model_config }}-${{ matrix.test.instance }}-tp2
+          sudo find "$PWD/models/compiled/" -maxdepth 1 -type d -name "sagemaker-fast-model-loader-*" -exec sudo rm -rf {} +
+          echo "SM_FAST_MODEL_LOADER_S3_URI=s3://djl-scratch-001-gamma-us-west-2/github-workflows/$RUN_NUMBER/${{ matrix.test.test_model_config }}-${{ matrix.test.instance }}-tp2" >> $PWD/docker_env
+          # test inference
+          ./launch_container.sh $DJL_CONTAINER_REPO:$DJLSERVING_DOCKER_TAG $PWD/models/compiled lmi serve
+          python3 llm/client.py  ${{ matrix.test.test_handler }} ${{ matrix.test.test_serve_config }}
           # clean up
           docker rm -f $(docker ps -aq) || true
 
@@ -172,4 +236,8 @@ jobs:
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
           ./stop_instance.sh $instance_id
