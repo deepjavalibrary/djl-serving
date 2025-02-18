@@ -36,7 +36,7 @@ env:
   AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
-  create-runners:
+  create-optimization-runners:
     runs-on: [self-hosted, scheduler]
     steps:
       - name: Create new G6 instance
@@ -77,9 +77,10 @@ jobs:
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_NUMBER-{0}', github.run_number) }}
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('SHA-{0}', github.sha) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('JOB-{0}', 'create-optimization-runners') }}
       - ${{ matrix.test.instance }}
     timeout-minutes: 120
-    needs: create-runners
+    needs: create-optimization-runners
     strategy:
       fail-fast: false
       matrix:
@@ -208,7 +209,7 @@ jobs:
           python3 llm/client.py  ${{ matrix.test.test_handler }} ${{ matrix.test.test_serve_config }}
           # clean up
           docker rm -f $(docker ps -aq) || true
-
+          sudo rm -rf  $PWD/models
       - name: On Failure
         id: test-failure
         if: ${{ failure() }}
@@ -230,14 +231,14 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, neo-test]
+    needs: [ create-optimization-runners, neo-test]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          instance_id=${{ needs.create-optimization-runners.outputs.gpu_instance_id_1 }}
           ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
+          instance_id=${{ needs.create-optimization-runners.outputs.gpu_instance_id_2 }}
           ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
+          instance_id=${{ needs.create-optimization-runners.outputs.gpu_instance_id_3 }}
           ./stop_instance.sh $instance_id

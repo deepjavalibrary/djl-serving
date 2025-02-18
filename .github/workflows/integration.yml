@@ -128,6 +128,7 @@ jobs:
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_ID-{0}', github.run_id) }}
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('RUN_NUMBER-{0}', github.run_number) }}
       - ${{ matrix.test.gh-runner && matrix.test.instance || format('SHA-{0}', github.sha) }}
+      - ${{ matrix.test.gh-runner && matrix.test.instance || format('JOB-{0}', 'create-runners') }}
       - ${{ matrix.test.instance }}
     timeout-minutes: 120
     needs: create-runners
