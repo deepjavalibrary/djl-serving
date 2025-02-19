@@ -57,7 +57,7 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
-      - name: Create new G6 instance
+      - name: Create new P4D instance
         id: create_p4d
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
@@ -127,6 +127,7 @@ jobs:
           nvidia-smi -L
       - name: Clean env
         run: |
+          sudo rm -rf  tests/integration/models
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
@@ -221,6 +222,7 @@ jobs:
           ./remove_container.sh
           failure_prefix="${{ matrix.test.failure-prefix }}"
           echo "failure_${failure_prefix}=1" >> "$GITHUB_OUTPUT"
+          sudo rm -rf  $PWD/models
       - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
