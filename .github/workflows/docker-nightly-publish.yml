@@ -114,55 +114,48 @@ jobs:
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-      - name: Extract DJL and DJL Serving versions from TOML
+      - name: Set env vars for container build and tag
         id: get-versions
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
-          echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_OUTPUT
-      - name: Build release candidate docker image
-        if: ${{ inputs.mode == 'release' }}
-        working-directory: serving/docker
+          echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
+          mode=${{ inputs.mode }}
+          if [[ "$mode" != "release" ]]; then
+            export NIGHTLY="-nightly"
+            echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
+            ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
+            export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
+            export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
+          else
+            rm -rf serving/docker/distributions
+            export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
+            export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT" 
+          fi
+          echo "BUILD_VERSION_ARG_DJL=$BUILD_VERSION_ARG_DJL" >> $GITHUB_ENV
+          echo "BUILD_VERSION_ARG_SERVING=$BUILD_VERSION_ARG_SERVING" >> $GITHUB_ENV
+      - name: Build docker image
         run: |
-          export BASE_RELEASE_VERSION="${{ env.SERVING_VERSION }}"
           export RELEASE_VERSION="${{ env.SERVING_VERSION }}-"
-          docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }} \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
-          ${{ matrix.arch }}
-      - name: Build temp docker image
-        if: ${{ inputs.mode == '' || inputs.mode == 'temp' || inputs.mode == 'nightly' }}
-        run: |
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
           cd serving/docker
-          export NIGHTLY="-nightly"
-          echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
           docker compose build --no-cache \
-          --build-arg djl_version=${{ env.DJL_VERSION }}-SNAPSHOT \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
+          --build-arg djl_version=${{ env.BUILD_VERSION_ARG_DJL }} \
+          --build-arg djl_serving_version=${{ env.BUILD_VERSION_ARG_SERVING }} \
           ${{ matrix.arch }}
       - name: Tag and push temp image to ECR repo
         working-directory: serving/docker
         run: |
           ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
-          mode=${{ inputs.mode }}
-          if [[ "${{ inputs.mode }}" == "release" ]]; then
-            mode=${{ env.DJL_VERSION }}
-          fi
-          if [[ -z "${{ inputs.mode }}" ]]; then
-            mode="nightly"
-          fi
-          tempRunIdTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_RUN_ID}"
-          tempCommitTag="${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-$mode-${GITHUB_SHA}"
+          baseDockerTag="${{ env.AWS_ECR_REPO }}:${{ env.SERVING_VERSION}}-${{ matrix.arch }}${{ env.NIGHTLY }}"
+          tempRunIdTag="${baseDockerTag}-${GITHUB_RUN_ID}"
+          tempCommitTag="${baseDockerTag}-${GITHUB_SHA}"
 
-          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
-          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
-          if [[ "$mode" == "nightly" ]]; then
-            docker tag ${{ env.DOCKER_HUB_REPO }}:${{ matrix.arch }}${{ env.NIGHTLY }} ${{ env.AWS_ECR_REPO }}:${{ matrix.arch }}-nightly
-          fi
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ env.SERVING_VERSION}}-${{ matrix.arch }}${{ env.NIGHTLY }} $baseDockerTag 
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ env.SERVING_VERSION}}-${{ matrix.arch }}${{ env.NIGHTLY }} $tempRunIdTag
+          docker tag ${{ env.DOCKER_HUB_REPO }}:${{ env.SERVING_VERSION}}-${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
   stop-runners:
