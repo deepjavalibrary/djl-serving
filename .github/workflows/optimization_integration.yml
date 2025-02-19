@@ -5,25 +5,35 @@ on:
     inputs:
       djl-version:
         description: 'The released version of DJL.'
-        required: false
+        required: true
         default: ''
       tag-suffix:
         description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
         required: false
         type: string
         default: 'nightly'
+      image-repo:
+        description: 'The repository to fetch images from'
+        required: false
+        type: string
+        default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
   workflow_call:
     inputs:
       djl-version:
         description: 'The released version of DJL.'
         required: false
         type: string
-        default: 'nightly'
+        default: ''
       tag-suffix:
         description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
         required: false
         type: string
-        default: ''
+        default: 'nightly'
+      image-repo:
+        description: 'The repository to fetch images from'
+        required: false
+        type: string
+        default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
     outputs:
       failure_lmi:
         value: ${{ jobs.neo-test.outputs.failure_lmi || '0' }}
@@ -31,9 +41,6 @@ on:
 permissions:
   id-token: write
   contents: read
-
-env:
-  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
   create-optimization-runners:
@@ -146,37 +153,39 @@ jobs:
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
-          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
-          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+          IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ inputs.image-repo }}
         run: |
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
+          ECR_REGION=$(echo "$IMAGE_REPO" | awk -F. '{print $4}')
           aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
           mkdir logs
       - name: "Compute Image Uri"
         id: compute-image-uri
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
-          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
-          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+          IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ inputs.image-repo }}
+          CONTAINER: "lmi"
         run: |
-          repo=$IMAGE_REPO
-          container="lmi"
-          if [ -z "${TEST_DJL_VERSION}" ] || [ "${TEST_DJL_VERSION}" == "nightly" ]; then
-              flavor="${container}-nightly"
-          elif [ "${TEST_DJL_VERSION}" == "temp" ]; then
-              flavor="${container}-temp-${GITHUB_SHA}"
-          else
-              flavor="${container}-${TEST_DJL_VERSION}-${GITHUB_SHA}"
-          fi
-          # Override flavor if OVERRIDE_IMAGE_TAG_SUFFIX is set
-          if [ -n "${OVERRIDE_IMAGE_TAG_SUFFIX}" ]; then
-              flavor="${container}-${OVERRIDE_IMAGE_TAG_SUFFIX}"
-          fi
+          DJL_VERSION=${TEST_DJL_VERSION:-"0.32.0"}
+          DJL_VERSION=$(echo $DJL_VERSION | xargs) # trim whitespace
 
-          # Compute final image URL
-          image="${repo}:${flavor}"
-          echo $image
-          echo "TEST_IMAGE_URI=$image" >> $GITHUB_OUTPUT
+          if [ -n "$OVERRIDE_TEST_CONTAINER" ]; then
+            TEST_IMAGE_URI=$OVERRIDE_TEST_CONTAINER
+            echo "Warning: An override container has been specified - this container may not work for all tests, ensure you are only running tests compatible with the container" >&2
+          else
+            if [ -z "$IMAGE_REPO" ]; then
+                echo "Error: You must set the docker image repo via IMAGE_REPO environment variable. Ex: deepjavalibrary/djl-serving" >&2
+                exit 1
+            fi
+            CONTAINER_TAG="${DJL_VERSION}-${CONTAINER}"
+            if [ -n "$IMAGE_TAG_SUFFIX" ]; then
+                CONTAINER_TAG="${CONTAINER_TAG}-${IMAGE_TAG_SUFFIX}"
+            fi
+            TEST_IMAGE_URI="${IMAGE_REPO}:${CONTAINER_TAG}"
+          fi
+          echo "Computed image URI: $TEST_IMAGE_URI"
+          echo "TEST_IMAGE_URI=$TEST_IMAGE_URI" >> $GITHUB_OUTPUT
 
       - name: "Model Optimization Step"
         working-directory: tests/integration

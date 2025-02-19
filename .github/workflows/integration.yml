@@ -5,25 +5,35 @@ on:
     inputs:
       djl-version:
         description: 'The released version of DJL.'
-        required: false
+        required: true
         default: ''
       tag-suffix:
         description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
         required: false
         type: string
         default: 'nightly'
+      image-repo:
+        description: 'The repository to fetch images from'
+        required: false
+        type: string
+        default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
   workflow_call:
     inputs:
       djl-version:
         description: 'The released version of DJL.'
         required: false
         type: string
-        default: 'nightly'
+        default: ''
       tag-suffix:
         description: 'Run tests on the specific tags suffix i.e. arch-{suffix}'
         required: false
         type: string
-        default: ''
+        default: 'nightly'
+      image-repo:
+        description: 'The repository to fetch images from'
+        required: false
+        type: string
+        default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
     outputs:
       failure_cpu:
         value: ${{ jobs.test.outputs.failure_cpu || '0' }}
@@ -41,9 +51,6 @@ on:
 permissions:
   id-token: write
   contents: read
-
-env:
-  AWS_ECR_REPO: "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
 
 jobs:
   create-runners:
@@ -245,7 +252,6 @@ jobs:
           chmod +x awscurl
           mkdir outputs
       - name: Configure AWS Credentials
-        if: matrix.test.instance == 'ubuntu-latest'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
@@ -254,11 +260,13 @@ jobs:
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
-          OVERRIDE_IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
-          IMAGE_REPO: ${{ env.AWS_ECR_REPO }}
+          IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
+          IMAGE_REPO: ${{ inputs.image-repo }}
         run: |
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          ECR_REGION=$(echo "$IMAGE_REPO" | awk -F. '{print $4}')
+          if [[ -n "$ECR_REGION" ]]; then
+            aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin "$IMAGE_REPO"
+          fi
           python -m pytest -s -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
@@ -315,16 +323,16 @@ jobs:
           aws-region: us-east-1
       - name: Download models and dockers
         run: |
-          if [ "${{ github.event.inputs.djl-version }}" == "temp"  ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-temp-${GITHUB_SHA}"
-          elif [ -n "${{ inputs.tag-suffix }}" ]; then
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-${{ inputs.tag-suffix }}"
+          if [ -n "${{ inputs.tag-suffix }}" ]; then
+            DOCKER_IMAGE_URI="${{ inputs.image-repo }}:${{ inputs.djl-version }}-pytorch-inf2-${{ inputs.tag-suffix }}"
           else
-            DOCKER_IMAGE_URI="${{ env.AWS_ECR_REPO }}:pytorch-inf2-nightly"
+            DOCKER_IMAGE_URI="${{ inputs.image-repo }}:${{ inputs.djl-version }}-pytorch-inf2"
           fi
           echo "DOCKER_IMAGE_URI=$DOCKER_IMAGE_URI" >>$GITHUB_ENV
-          ECR_REGION=$(echo "${{ env.AWS_ECR_REPO }}" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          ECR_REGION=$(echo "${{ inputs.image-repo }}" | awk -F. '{print $4}')
+          if [[ -n "$ECR_REGION" ]]; then 
+            aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{ inputs.image-repo }}
+          fi
           echo $DOCKER_IMAGE_URI
           docker pull $DOCKER_IMAGE_URI
       - name: Run djl_python unit/integration tests on container

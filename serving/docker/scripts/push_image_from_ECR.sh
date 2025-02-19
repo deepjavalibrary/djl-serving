@@ -24,17 +24,22 @@ from_repo=$AWS_TMP_ECR_REPO
 
 set -x
 
-if [[ "$mode" == "release" ]]; then
-  if [[ "$image" == "cpu" ]]; then
-    tag=$version
-  else
-    tag="$version-$image"
-  fi
-fi
+base_tag="$version-$image"
 
 if [[ "$mode" == "nightly" ]]; then
-  tag="$image-nightly"
+  base_tag="$base_tag-nightly"
 fi
-docker pull $from_repo:$image-$mode-$commit_sha
-docker tag $from_repo:$image-$mode-$commit_sha $to_repo:$tag
-docker push $to_repo:$tag
+docker pull "$from_repo:$base_tag-$commit_sha"
+docker tag "$from_repo:$base_tag-$commit_sha" "$to_repo:$base_tag"
+docker push "$to_repo:$base_tag"
+if [[ "$image" == "cpu" ]]; then
+  if [[ "$mode" == "release" ]]; then
+    docker tag "$from_repo:$base_tag-$commit_sha" "$to_repo:$version"
+    docker push "$to_repo:$version"
+    docker tag "$from_repo:$base_tag-$commit_sha" "$to_repo:latest"
+    docker push "$to_repo:latest"
+  elif [[ "$mode" == "nightly" ]]; then
+    docker tag "$from_repo:$base_tag-$commit_sha" "$to_repo:$version-nightly"
+    docker push "$to_repo:$version-nightly"
+  fi
+fi
