@@ -157,7 +157,9 @@ jobs:
           IMAGE_REPO: ${{ inputs.image-repo }}
         run: |
           ECR_REGION=$(echo "$IMAGE_REPO" | awk -F. '{print $4}')
-          aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin ${{env.AWS_ECR_REPO}}
+          if [[ -n "$ECR_REGION" ]]; then
+            aws ecr get-login-password --region $ECR_REGION | docker login --username AWS --password-stdin "$IMAGE_REPO"
+          fi
           mkdir logs
       - name: "Compute Image Uri"
         id: compute-image-uri
