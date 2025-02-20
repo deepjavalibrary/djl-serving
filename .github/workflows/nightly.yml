@@ -39,9 +39,19 @@ jobs:
         with:
             djl-version: ${{ needs.build.outputs.djl_version }}
             tag-suffix: ${{ inputs.mode == 'nightly' && format('{0}-{1}', 'nightly', github.sha) || github.sha }}
+
+    optimization-integration-test:
+        needs: [build]
+        uses: ./.github/workflows/optimization_integration.yml
+        secrets: inherit
+        with:
+            djl-version: ${{ needs.build.outputs.djl_version }}
+            tag-suffix: ${{ inputs.mode == 'nightly' && format('{0}-{1}', 'nightly', github.sha) || github.sha }}
+
+            
     determine_images_to_publish:
         if: always()
-        needs: [ integration-test ]
+        needs: [ integration-test, optimization-integration-test ]
         runs-on: ubuntu-latest
         outputs:
             images: ${{ steps.generate-images.outputs.images }}
@@ -60,9 +70,10 @@ jobs:
                   if [[ "${{ needs.integration-test.outputs.failure_aarch64 }}" == "0" ]]; then
                     images+=("aarch64")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]]; then
+                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" &&
+                        "${{ needs.optimization-integration-test.outputs.failure_lmi }}" == "0" ]]; then
                     images+=("lmi")
-                    fi
+                  fi
                   if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" == "0" ]]; then
                     images+=("tensorrt-llm")
                   fi
