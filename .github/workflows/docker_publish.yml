@@ -48,26 +48,50 @@ env:
   ECR_REPO_REGION: "us-east-1"
 
 jobs:
-  create-aarch64-runner:
+  create-runners:
     runs-on: [ self-hosted, scheduler ]
     steps:
-      - name: Create new Graviton instance
-        id: create_aarch64
+      - name: Create new CPU instance
+        id: create_cpu_1
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token djl-serving
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu_3
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
     outputs:
-      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
-
+      cpu_instance_id1: ${{ steps.create_cpu_1.outputs.action_cpu_instance_id }}
+      cpu_instance_id2: ${{ steps.create_cpu_2.outputs.action_cpu_instance_id }}
+      cpu_instance_id3: ${{ steps.create_cpu_3.outputs.action_cpu_instance_id }}
 
   docker-sync:
-    runs-on:  ${{ contains( '[tensorrt-llm]', matrix.arch) && needs.create-aarch64-runner.outputs.aarch64_instance_id || 'ubuntu-latest' }}
+    runs-on:
+      - self-hosted
+      - cpu
+      - RUN_ID-${{ github.run_id }}
+      - RUN_NUMBER-${{ github.run_number }}
+      - SHA-${{ github.sha }}
     timeout-minutes: 60
-    needs: [create-aarch64-runner]
+    needs: [create-runners]
     strategy:
       fail-fast: false
       matrix:
@@ -112,23 +136,21 @@ jobs:
         working-directory: serving/docker
         run: |
           ./scripts/push_image_from_ECR.sh $DJL_VERSION $AWS_STAGING_ECR_REPO ${{ inputs.mode }} ${{ matrix.arch }} ${{ inputs.commit_sha }}
-      - name: Retag image for release latest
-        if: ${{ inputs.mode == 'release' }}
-        working-directory: serving/docker
-        run: |
-          docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
-          docker push deepjavalibrary/djl-serving:latest
       - name: Clean docker env
         working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
-  stop-aarch64-runner:
+  stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [docker-sync, create-aarch64-runner]
+    needs: [docker-sync, create-runners]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-aarch64-runner.outputs.aarch64_instance_id }}
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id3 }}
           ./stop_instance.sh $instance_id

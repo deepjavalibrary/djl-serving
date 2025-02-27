@@ -9,10 +9,10 @@ import llm.client as client
 import rb_client as rb_client
 import test_client
 
-djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
-override_image_tag_suffix = os.environ.get('OVERRIDE_IMAGE_TAG_SUFFIX',
-                                           '').strip()
+djl_version = os.environ.get('TEST_DJL_VERSION', '0.32.0').strip()
+override_image_tag_suffix = os.environ.get('IMAGE_TAG_SUFFIX', '').strip()
 image_repo = os.environ.get('IMAGE_REPO', '').strip()
+override_container = os.environ.get('OVERRIDE_TEST_CONTAINER', '').strip()
 
 
 def is_applicable_cuda_capability(arch: int) -> bool:
@@ -31,22 +31,22 @@ class Runner:
         self.test_name = test_name
         self.client_file_handler = None
 
-        # Compute flavor and repo
-        repo = image_repo
-        if djl_version is None or len(
-                djl_version) == 0 or djl_version == "nightly":
-            flavor = f"{container}-nightly"
-        elif djl_version == "temp":
-            flavor = f"{container}-temp-{os.environ['GITHUB_SHA']}"
+        if len(override_container) > 0:
+            self.image = override_container
+            logging.warning(
+                "An override container has been specified - this container"
+                " may not work for all tests, ensure you are only running tests compatible with the container"
+            )
         else:
-            flavor = f"{container}-{djl_version}-{os.environ['GITHUB_SHA']}"
+            if len(image_repo) == 0:
+                raise ValueError(
+                    "You must set the docker image repo via IMAGE_REPO environment variable."
+                    " Ex: deepjavalibrary/djl-serving")
+            container_tag = f"{djl_version}-{container}"
+            if len(override_image_tag_suffix) > 0:
+                container_tag = f"{container_tag}-{override_image_tag_suffix}"
+            self.image = f"{image_repo}:{container_tag}"
 
-        if override_image_tag_suffix:
-            flavor = f"{container}-{override_image_tag_suffix}"
-
-        self.image = f"{repo}:{flavor}"
-
-        # os.system(f'docker pull {self.image}')
         os.system('rm -rf models')
 
         if download:
@@ -911,7 +911,8 @@ class TestNeuronxRollingBatch:
 
     def test_llama_8b_vllm_nxdi_aot(self):
         with Runner('pytorch-inf2', 'llama-3-1-8b-instruct-vllm-nxdi') as r:
-            prepare.build_transformers_neuronx_handler_model("llama-3-1-8b-instruct-vllm-nxdi")
+            prepare.build_transformers_neuronx_handler_model(
+                "llama-3-1-8b-instruct-vllm-nxdi")
             r.launch(
                 container="pytorch-inf2-4",
                 cmd=
