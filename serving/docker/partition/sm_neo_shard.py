@@ -46,26 +46,35 @@ class NeoShardingService():
 
         self.properties: dict = update_kwargs_with_env_vars({})
         self.properties.update(load_properties(self.INPUT_MODEL_DIRECTORY))
-
-    def save_configs(self, pp_degree: int, tp_degree: int, input_dir: str,
-                     output_dir: str, configs: list) -> None:
         import sagemaker_fast_model_loader_rust as sm_fml
         py_version = "{}.{}.{}".format(*sys.version_info[:3])
-        conf = sm_fml.ModelConfig(
-            pipeline_parallel_size=pp_degree,
-            tensor_parallel_size=tp_degree,
+
+        self.pp_degree = int(
+            self.properties.get("option.pipeline_parallel_degree", 1))
+        self.tp_degree = int(self.properties["option.tensor_parallel_degree"])
+        self.shard_config = sm_fml.ModelConfig(
+            pipeline_parallel_size=self.pp_degree,
+            tensor_parallel_size=self.tp_degree,
             framework=sm_fml.ModelFramework.Vllm,
             framework_version=version("vllm"),
             python_version=py_version,
         )
-        for entry in configs:
-            conf.add_shard(
+
+    def add_shard_configs(
+        self,
+        partial_configs: list,
+    ):
+        for entry in partial_configs:
+            if not entry["config"]:
+                continue
+            self.shard_config.add_shard(
                 pipeline_parallel_degree=int(entry["pp"]),
                 tensor_parallel_degree=int(entry["tp"]),
                 shard_config=entry["config"],
             )
 
-        conf.save(output_dir=output_dir)
+    def save_configs(self, input_dir: str = "", output_dir: str = "") -> None:
+        self.shard_config.save(output_dir=output_dir)
         logging.info(
             f"SageMaker Fast Model Loader config file saved to {output_dir}")
         self.copy_non_safetensors_files(input_dir, output_dir)
@@ -100,9 +109,13 @@ class NeoShardingService():
             for key, value in self.properties.items():
                 f.write(f"{key}={value}\n")
 
+    # By setting pp_rank and tp_rank_interval , only workers in those ranks will load the model
+    # i.e. in case pp=2, tp=4, the arg of pp_rank=1, tp_interval = [2,3,4]
+    #       only workers with rank 5, 6, 7 load the model
     def shard_lmi_dist_model(self, input_dir: str, output_dir: str,
-                             pp_degree: int, tp_degree: int,
-                             chunk_mb: int) -> None:
+                             pp_degree: int, tp_degree: int, chunk_mb: int,
+                             target_pp_rank: int,
+                             target_tp_rank_interval) -> None:
         # For engine args which can affect GPU memory utilization, use LMI defaults
         # unless specified otherwise by the customer
         gpu_memory_utilization = float(
@@ -158,7 +171,8 @@ class NeoShardingService():
         )
 
         engine_configs = engine_args.create_engine_configs()
-        engine_worker = load_model_for_sharding(engine_configs)
+        engine_worker = load_model_for_sharding(engine_configs, target_pp_rank,
+                                                target_tp_rank_interval)
 
         # Lazy import to avoid MPI not-inited errors
         import sagemaker_fast_model_loader_rust as sm_fml
@@ -166,34 +180,72 @@ class NeoShardingService():
         os.makedirs(model_dir, exist_ok=True)
 
         config_for_current_rank = engine_worker.save_chunked_shard(
-            output_dir=model_dir, chunk_mb=chunk_mb)
+            output_dir=model_dir,
+            chunk_mb=chunk_mb,
+            target_pp_rank=target_pp_rank,
+            target_tp_rank_interval=target_tp_rank_interval)
 
         # Gather results from all ranks to driver process
         configs = MPI.COMM_WORLD.gather(config_for_current_rank, root=0)
 
-        # Driver process saves configs to disk
+        # Driver process saves configs of current rank to disk
         if comms.rank == 0:
-            self.save_configs(
-                pp_degree=pp_degree,
-                tp_degree=tp_degree,
-                input_dir=input_dir,
-                output_dir=output_dir,
-                configs=configs,
-            )
+            self.add_shard_configs(configs)
 
+        del engine_worker
         torch.cuda.empty_cache()
+        MPI.COMM_WORLD.Barrier()
+        print(
+            f"Memory after cleaning {torch.cuda.memory_allocated()/(1024**3)} GB"
+        )
+
+    def generate_tensor_parallel_intervals(self, num_gpus, tp_degree):
+        """
+        Generate intervals for tensor parallel partitions across available GPUs.
+        
+        Args:
+            num_gpus (int): Number of available GPUs
+            tp_degree (int): Tensor parallel degree
+        
+        Returns:
+            list: List of lists containing the partition intervals
+        """
+        intervals = []
+        start = 0
+
+        while start < tp_degree:
+            end = min(start + num_gpus, tp_degree)
+            interval = list(range(start, end))
+            intervals.append(interval)
+            start = end
+
+        return intervals
 
     def run_sharding(self):
         try:
-            pp_degree = int(
-                self.properties.get("option.pipeline_parallel_degree", 1))
-            self.shard_lmi_dist_model(
-                input_dir=self.INPUT_MODEL_DIRECTORY,
-                output_dir=self.OUTPUT_MODEL_DIRECTORY,
-                pp_degree=pp_degree,
-                tp_degree=int(
-                    self.properties["option.tensor_parallel_degree"]),
-                chunk_mb=CHUNK_MB)
+            device_count = torch.cuda.device_count()
+            # This is to generate shards by batch
+            # Example 1: TP=4, PP=2 on 4-GPU instance
+            #   batch 1: PP=0, TP=[0,1,2,3]
+            #   batch 2: PP=1, TP=[0,1,2,3]
+            # Example 2: TP=8, PP=1 on 4-GPU instance
+            #   batch 1: PP=0, TP=[0,1,2,3]
+            #   batch 2: PP=0, TP=[4,5,6,7]
+            for pp_rank in range(self.pp_degree):
+                for tp_interval in self.generate_tensor_parallel_intervals(
+                        device_count, self.tp_degree):
+                    self.shard_lmi_dist_model(
+                        input_dir=self.INPUT_MODEL_DIRECTORY,
+                        output_dir=self.OUTPUT_MODEL_DIRECTORY,
+                        pp_degree=self.pp_degree,
+                        tp_degree=self.tp_degree,
+                        chunk_mb=CHUNK_MB,
+                        target_pp_rank=pp_rank,
+                        target_tp_rank_interval=tp_interval)
+            if comms.rank == 0:
+                self.save_configs(input_dir=self.INPUT_MODEL_DIRECTORY,
+                                  output_dir=self.OUTPUT_MODEL_DIRECTORY)
+
         except Exception as exc:
             raise OptimizationFatalError(
                 f"Encountered an error during sharding: {exc}")

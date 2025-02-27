@@ -71,12 +71,6 @@ class NeoDispatcher:
                     f"Please specify a non-zero tensor_parallel_degree while Sharding. "
                     f"Received {self.properties.get('option.tensor_parallel_degree')}."
                 )
-            if int(self.properties.get("option.pipeline_parallel_degree",
-                                       1)) > 1:
-                raise ValueError(
-                    f"Sharding does not currently support Pipeline Parallelism. "
-                    f"Received {self.properties.get('option.pipeline_parallel_degree')}."
-                )
             return True
         return False
 
