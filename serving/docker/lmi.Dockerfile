@@ -83,6 +83,7 @@ RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cu
 
 RUN scripts/patch_oss_dlc.sh python \
     && scripts/security_patch.sh lmi \
+    && scripts/patch_libpmix2.sh \
     && useradd -m -d /home/djl djl \
     && chown -R djl:djl /opt/djl \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
