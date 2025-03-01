@@ -15,7 +15,8 @@ apt-get install -y \
     libfabric-dev \
     libevent-2.1-7 \
     devscripts \
-    debhelper
+    debhelper \
+    wget
 apt remove -y openmpi-bin libopenmpi-dev libpmix-dev libpmix2
 apt autoremove -y
 
