@@ -104,6 +104,7 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     scripts/install_s5cmd.sh x64 && \
     scripts/security_patch.sh trtllm && \
+    scripts/patch_libpmix2.sh && \
     scripts/patch_oss_dlc.sh python && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_serving_version} tensorrtllm" > /opt/djl/bin/telemetry && \
