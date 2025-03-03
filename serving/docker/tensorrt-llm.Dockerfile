@@ -59,6 +59,7 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 COPY scripts scripts/
+RUN chmod -R +x scripts
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
     mkdir -p /opt/djl/partition && \
