@@ -11,8 +11,6 @@ on:
         description: 'Run only the tests you need [aiccl]'
         required: false
         default: ''
-  schedule:
-    - cron: '0 15 * * *'
 
 
 jobs:
