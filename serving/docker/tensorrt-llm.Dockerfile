@@ -9,7 +9,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.5.1-devel-ubuntu22.04
+ARG version=12.5.1-devel-ubuntu24.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu125
 ARG python_version=3.10
@@ -105,7 +105,6 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     scripts/install_s5cmd.sh x64 && \
     scripts/security_patch.sh trtllm && \
-    scripts/patch_libpmix2.sh && \
     scripts/patch_oss_dlc.sh python && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_serving_version} tensorrtllm" > /opt/djl/bin/telemetry && \
