@@ -9,9 +9,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.4.1-devel-ubuntu22.04
+ARG version=12.6.1-devel-ubuntu24.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu124
+ARG cuda_version=cu126
 ARG djl_version
 ARG djl_serving_version
 ARG python_version=3.11
@@ -83,7 +83,6 @@ RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cu
 
 RUN scripts/patch_oss_dlc.sh python \
     && scripts/security_patch.sh lmi \
-    && scripts/patch_libpmix2.sh \
     && useradd -m -d /home/djl djl \
     && chown -R djl:djl /opt/djl \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
@@ -112,5 +111,5 @@ LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
-# To use the 535 CUDA driver, CUDA 12.4 can work on this one too
+# To use the 535 CUDA driver, CUDA 12.6 can work on this one too
 LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
