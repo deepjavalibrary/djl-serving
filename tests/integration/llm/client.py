@@ -613,6 +613,11 @@ vllm_chat_model_spec = {
         "enable_reasoning": True,
         "tokenizer": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     },
+    "llama-3-1-8b-instruct": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "unsloth/Meta-Llama-3.1-8B-Instruct",
+    }
 }
 
 vllm_tool_model_spec = {

@@ -40,8 +40,6 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
     private PyProcess process;
     private int timeout;
-    private boolean isRollingBatch;
-    private RollingBatch rollingBatch;
 
     public PyPredictor(
             Model model,
@@ -52,12 +50,6 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         super(model, translator, device, false);
         this.process = process;
         this.timeout = timeout;
-        isRollingBatch =
-                model.getProperty("rolling_batch") != null
-                        && !"disable".equals(model.getProperty("rolling_batch"));
-        if (isRollingBatch) {
-            rollingBatch = new RollingBatch(process, model, timeout);
-        }
     }
 
     /** {@inheritDoc} */
@@ -78,11 +70,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             if (size == 1) {
                 Output output;
                 Input input = (Input) first;
-                if (isRollingBatch && !input.getProperties().containsKey("handler")) {
-                    output = rollingBatch.addInput(input, timeout);
-                } else {
-                    output = process.predict(input, timeout, false);
-                }
+                output = process.predict(input, timeout, false);
                 return Collections.singletonList((O) output);
             }
 
@@ -156,7 +144,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         Input inputs = new Input();
         inputs.addProperty("Content-Type", "tensor/ndlist");
         inputs.add(ndList.encode());
-        Output output = process.predict(inputs, timeout, false);
+        Output output = process.predictStandard(inputs, timeout, false);
         NDManager manager = ndList.head().getManager();
         return output.getDataAsNDList(manager);
     }
@@ -165,9 +153,6 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     @Override
     public void close() {
         super.close();
-        process.stopPythonProcess(false);
-        if (rollingBatch != null) {
-            rollingBatch.shutdown();
-        }
+        process.cleanUp();
     }
 }

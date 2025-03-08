@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 class Connection {
@@ -71,8 +72,13 @@ class Connection {
     private Channel channel;
     private RequestHandler requestHandler;
 
-    Connection(PyEnv pyEnv, int basePort, int rank, String hostname) {
-        requestHandler = new RequestHandler();
+    Connection(
+            PyEnv pyEnv,
+            int basePort,
+            int rank,
+            String hostname,
+            Consumer<Output> responseCallback) {
+        requestHandler = new RequestHandler(responseCallback);
         port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank, hostname);
     }
@@ -160,7 +166,7 @@ class Connection {
                 }
                 sb.append(host).append(':').append(localSize);
             }
-            String[] args = new String[50];
+            String[] args = new String[51];
             args[0] = "mpirun";
             args[1] = "-np";
             args[2] = String.valueOf(worldSize);
@@ -212,11 +218,12 @@ class Connection {
             args[47] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
             args[48] = "--log-level";
             args[49] = pythonLogLevel;
+            args[50] = pyEnv.isAsyncMode() ? "--async-mode" : "--no-async-mode";
             return args;
         } else if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, worldSize);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[46];
+            String[] args = new String[47];
             args[0] = "mpirun";
             args[1] = "-np";
             args[2] = String.valueOf(worldSize);
@@ -263,6 +270,7 @@ class Connection {
             args[43] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
             args[44] = "--log-level";
             args[45] = pythonLogLevel;
+            args[46] = pyEnv.isAsyncMode() ? "--async-mode" : "--no-async-mode";
             return args;
         }
 
@@ -288,7 +296,7 @@ class Connection {
             logger.info("Set OMP_NUM_THREADS={}", neuronThreads);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
-        String[] args = new String[18];
+        String[] args = new String[19];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
@@ -307,6 +315,7 @@ class Connection {
         args[15] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
         args[16] = "--log-level";
         args[17] = pythonLogLevel;
+        args[18] = pyEnv.isAsyncMode() ? "--async-mode" : "--no-async-mode";
         return args;
     }
 
@@ -434,10 +443,19 @@ class Connection {
     private static final class RequestHandler extends SimpleChannelInboundHandler<Output> {
 
         private CompletableFuture<Output> future;
+        private Consumer<Output> responseCallback;
+
+        RequestHandler(Consumer<Output> responseCallback) {
+            super();
+            this.responseCallback = responseCallback;
+        }
 
         /** {@inheritDoc} */
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Output msg) {
+            if (responseCallback != null) {
+                responseCallback.accept(msg);
+            }
             future.complete(msg);
         }
 

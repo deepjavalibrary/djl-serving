@@ -17,6 +17,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.translate.TranslateException;
 import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 class PyProcess {
 
@@ -55,6 +57,8 @@ class PyProcess {
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean passiveWorkersMode;
+    private RollingBatch rollingBatch;
+    private AsyncRequestManager asyncRequestManager;
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
@@ -63,6 +67,27 @@ class PyProcess {
         this.pyEnv = pyEnv;
         this.workerId = workerId;
         int port = counter.getAndIncrement();
+        restartCount = new AtomicInteger(0);
+        // TODO: avoid using this hack when TRT-LLM improve its behavior
+        // Note: Now, by default, we use passive worker behavior in MPI mode.
+        // We can get the old behavior by setting OPTION_USE_PASSIVE_WORKERS=false.
+        passiveWorkersMode =
+                "trtllm".equals(model.getProperty("rolling_batch"))
+                        || Boolean.parseBoolean(model.getProperty("use_passive_workers", "true"));
+
+        boolean isRollingBatch =
+                model.getProperty("rolling_batch") != null
+                        && !"disable".equals(model.getProperty("rolling_batch"));
+        if (isRollingBatch) {
+            logger.info("Creating new python process in rolling batch mode");
+            rollingBatch = new RollingBatch(this, model, pyEnv.getPredictTimeout());
+        }
+        if (pyEnv.isAsyncMode()) {
+            logger.info("Creating new python process in async mode");
+            asyncRequestManager = new AsyncRequestManager(this, model);
+        }
+        Consumer<Output> responseCallback =
+                pyEnv.isAsyncMode() ? asyncRequestManager::addOutput : null;
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
@@ -74,28 +99,62 @@ class PyProcess {
                 hosts = getHosts(clusterSize);
                 for (int i = 0; i < worldSize; ++i) {
                     int connectionsPerHost = worldSize / clusterSize;
-                    connections.add(new Connection(pyEnv, port, i, hosts[i / connectionsPerHost]));
+                    connections.add(
+                            new Connection(
+                                    pyEnv,
+                                    port,
+                                    i,
+                                    hosts[i / connectionsPerHost],
+                                    responseCallback));
                 }
             } else {
                 for (int i = 0; i < worldSize; ++i) {
-                    connections.add(new Connection(pyEnv, port, i, "127.0.0.1"));
+                    connections.add(new Connection(pyEnv, port, i, "127.0.0.1", responseCallback));
                 }
             }
             counter.set(port + worldSize);
         } else {
-            connections = Collections.singletonList(new Connection(pyEnv, port, -1, "127.0.0.1"));
+            connections =
+                    Collections.singletonList(
+                            new Connection(pyEnv, port, -1, "127.0.0.1", responseCallback));
         }
-
-        restartCount = new AtomicInteger(0);
-        // TODO: avoid using this hack when TRT-LLM improve its behavior
-        // Note: Now, by default, we use passive worker behavior in MPI mode.
-        // We can get the old behavior by setting OPTION_USE_PASSIVE_WORKERS=false.
-        passiveWorkersMode =
-                "trtllm".equals(model.getProperty("rolling_batch"))
-                        || Boolean.parseBoolean(model.getProperty("use_passive_workers", "true"));
     }
 
-    Output predict(Input inputs, int timeout, boolean initialLoad) {
+    void sendRequest(Input input) {
+        if (input.getProperty("handler", null) == null) {
+            String handler = pyEnv.getHandler();
+            if (handler != null) {
+                input.addProperty("handler", handler);
+            }
+        }
+        try {
+            if (!passiveWorkersMode) {
+                for (Connection connection : connections) {
+                    connection.send(input);
+                }
+            } else {
+                connections.get(0).send(input);
+            }
+        } catch (InterruptedException e) {
+            logger.info("error", e);
+            throw new EngineException(e);
+        }
+    }
+
+    Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
+        if (initialLoad) {
+            return predictStandard(inputs, timeout, initialLoad);
+        }
+        if (rollingBatch != null) {
+            return rollingBatch.addInput(inputs, timeout);
+        }
+        if (asyncRequestManager != null) {
+            return asyncRequestManager.addInput(inputs);
+        }
+        return predictStandard(inputs, timeout, initialLoad);
+    }
+
+    Output predictStandard(Input inputs, int timeout, boolean initialLoad) {
         try {
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
@@ -244,6 +303,9 @@ class PyProcess {
             process.destroyForcibly();
             process = null;
         }
+        if (asyncRequestManager != null) {
+            asyncRequestManager.terminateInFlightRequests();
+        }
     }
 
     void setStarted(boolean started, int id) {
@@ -256,6 +318,13 @@ class PyProcess {
                     latch.countDown();
                 }
             }
+        }
+    }
+
+    void cleanUp() {
+        stopPythonProcess(false);
+        if (rollingBatch != null) {
+            rollingBatch.shutdown();
         }
     }
 
