@@ -90,6 +90,12 @@ class Output(object):
         self.properties[key] = val
         return self
 
+    def get_properties(self):
+        return self.properties
+
+    def get_property(self, key):
+        return self.properties.get(key)
+
     def add(self, value, key=None, batch_index=None):
         if key is not None and type(key) is not str:
             logging.warning(f"Output key should be str type, got {type(key)}")
@@ -182,7 +188,7 @@ class Output(object):
         msg += struct.pack('>h', len(self.properties))
         for k, v in self.properties.items():
             self.write_utf8(msg, k)
-            self.write_utf8(msg, v)
+            self.write_utf8(msg, str(v))
 
         if self.stream_content is None:
             size = self.content.size()

@@ -64,6 +64,7 @@ public class PyEnv {
 
     private boolean enableVenv;
     private boolean venvCreated;
+    private boolean asyncMode;
 
     /**
      * Constructs a new {@code PyEnv} instance.
@@ -301,6 +302,14 @@ public class PyEnv {
 
     boolean isMpiMode() {
         return mpiMode;
+    }
+
+    void setAsyncMode(boolean asyncMode) {
+        this.asyncMode = asyncMode;
+    }
+
+    boolean isAsyncMode() {
+        return asyncMode;
     }
 
     /**

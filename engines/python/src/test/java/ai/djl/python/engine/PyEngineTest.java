@@ -469,6 +469,50 @@ public class PyEngineTest {
     }
 
     @Test
+    public void testAsyncMode() throws TranslateException, IOException, ModelException {
+        int inferenceRequestSleepTime = 5;
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/async_echo"))
+                        .build();
+        List<Output> outputList = new ArrayList<>();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            long startTime = System.currentTimeMillis();
+            for (int i = 0; i < 5; ++i) {
+                String streaming = i % 2 == 0 ? "true" : "false";
+                Input input = new Input();
+                input.add(
+                        "{\"inputs\": \"request"
+                                + i
+                                + "\", \"stream\": \""
+                                + streaming
+                                + "\", \"parameters\": {\"sleep_time\": "
+                                + inferenceRequestSleepTime
+                                + "}}");
+                input.addProperty("Content-Type", "application/json");
+                Output output = predictor.predict(input);
+                outputList.add(output);
+            }
+            for (int i = 0; i < outputList.size(); ++i) {
+                Output output = outputList.get(i);
+                ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
+                Assert.assertNull(cbs.pollChunk());
+                String ret = cbs.getAsString();
+                System.out.println(ret);
+                Assert.assertTrue(ret.contains("request" + i + "- unit testing async mode"));
+            }
+            long endTime = System.currentTimeMillis();
+            long totalTime = endTime - startTime;
+            // Each request is sleeping for inferenceRequestSleepTime seconds, but in "parallel".
+            // The total time for 5 requests should be close to inferenceRequestSleepTime seconds.
+            Assert.assertTrue(totalTime < (inferenceRequestSleepTime + 1) * 1000);
+        }
+    }
+
+    @Test
     public void testModelException() throws TranslateException, IOException, ModelException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
