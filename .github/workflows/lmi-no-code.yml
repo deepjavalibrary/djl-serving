@@ -7,8 +7,6 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
-  schedule:
-    - cron: '0 8 * * *'
 
 jobs:
   create-runners:
