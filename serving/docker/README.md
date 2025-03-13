@@ -85,7 +85,7 @@ mkdir models
 cd models
 
 curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
-docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.30.0-aarch64
+docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.30.0-aarch64
 ```
 
 ## Run docker image with custom command line arguments
