@@ -335,8 +335,8 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
             "message": {
                 "role": "assistant",
                 "content": "",
+                "tool_calls": tool_calls,
             },
-            "tool_calls": tool_calls,
             "logprobs": None,
             "finish_reason": best_sequence.finish_reason,
         }
@@ -353,8 +353,8 @@ def _json_chat_output_formatter(request_output: TextGenerationOutput):
                 "message": {
                     "role": "assistant",
                     "content": tool_call_info.content,
+                    "tool_calls": tool_calls,
                 },
-                "tool_calls": tool_calls,
                 "logprobs": None,
                 "finish_reason": "tool_calls",
             }
@@ -484,11 +484,18 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
                         }]
                 }]
         },
+    auto_tools_called = False
+    if last_token and tool_parser:
+        auto_tools_called = len(tool_parser.prev_tool_call_arr) > 0
     choice = {
-        "index": 0,
-        "delta": delta,
-        "logprobs": logprobs,
-        "finish_reason": best_sequence.finish_reason
+        "index":
+        0,
+        "delta":
+        delta,
+        "logprobs":
+        logprobs,
+        "finish_reason":
+        "tool_calls" if auto_tools_called else best_sequence.finish_reason
     }
     response = {
         "id": f"chatcmpl-{id(request_output)}",
