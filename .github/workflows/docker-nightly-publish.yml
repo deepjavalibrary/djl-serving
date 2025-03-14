@@ -131,8 +131,8 @@ jobs:
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
           else
             rm -rf serving/docker/distributions
-            export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
-            export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT" 
+            export BUILD_VERSION_ARG_DJL="${DJL_VERSION}"
+            export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}"
           fi
           echo "BUILD_VERSION_ARG_DJL=$BUILD_VERSION_ARG_DJL" >> $GITHUB_ENV
           echo "BUILD_VERSION_ARG_SERVING=$BUILD_VERSION_ARG_SERVING" >> $GITHUB_ENV
