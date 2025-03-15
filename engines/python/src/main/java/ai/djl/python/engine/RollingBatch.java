@@ -14,7 +14,6 @@ package ai.djl.python.engine;
 
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
-import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Metrics;
@@ -27,20 +26,13 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -147,7 +139,7 @@ class RollingBatch implements Runnable {
 
             Output output;
             try {
-                output = process.predict(batch, timeout, false);
+                output = process.predictStandard(batch, timeout, false);
             } catch (EngineException e) {
                 logger.warn("prediction failed.", e);
                 list.clear();
@@ -259,116 +251,5 @@ class RollingBatch implements Runnable {
         this.stop = true;
         threadPool.shutdown();
         currentThread.interrupt();
-    }
-
-    private static final class Request {
-
-        Input input;
-        ChunkedBytesSupplier data;
-        Output output;
-        String nextToken;
-        boolean last;
-        String seed;
-        Metrics metrics;
-        Dimension dimension;
-        int count;
-        long creationTime;
-
-        Request(Input input, String seed, Metrics metrics, Dimension dimension) {
-            this.input = input;
-            data = new ChunkedBytesSupplier();
-            output = new Output();
-            output.add(data);
-            this.seed = seed;
-            this.metrics = metrics;
-            this.dimension = dimension;
-            creationTime = System.nanoTime();
-        }
-
-        BytesSupplier getRequest() {
-            if (nextToken != null) {
-                return BytesSupplier.wrap("");
-            }
-            return input.getData();
-        }
-
-        Set<Map.Entry<String, String>> getProperties() {
-            if (nextToken != null) {
-                return Collections.emptySet();
-            }
-            return input.getProperties().entrySet();
-        }
-
-        /**
-         * Seed is required for LMI Dist for sampling for all processes in the MPI to generate the
-         * same token. NextTokenChooserParameters is constructed during first forward and preserved
-         * for all forward calls of the request.
-         *
-         * @return seed, only for first forward
-         */
-        String getSeed() {
-            if (nextToken != null) {
-                return null;
-            }
-            return seed;
-        }
-
-        void addResponse(byte[] json, Map<String, String> properties) {
-            if (properties != null) {
-                output.getProperties().putAll(properties);
-            }
-            ++count;
-            ByteBuf buf = Unpooled.wrappedBuffer(json);
-            int size = buf.readShort();
-            String code = null;
-            String error = null;
-            for (int i = 0; i < size; ++i) {
-                String key = Objects.requireNonNull(CodecUtils.readUtf8(buf));
-                String value = Objects.requireNonNull(CodecUtils.readUtf8(buf));
-                switch (key) {
-                    case "data":
-                        nextToken = value;
-                        break;
-                    case "last":
-                        last = "true".equalsIgnoreCase(value);
-                        break;
-                    case "code":
-                        code = value;
-                        break;
-                    case "error":
-                        error = value;
-                        break;
-                    default:
-                        break;
-                }
-            }
-            if ((nextToken == null || nextToken.isEmpty()) && !last) {
-                // in non-streaming cases, we do not return content until generation is finished
-                return;
-            }
-            if (code != null) {
-                Map<String, Object> map = new ConcurrentHashMap<>(2);
-                int httpStatusCode = Integer.parseInt(code);
-                map.put("code", httpStatusCode);
-                output.setCode(httpStatusCode);
-                if (error != null) {
-                    map.put("error", error);
-                    output.setMessage(error);
-                }
-                byte[] buffer = JsonUtils.GSON.toJson(map).getBytes(StandardCharsets.UTF_8);
-                data.appendContent(buffer, true);
-            } else {
-                if (last && metrics != null) {
-                    long duration = System.nanoTime() - creationTime;
-                    double throughput = count * 1_000_000_000d / duration;
-                    long latency = duration / count / 1000;
-                    metrics.addMetric("TokenLatency", latency, Unit.MICROSECONDS, dimension);
-                    metrics.addMetric(
-                            "TokenThroughput", throughput, Unit.COUNT_PER_SECOND, dimension);
-                    metrics.addMetric("OutputTokens", count, Unit.COUNT_PER_ITEM, dimension);
-                }
-                data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
-            }
-        }
     }
 }

@@ -12,9 +12,9 @@
 # the specific language governing permissions and limitations under the License.
 import ast
 import logging
-from typing import Optional, Any, Dict, Tuple, Literal
+from typing import Optional, Any, Dict, Tuple, Literal, Union
 from pydantic import field_validator, model_validator, ConfigDict, Field
-from vllm import EngineArgs
+from vllm import EngineArgs, AsyncEngineArgs
 from vllm.utils import FlexibleArgumentParser
 from vllm.engine.arg_utils import StoreBoolean
 
@@ -219,7 +219,9 @@ class VllmRbProperties(Properties):
         vllm_engine_args.update(passthrough_vllm_engine_args)
         return vllm_engine_args
 
-    def get_engine_args(self) -> EngineArgs:
+    def get_engine_args(self,
+                        async_engine=False
+                        ) -> Union[EngineArgs, AsyncEngineArgs]:
         additional_vllm_engine_args = self.get_additional_vllm_engine_args()
         self.handle_lmi_vllm_config_conflicts(additional_vllm_engine_args)
         vllm_engine_arg_dict = self.generate_vllm_engine_arg_dict(
@@ -227,10 +229,11 @@ class VllmRbProperties(Properties):
         logging.debug(
             f"Construction vLLM engine args from the following DJL configs: {vllm_engine_arg_dict}"
         )
-        parser = EngineArgs.add_cli_args(FlexibleArgumentParser())
+        arg_cls = AsyncEngineArgs if async_engine else EngineArgs
+        parser = arg_cls.add_cli_args(FlexibleArgumentParser())
         args_list = construct_vllm_args_list(vllm_engine_arg_dict, parser)
         args = parser.parse_args(args=args_list)
-        engine_args = EngineArgs.from_cli_args(args)
+        engine_args = arg_cls.from_cli_args(args)
         # we have to do this separately because vllm converts it into a string
         engine_args.long_lora_scaling_factors = self.long_lora_scaling_factors
         # These neuron configs are not implemented in the vllm arg parser
