@@ -23,7 +23,7 @@ onnx
 sentence_transformers
 onnxruntime-gpu==1.20.0
 autoawq==0.2.5
-tokenizers==0.20.3
+tokenizers==0.21
 pydantic==2.9.2
 optimum==1.23.2
 torch==2.5.1
