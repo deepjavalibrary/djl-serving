@@ -53,7 +53,8 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     # Prefill is complete if any of the outputs have token_ids set
     prefill_is_complete = any(
         (output.token_ids for output in vllm_request_output.outputs))
-    if not prefill_is_complete:
+    # If the request is finished, stop waiting for prefill (This happens when the request is ignored)
+    if not prefill_is_complete and not vllm_request_output.finished:
         return request_cache
 
     # sets prompt token details if not set
