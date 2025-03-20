@@ -43,6 +43,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -51,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class PyEngineTest {
 
@@ -465,6 +467,71 @@ public class PyEngineTest {
             String ret = cbs.getAsString();
             System.out.println(ret);
             Assert.assertTrue(ret.startsWith(" token_request4_"));
+        }
+    }
+
+    @Test
+    public void testAsyncMode()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        int inferenceRequestSleepTime = 5;
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/async_echo"))
+                        .build();
+        List<Output> outputList = new ArrayList<>();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            long startTime = System.currentTimeMillis();
+            for (int i = 0; i < 5; ++i) {
+                String streaming = i % 2 == 0 ? "true" : "false";
+                Input input = new Input();
+                input.add(
+                        "{\"inputs\": \"request"
+                                + i
+                                + "\", \"stream\": \""
+                                + streaming
+                                + "\", \"parameters\": {\"sleep_time\": "
+                                + inferenceRequestSleepTime
+                                + "}}");
+                input.addProperty("Content-Type", "application/json");
+                Output output = predictor.predict(input);
+                outputList.add(output);
+            }
+            for (int i = 0; i < outputList.size(); ++i) {
+                Output output = outputList.get(i);
+                ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
+                // streaming validations
+                if (i % 2 == 0) {
+                    String[] expectedTokens = {
+                        "request" + i + " unit", "testing", "async", "mode", "[DONE]"
+                    };
+                    for (int j = 0; j < 5; ++j) {
+                        byte[] buf = cbs.nextChunk(5, TimeUnit.SECONDS);
+                        String tokenJsonStr = new String(buf, StandardCharsets.UTF_8);
+                        JsonElement json = JsonUtils.GSON.fromJson(tokenJsonStr, JsonElement.class);
+                        String token = json.getAsJsonObject().get("token").getAsString();
+                        System.out.println(token);
+                        Assert.assertEquals(token, expectedTokens[j]);
+                    }
+                    Assert.assertFalse(cbs.hasNext());
+                } else {
+                    String ret = cbs.getAsString();
+                    JsonElement json = JsonUtils.GSON.fromJson(ret, JsonElement.class);
+                    String generatedText =
+                            json.getAsJsonObject().get("generated_text").getAsString();
+                    System.out.println(generatedText);
+                    Assert.assertEquals(generatedText, "request" + i + " unit testing async mode");
+                }
+            }
+            long endTime = System.currentTimeMillis();
+            long totalTime = endTime - startTime;
+            // Each request is sleeping for inferenceRequestSleepTime seconds, but in "parallel".
+            // The total time for 5 requests should be close to inferenceRequestSleepTime seconds.
+            System.out.println(
+                    "Total time for 5 requests each taking about 5 seconds is " + totalTime + "ms");
+            Assert.assertTrue(totalTime < (inferenceRequestSleepTime + 1) * 1000);
         }
     }
 

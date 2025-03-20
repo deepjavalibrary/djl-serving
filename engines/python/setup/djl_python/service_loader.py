@@ -29,6 +29,13 @@ class ModelService(object):
         inputs.properties["model_dir"] = self.model_dir
         return getattr(self.module, function_name)(inputs)
 
+    # TODO: this method currently requires the socket directly for supporting streaming.
+    # This is a temporary solution for the initial implementation, but will be reworked after
+    # some more testing and experiments.
+    async def invoke_handler_async(self, function_name, inputs, cl_socket):
+        inputs.properties["model_dir"] = self.model_dir
+        return await getattr(self.module, function_name)(inputs, cl_socket)
+
 
 def load_model_service(model_dir, entry_point, device_id):
     manifest_file = os.path.join(model_dir, "MAR-INF/MANIFEST.json")
