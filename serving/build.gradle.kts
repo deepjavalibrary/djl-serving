@@ -6,7 +6,7 @@ plugins {
     ai.djl.javaProject
     ai.djl.publish
     application
-    id("com.netflix.nebula.ospackage") version "11.4.0"
+    id("com.netflix.nebula.ospackage") version "11.11.1"
 }
 
 dependencies {
