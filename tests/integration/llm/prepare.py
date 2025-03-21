@@ -741,7 +741,13 @@ lmi_dist_model_list = {
     },
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
-    }
+    },
+    "tinyllama-input-len-exceeded": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.max_model_len": "50",
+        "option.max_rolling_batch_size": "1",
+        "option.enforce_eager": True,
+    },
 }
 
 vllm_model_list = {
@@ -1092,6 +1098,12 @@ vllm_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.enable_reasoning": True,
         "option.reasoning_parser": "deepseek_r1",
+    },
+    "tinyllama-input-len-exceeded": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.max_model_len": "50",
+        "option.max_rolling_batch_size": "1",
+        "option.enforce_eager": True,
     },
 }
 
