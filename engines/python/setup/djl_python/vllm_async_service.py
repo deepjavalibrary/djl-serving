@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+import types
 from typing import Optional, Tuple, Callable, Union, AsyncGenerator
 
 from vllm import AsyncLLMEngine
@@ -38,11 +39,9 @@ async def handle_streaming_response(response: AsyncGenerator[str, None],
                                     properties: dict, cl_socket) -> Output:
     async for chunk in response:
         # TODO: support LMI output schema
-        logger.info(f"properties are {properties}")
         output = Output()
         for k, v in properties.items():
             output.add_property(k, v)
-        logger.info(f"output properties are {properties}")
         trimmed_chunk = chunk[6:]
         if trimmed_chunk == "[DONE]\n\n":
             data = ""
@@ -94,10 +93,17 @@ class VLLMHandler:
             self.vllm_engine_args)
         model_config = await self.vllm_engine.get_model_config()
 
-        self.model_name = self.vllm_engine_args.served_model_name or self.vllm_engine_args.model
+        model_names = self.vllm_engine_args.served_model_name or self.vllm_engine_args.model
+        if not isinstance(model_names, list):
+            model_names = [model_names]
+        # Users can provide multiple names that refer to the same model
         base_model_paths = [
-            BaseModelPath(self.model_name, self.vllm_engine_args.model)
+            BaseModelPath(model_name, self.vllm_engine_args.model)
+            for model_name in model_names
         ]
+        # Use the first model name as default.
+        # This is needed to be backwards compatible since LMI never required the model name in payload
+        self.model_name = model_names[0]
         self.model_registry = OpenAIServingModels(
             self.vllm_engine,
             model_config,
@@ -124,7 +130,6 @@ class VLLMHandler:
             enable_reasoning=self.vllm_properties.enable_reasoning,
             reasoning_parser=self.vllm_properties.reasoning_parser,
         )
-
         self.initialized = True
 
     def preprocess_request(
@@ -165,7 +170,7 @@ class VLLMHandler:
             return output
 
         response = await invoke_call(request)
-        if request.stream:
+        if isinstance(response, types.AsyncGeneratorType):
             return await handle_streaming_response(response, properties,
                                                    cl_socket)
 
@@ -186,7 +191,7 @@ service = VLLMHandler()
 async def handle(inputs: Input, cl_socket) -> Optional[Output]:
     if not service.initialized:
         await service.initialize(inputs.get_properties())
-        logging.info("vllm service initialized")
+        logger.info("vllm service initialized")
     if inputs.is_empty():
         return None
 
