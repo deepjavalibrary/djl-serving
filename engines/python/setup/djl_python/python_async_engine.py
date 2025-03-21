@@ -135,7 +135,14 @@ class PythonAsyncEngine(PythonSyncEngine):
                 await asyncio.get_event_loop().run_in_executor(
                     executor, check_threads)
 
+        try:
+            import uvloop
+            uvloop.install()
+        except ImportError:
+            logging.warning("uvloop not available, using asyncio as default")
+
         asyncio.run(main())
+
         if not self.exception_queue.empty():
             logging.error(
                 f"djl async engine terminated with error {self.exception_queue.get()}"
