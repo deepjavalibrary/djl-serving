@@ -1,6 +1,6 @@
-peft==0.13.2
+peft==0.14.0
 protobuf==3.20.3
-transformers==4.45.2
+transformers==4.46.3
 hf-transfer
 zstandard
 datasets==3.0.1
@@ -28,5 +28,6 @@ pydantic==2.9.2
 optimum==1.23.2
 torch==2.5.1
 torchvision==0.20.1
+aiohttp==3.11.10
 # sequence scheduler wheel for hf accelerate rolling batch
 https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl
