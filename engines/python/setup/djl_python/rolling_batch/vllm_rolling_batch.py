@@ -199,6 +199,12 @@ class VLLMRollingBatch(RollingBatch):
         for request in self.active_requests:
             request_output = request.request_output
             if request_output.finished:
+                prompt_len = len(request_output.prompt_tokens_details)
+                max_model_len = self.get_model_config().max_model_len
+                if prompt_len > max_model_len:
+                    raise ValueError(
+                        f"Input prompt ({prompt_len} tokens) is too long and exceeds limit of {max_model_len}"
+                    )
                 request.last_token = True
 
         return self.postprocess_results()

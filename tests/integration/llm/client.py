@@ -416,7 +416,12 @@ lmi_dist_model_spec = {
     "flan-t5-xl": {
         "batch_size": [1, 4],
         "seq_length": [256],
-    }
+    },
+    "tinyllama-input-len-exceeded": {
+        "batch_size": [1],
+        "seq_length": [25],
+        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    },
 }
 
 lmi_dist_chat_model_spec = {
@@ -569,6 +574,11 @@ vllm_model_spec = {
     "gemma-2b": {
         "batch_size": [1, 4],
         "seq_length": [256],
+    },
+    "tinyllama-input-len-exceeded": {
+        "batch_size": [1],
+        "seq_length": [25],
+        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
     },
 }
 
@@ -1055,7 +1065,9 @@ def send_json(data):
 
     if resp.status_code >= 300:
         LOGGER.exception(f"HTTP error: {resp}")
-        raise ValueError("Failed to send request to model server")
+        raise ValueError(
+            f"Failed to send request to model server. Status code: {resp.status_code}"
+        )
     return resp
 
 
