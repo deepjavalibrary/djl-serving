@@ -1070,7 +1070,9 @@ def send_json(data):
 
     if resp.status_code >= 300:
         LOGGER.exception(f"HTTP error: {resp}")
-        raise ValueError(f"Failed to send request to model server. Status code: {resp.status_code}")
+        raise ValueError(
+            f"Failed to send request to model server. Status code: {resp.status_code}"
+        )
     return resp
 
 
