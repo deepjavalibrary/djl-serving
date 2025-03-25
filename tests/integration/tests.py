@@ -550,7 +550,7 @@ class TestLmiDist2:
             prepare.build_lmi_dist_model("tinyllama-input-len-exceeded")
             r.launch()
             start = time.perf_counter()
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match=r".*424.*"):
                 client.run(
                     "lmi_dist tinyllama-input-len-exceeded --in_tokens 100".
                     split())
@@ -675,7 +675,7 @@ class TestVllm1:
             prepare.build_vllm_model("tinyllama-input-len-exceeded")
             r.launch()
             start = time.perf_counter()
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match=r".*424.*"):
                 client.run("vllm tinyllama-input-len-exceeded --in_tokens 100".
                            split())
             req_time = time.perf_counter() - start
