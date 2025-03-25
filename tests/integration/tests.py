@@ -8,6 +8,7 @@ import llm.prepare as prepare
 import llm.client as client
 import rb_client as rb_client
 import test_client
+import time
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '0.33.0').strip()
 override_image_tag_suffix = os.environ.get('IMAGE_TAG_SUFFIX', '').strip()
@@ -544,6 +545,20 @@ class TestLmiDist2:
             r.launch(env_vars=envs)
             client.run("lmi_dist llama-3.1-8b".split())
 
+    def test_tiny_llama_input_length_exceeded(self):
+        with Runner('lmi', 'tinyllama-test-input-length-exceeded') as r:
+            prepare.build_lmi_dist_model("tinyllama-input-len-exceeded")
+            r.launch()
+            start = time.perf_counter()
+            with pytest.raises(ValueError, match=r".*424.*"):
+                client.run(
+                    "lmi_dist tinyllama-input-len-exceeded --in_tokens 100".
+                    split())
+            req_time = time.perf_counter() - start
+            assert req_time < 20
+            client.run(
+                "vllm tinyllama-input-len-exceeded --in_tokens 10".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4
@@ -654,6 +669,19 @@ class TestVllm1:
             prepare.build_vllm_async_model('llama-3-1-8b-instruct')
             r.launch()
             client.run("vllm_chat llama-3-1-8b-instruct".split())
+
+    def test_tiny_llama_input_length_exceeded(self):
+        with Runner('lmi', 'tinyllama-test-input-length-exceeded') as r:
+            prepare.build_vllm_model("tinyllama-input-len-exceeded")
+            r.launch()
+            start = time.perf_counter()
+            with pytest.raises(ValueError, match=r".*424.*"):
+                client.run("vllm tinyllama-input-len-exceeded --in_tokens 100".
+                           split())
+            req_time = time.perf_counter() - start
+            assert req_time < 20
+            client.run(
+                "vllm tinyllama-input-len-exceeded --in_tokens 10".split())
 
 
 @pytest.mark.vllm
