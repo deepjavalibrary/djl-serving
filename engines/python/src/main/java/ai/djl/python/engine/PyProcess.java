@@ -142,7 +142,10 @@ class PyProcess {
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
-        if (initialLoad) {
+        // In RollingBatch, we queue adapter loading jobs to occur after the initial load.
+        // Executing those in RollingBatch context doesn't work, so we need to handle them in the
+        // 'standard' way.
+        if (initialLoad || inputs.getProperty("handler", null) != null) {
             return predictStandard(inputs, timeout, initialLoad);
         }
         if (rollingBatch != null) {
