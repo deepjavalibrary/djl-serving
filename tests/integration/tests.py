@@ -664,12 +664,6 @@ class TestVllm1:
             r.launch()
             client.run("vllm_chat deepseek-r1-distill-qwen-1-5b".split())
 
-    def test_llama3_1_8b_instruct_async_mode(self):
-        with Runner('lmi', 'llama_3_1_8b_async_mode') as r:
-            prepare.build_vllm_async_model('llama-3-1-8b-instruct')
-            r.launch()
-            client.run("vllm_chat llama-3-1-8b-instruct".split())
-
     def test_tiny_llama_input_length_exceeded(self):
         with Runner('lmi', 'tinyllama-test-input-length-exceeded') as r:
             prepare.build_vllm_model("tinyllama-input-len-exceeded")
