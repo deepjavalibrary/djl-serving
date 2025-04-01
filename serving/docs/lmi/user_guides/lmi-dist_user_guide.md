@@ -16,9 +16,6 @@ In addition to the vllm models, LMI-Dist also supports the t5 model family (e.g.
 
 LMI-Dist supports the same set of multi-modal models as [vllm 0.6.3.post1](https://docs.vllm.ai/en/v0.6.3.post1/models/supported_models.html#decoder-only-language-models).
 
-However, the one known exception is MLlama (Llama3.2 multimodal models). 
-MLlama support is expected in the v13 (0.32.0) release.
-
 ### Model Coverage in CI
 
 The following set of models are tested in our nightly tests:
