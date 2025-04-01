@@ -242,14 +242,14 @@ public class ModelInfoTest {
         System.setProperty("SERVING_FEATURES", "vllm,lmi-dist");
         Map<String, String> modelToRollingBatch =
                 Map.of(
-                        "TheBloke/Llama-2-7B-fp16", "lmi-dist",
-                        "openai-community/gpt2", "lmi-dist",
-                        "tiiuae/falcon-7b", "lmi-dist",
-                        "NousResearch/Hermes-2-Pro-Mistral-7B", "lmi-dist",
-                        "src/test/resources/local-hf-model", "lmi-dist",
+                        "TheBloke/Llama-2-7B-fp16", "vllm",
+                        "openai-community/gpt2", "vllm",
+                        "tiiuae/falcon-7b", "vllm",
+                        "NousResearch/Hermes-2-Pro-Mistral-7B", "vllm",
+                        "src/test/resources/local-hf-model", "vllm",
                         "HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable",
-                        "THUDM/chatglm3-6b", "lmi-dist",
-                        "src/test/resources/local-mistral-model", "lmi-dist");
+                        "THUDM/chatglm3-6b", "vllm",
+                        "src/test/resources/local-mistral-model", "vllm");
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
         Path prop = modelDir.resolve("serving.properties");

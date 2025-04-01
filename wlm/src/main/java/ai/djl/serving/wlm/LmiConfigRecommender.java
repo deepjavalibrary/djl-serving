@@ -57,6 +57,14 @@ public final class LmiConfigRecommender {
         }
 
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
+        if ("lmi-dist".equals(rollingBatch)) {
+            logger.warn(
+                    "lmi-dist rolling batch is not supported in DJL-Serving 0.33.0. Most use-cases"
+                            + " for lmi-dist can be handled by vllm. If you require using lmi-dist,"
+                            + " please use DJL-Serving 0.32.0.Overriding lmi-dist rolling batch to"
+                            + " vllm");
+            lmiProperties.setProperty("option.rolling_batch", "vllm");
+        }
         if (!"auto".equals(rollingBatch)) {
             return;
         } else if (!isTextGenerationModel(modelConfig)) {
@@ -69,8 +77,6 @@ public final class LmiConfigRecommender {
             } else {
                 rollingBatch = "tnx";
             }
-        } else if (isLmiDistEnabled(features)) {
-            rollingBatch = "lmi-dist";
         } else if (isVllmEnabled(features)) {
             rollingBatch = "vllm";
         } else if (isTrtLlmEnabled(features)) {
@@ -215,11 +221,6 @@ public final class LmiConfigRecommender {
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
         if ("vllm".equals(rollingBatch) && !isTnxEnabled(features)) {
             lmiProperties.setProperty("option.pythonExecutable", "/opt/djl/vllm_venv/bin/python");
-            return;
-        }
-        if ("lmi-dist".equals(rollingBatch)) {
-            lmiProperties.setProperty(
-                    "option.pythonExecutable", "/opt/djl/lmi_dist_venv/bin/python");
         }
     }
 }
