@@ -1,7 +1,7 @@
 # Chat Completions API Schema
 
 This document describes the API schema for the chat completions endpoints (`v1/chat/completions`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.30.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
+This schema is applicable to our latest release, v0.32.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
 Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.30.0-dlc).
 
 On SageMaker, Chat Completions API schema is supported with the `/invocations` endpoint without additional configurations.
@@ -15,9 +15,6 @@ See [the HuggingFace documentation on chat templates](https://huggingface.co/doc
 This processing happens per request, meaning that you can support our [standard schema](lmi_input_output_schema.md),
 as well as chat completions schema in the same endpoint.
 
-Note: This is an experimental feature. The complete spec has not been implemented.
-In particular, function calling is not currently available.
-We are targeting function calling support in our next release, 0.32.0, planned for January 2025.
 
 ## Request Schema
 
@@ -41,6 +38,8 @@ Request Body Fields:
 | `top_p`             | float                        | no       | Float number.                             |
 | `user`              | string                       | no       | example: "test"                           |
 | `ignore_eos`        | boolean                      | no       | `true`, `false` (default)                 |
+| `tools`             | array of [Tools](#tools)     | no       | See the [Tools](#tools) documentation     |
+| `tool_choice`       | string or object             | no       | See the [Tools](#tools) documentation     |
 
 Example request using curl
 
@@ -383,3 +382,83 @@ Example:
     "total_tokens":133
 }
 ```
+
+### Tools
+
+The tools object provides function defitions for the model to use.
+Tools and function calling are only supported by vLLM currently.
+Please see the [tool calling documentation](tool_calling.md) for details on enabling function calling.
+
+| Field Name | Type                  | Description             | Example                                       |
+|------------|-----------------------|-------------------------|-----------------------------------------------|
+| `type`     | string                | The type of tool        | `function` is the only valid option currently |
+| `function` | [Function](#function) | The function definition | See the [Function](#function) documentation   |
+
+#### Function
+
+| Field Name    | Type   | Description                                                | Example                                 |
+|---------------|--------|------------------------------------------------------------|-----------------------------------------|
+| `name`        | string | the name of the function to be called                      | `get_current_weather`                   |
+| `description` | string | description of what the function does                      | `gets the weather for a given location` |
+| `parameters`  | object | parameters of the function defined as a JSON Schema object | see the following example               |
+
+When specifying tools, you can also optionally specify `tool_choice` in the payload.
+Valid options for `tool_choice` are `none`, `auto`, or object specifying which tool to use.
+
+The following is an example payload demonstrating tool usage. 
+```
+{
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hi! How are you doing today?"
+        }, {
+            "role": "assistant",
+            "content": "I'm doing well! How can I help you?"
+        }, {
+            "role": "user",
+            "content": "Can you tell me what the temperate will be in Dallas, in fahrenheit?"
+        }
+    ],
+    "tools": [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_current_weather",
+                "description": "Get the current weather in a given location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "city": {
+                            "type":
+                            "string",
+                            "description":
+                            "The city to find the weather for, e.g. 'San Francisco'"
+                        },
+                        "state": {
+                            "type":
+                            "string",
+                            "description":
+                            "the two-letter abbreviation for the state that the city is in, e.g. 'CA' which would mean 'California'"
+                        },
+                        "unit": {
+                            "type": "string",
+                            "description":
+                            "The unit to fetch the temperature in",
+                            "enum": ["celsius", "fahrenheit"]
+                        }
+                    },
+                    "required": ["city", "state", "unit"]
+                }
+            }
+        }
+    ],
+    "tool_choice": {
+        "type": "function",
+        "function": {
+            "name": "get_current_weather"
+        }
+    }
+}
+```
+
