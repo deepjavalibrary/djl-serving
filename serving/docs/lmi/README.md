@@ -74,9 +74,9 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 
 | Backend                | SageMakerDLC    | Example URI                                                                               |
 |------------------------|-----------------|-------------------------------------------------------------------------------------------|
-| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.31.0-lmi13.0.0-cu124         |
-| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.31.0-lmi13.0.0-cu124         |
-| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125 |
+| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126         |
+| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126         |
+| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-tensorrtllm0.12.0-cu125 |
 | `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-neuronx-sdk2.20.1       |
 
 ## Advanced Features
