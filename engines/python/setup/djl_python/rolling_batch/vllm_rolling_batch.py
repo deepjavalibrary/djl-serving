@@ -182,9 +182,7 @@ class VLLMRollingBatch(RollingBatch):
                 adapter_name = request.adapter.get_property("name")
                 request_params["lora_request"] = get_lora_request(
                     adapter_name, self.lora_requests)
-            self.engine.add_request(request_id=request_id,
-                                    inputs=prompt_inputs,
-                                    params=sampling_params,
+            self.engine.add_request(request_id, prompt_inputs, sampling_params,
                                     **request_params)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
