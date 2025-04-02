@@ -113,7 +113,7 @@ def _preprocess_chat(
     add_special_tokens: bool = False,
 ) -> Tuple[List[ConversationMessage], RequestPrompt, TokensPrompt, str]:
     resolved_content_format = resolve_chat_template_content_format(
-        chat_template, chat_template_content_format, tokenizer)
+        chat_template, tool_dicts, chat_template_content_format, tokenizer)
     conversation, mm_data = parse_chat_messages(
         messages,
         rolling_batch.engine.model_config,

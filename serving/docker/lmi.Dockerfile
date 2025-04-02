@@ -9,9 +9,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.6.1-devel-ubuntu24.04
+ARG version=12.8.1-devel-ubuntu24.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu126
+ARG cuda_version=cu128
 ARG djl_version
 ARG djl_serving_version
 ARG python_version=3.11
@@ -73,7 +73,7 @@ COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 COPY scripts/telemetry.sh /opt/djl/bin
 
-RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-4 \
+RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-8 \
     && scripts/install_openssh.sh \
     && scripts/install_python.sh ${python_version} \
     && scripts/install_s5cmd.sh x64 \
@@ -111,5 +111,5 @@ LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
-# To use the 535 CUDA driver, CUDA 12.6 can work on this one too
+# To use the 535 CUDA driver, CUDA 12.8 can work on this one too
 LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
