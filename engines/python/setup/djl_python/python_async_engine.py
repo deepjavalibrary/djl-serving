@@ -69,21 +69,16 @@ class PythonAsyncEngine(PythonSyncEngine):
                     f"Memory Error encountered when invoking module {self.service.module}, function {function_name}"
                 )
                 outputs = Output(code=507, message=str(e))
-                outputs.add_property(REQUEST_TRACKING_ID_KEY,
-                                     request_tracking_id)
             else:
                 logging.exception(
                     f"service.invoke_handler_async() failure. There was an error invoking module {self.service.module}, function {function_name}"
                 )
                 outputs = Output().error(
                     str(e), message="service.invoke_handler_async() failure")
-                outputs.add_property(REQUEST_TRACKING_ID_KEY,
-                                     request_tracking_id)
         if outputs is None:
             outputs = Output(code=204, message="No content")
             logging.debug(
                 "empty response received from service.invoke_handler_async()")
-            outputs.add_property(REQUEST_TRACKING_ID_KEY, request_tracking_id)
         elif not isinstance(outputs, Output):
             message = (
                 f"Invalid type returned from {self.service.module}.{function_name}. "
@@ -91,8 +86,10 @@ class PythonAsyncEngine(PythonSyncEngine):
             )
             logging.error(message)
             outputs = Output().error(message)
-            outputs.add_property(REQUEST_TRACKING_ID_KEY, request_tracking_id)
-        logging.info(f"putting result of inference to output queue")
+        # Request tracking ID is needed always for async
+        # Do this here so that users in custom handlers do not need to worry about it
+        outputs.add_property(REQUEST_TRACKING_ID_KEY, request_tracking_id)
+        logging.debug(f"putting result of inference to output queue")
         await self.output_queue.put(outputs)
 
     def send_responses(self):
