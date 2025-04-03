@@ -79,18 +79,11 @@ class AsyncRequestManager {
             logger.info("process is not ready");
             return;
         }
-        PairList<String, BytesSupplier> content = output.getContent();
-        assert content.size() == 1;
-        Map<String, String> prop = output.getProperties();
-        byte[] responseContent = content.get(0).getValue().getAsBytes();
-        String requestTrackingId = prop.get(REQUEST_TRACKING_ID);
-        Request request = activeRequests.get(requestTrackingId);
-        request.addResponse(responseContent, prop);
-        if (request.last) {
-            logger.info("Request [{}] completed", request.getRequestId());
-            logger.debug("Removing request with trackingId {}", requestTrackingId);
-            activeRequests.remove(requestTrackingId);
+        if (output.getCode() != 200) {
+            sendErrorResponse(output);
+            return;
         }
+        sendInferenceResponse(output);
     }
 
     void terminateInFlightRequests() {
@@ -111,5 +104,33 @@ class AsyncRequestManager {
         }
         activeRequests.clear();
         logger.info("In-flight requests terminated");
+    }
+
+    private void sendErrorResponse(Output output) {
+        String requestTrackingId = output.getProperties().get(REQUEST_TRACKING_ID);
+        int code = output.getCode();
+        String errorMessage = String.format("Async Inference Failure %s", output.getMessage());
+        logger.error("[RequestId={}] {}", requestTrackingId, errorMessage);
+        Output out = new Output(code, errorMessage);
+        BytesSupplier error = BytesSupplier.wrap(JsonUtils.GSON.toJson(out));
+        Request request = activeRequests.get(requestTrackingId);
+        request.last = true;
+        request.output.setCode(code);
+        request.data.appendContent(error, true);
+        activeRequests.remove(requestTrackingId);
+    }
+
+    private void sendInferenceResponse(Output output) {
+        PairList<String, BytesSupplier> content = output.getContent();
+        Map<String, String> prop = output.getProperties();
+        String requestTrackingId = prop.get(REQUEST_TRACKING_ID);
+        byte[] responseContent = content.get(0).getValue().getAsBytes();
+        Request request = activeRequests.get(requestTrackingId);
+        request.addResponse(responseContent, prop);
+        if (request.last) {
+            logger.info("Request [{}] completed", request.getRequestId());
+            logger.debug("Removing request with trackingId {}", requestTrackingId);
+            activeRequests.remove(requestTrackingId);
+        }
     }
 }
