@@ -42,6 +42,7 @@ async def handle_streaming_response(response: AsyncGenerator[str, None],
         output = Output()
         for k, v in properties.items():
             output.add_property(k, v)
+        output.add_property("Content-Type", "application/jsonlines")
         trimmed_chunk = chunk[6:]
         if trimmed_chunk == "[DONE]\n\n":
             data = ""
@@ -166,7 +167,13 @@ class VLLMHandler:
             output = Output()
             for k, v in properties.items():
                 output.add_property(k, str(v))
-            output.error(str(e), 424, "Input Parsing failed")
+            error = {
+                "data": "",
+                "last": True,
+                "code": 424,
+                "error": f"Input parsing failed. Details {e}"
+            }
+            output.add(Output.binary_encode(error))
             return output
 
         response = await invoke_call(request)
