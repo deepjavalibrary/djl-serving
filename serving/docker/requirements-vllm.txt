@@ -1,5 +1,5 @@
 ninja
 peft==0.15.1
 llmcompressor==0.4.1
-vllm==0.8.2
+vllm==0.8.3
 https://github.com/flashinfer-ai/flashinfer/releases/download/v0.2.4/flashinfer_python-0.2.4+cu124torch2.6-cp38-abi3-linux_x86_64.whl
