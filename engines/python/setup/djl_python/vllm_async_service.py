@@ -33,10 +33,9 @@ from djl_python.encode_decode import decode
 logger = logging.getLogger(__name__)
 
 
-# TODO: support handle returning AsyncGenerator directly so that
-# users don't have to work directly with the socket object this way
-async def handle_streaming_response(response: AsyncGenerator[str, None],
-                                    properties: dict, cl_socket) -> Output:
+async def handle_streaming_response(
+        response: AsyncGenerator[str, None],
+        properties: dict) -> AsyncGenerator[Output, None]:
     async for chunk in response:
         # TODO: support LMI output schema
         output = Output()
@@ -51,9 +50,7 @@ async def handle_streaming_response(response: AsyncGenerator[str, None],
             last = False
         resp = {"data": data, "last": last}
         output.add(Output.binary_encode(resp))
-        if last:
-            return output
-        output.send(cl_socket)
+        yield output
 
 
 def convert_lmi_schema_to_completion_request(
@@ -157,7 +154,9 @@ class VLLMHandler:
                 "invalid payload. must contain prompt, inputs, or messages")
         return vllm_request, vllm_invoke_function
 
-    async def inference(self, inputs: Input, cl_socket) -> Output:
+    async def inference(
+            self,
+            inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
         properties = inputs.get_properties()
         try:
             request, invoke_call = self.preprocess_request(inputs)
@@ -171,8 +170,7 @@ class VLLMHandler:
 
         response = await invoke_call(request)
         if isinstance(response, types.AsyncGeneratorType):
-            return await handle_streaming_response(response, properties,
-                                                   cl_socket)
+            return handle_streaming_response(response, properties)
 
         output = Output()
         response_dict = {"data": response.model_dump_json(), "last": True}
@@ -188,12 +186,14 @@ class VLLMHandler:
 service = VLLMHandler()
 
 
-async def handle(inputs: Input, cl_socket) -> Optional[Output]:
+async def handle(
+        inputs: Input
+) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
     if not service.initialized:
         await service.initialize(inputs.get_properties())
         logger.info("vllm service initialized")
     if inputs.is_empty():
         return None
 
-    outputs = await service.inference(inputs, cl_socket)
+    outputs = await service.inference(inputs)
     return outputs
