@@ -135,7 +135,7 @@ class VllmRbProperties(Properties):
     @model_validator(mode='after')
     def validate_reasoning_parser(self):
         if self.enable_reasoning:
-            from vllm.entrypoints.openai.reasoning_parsers import ReasoningParserManager
+            from vllm.reasoning.abs_reasoning_parsers import ReasoningParserManager
             valid_reasoning_parses = ReasoningParserManager.reasoning_parsers.keys(
             )
             if self.reasoning_parser not in valid_reasoning_parses:
