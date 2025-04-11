@@ -15,6 +15,7 @@ import asyncio
 import logging
 import time
 import traceback
+import types
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from threading import Thread
@@ -58,7 +59,7 @@ class PythonAsyncEngine(PythonSyncEngine):
         request_tracking_id = inputs.get_property(REQUEST_TRACKING_ID_KEY)
         try:
             outputs = await self.service.invoke_handler_async(
-                function_name, inputs, self.cl_socket)
+                function_name, inputs)
         except Exception as e:
             logging.exception("Failed invoke service.invoke_handler_async()")
             if (type(e).__name__ == "OutOfMemoryError"
@@ -79,13 +80,21 @@ class PythonAsyncEngine(PythonSyncEngine):
             outputs = Output(code=204, message="No content")
             logging.debug(
                 "empty response received from service.invoke_handler_async()")
-        elif not isinstance(outputs, Output):
+        elif not isinstance(outputs, Output) and not isinstance(
+                outputs, types.AsyncGeneratorType):
             message = (
                 f"Invalid type returned from {self.service.module}.{function_name}. "
-                f"Received type {type(outputs)}, does not match expected type djl_python.outputs.Output"
+                f"Received type {type(outputs)}, does not match expected type djl_python.outputs.Output or types.AsyncGenerator"
             )
             logging.error(message)
             outputs = Output().error(message)
+
+        if isinstance(outputs, types.AsyncGeneratorType):
+            async for output in outputs:
+                output.add_property(REQUEST_TRACKING_ID_KEY,
+                                    request_tracking_id)
+                await self.output_queue.put(output)
+            return
         # Request tracking ID is needed always for async
         # Do this here so that users in custom handlers do not need to worry about it
         outputs.add_property(REQUEST_TRACKING_ID_KEY, request_tracking_id)

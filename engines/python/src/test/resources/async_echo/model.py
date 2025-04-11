@@ -13,15 +13,16 @@
 import asyncio
 import logging
 import json
-from typing import Optional, List, AsyncGenerator
+from typing import Optional, List, AsyncGenerator, Union
 
 from djl_python import Input
 from djl_python import Output
 from djl_python.encode_decode import decode
 
 
-async def handle_streaming_response(response: AsyncGenerator[str, None],
-                                    properties: dict, cl_socket) -> Output:
+async def handle_streaming_response(
+        response: AsyncGenerator[str, None],
+        properties: dict) -> AsyncGenerator[Output, None]:
     async for chunk in response:
         output = Output()
         for k, v in properties.items():
@@ -33,9 +34,7 @@ async def handle_streaming_response(response: AsyncGenerator[str, None],
 
         resp = {"data": chunk, "last": last}
         output.add(Output.binary_encode(resp))
-        if last:
-            return output
-        output.send(cl_socket)
+        yield output
 
 
 async def stream_generator(tokens: List[str]) -> AsyncGenerator[str, None]:
@@ -50,7 +49,9 @@ class AsyncEcho:
     def __init__(self):
         pass
 
-    async def inference(self, inputs: Input, cl_socket) -> Output:
+    async def inference(
+            self,
+            inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
         outputs = Output()
         batch = inputs.get_batches()
         first = batch[0]
@@ -70,9 +71,8 @@ class AsyncEcho:
             ]
             if streaming:
                 generator = stream_generator(response_tokens)
-                outputs = await handle_streaming_response(
-                    generator, first.get_properties(), cl_socket)
-                return outputs
+                return handle_streaming_response(generator,
+                                                 first.get_properties())
 
             response = {
                 "data":
@@ -93,9 +93,11 @@ class AsyncEcho:
 service = AsyncEcho()
 
 
-async def handle(inputs: Input, cl_socket) -> Optional[Output]:
+async def handle(
+        inputs: Input
+) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
     if inputs.is_empty():
         logging.info("empty inference request")
         return None
 
-    return await service.inference(inputs, cl_socket)
+    return await service.inference(inputs)
