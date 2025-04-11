@@ -141,7 +141,7 @@ class VLLMRollingBatch(RollingBatch):
 
         # if n is not explicitly set when best_of is set, we return `best_of` values sequences for tgi compatibility.
         if "best_of" in parameters:
-            if "n" not in "best_of":
+            if "n" not in parameters:
                 parameters["n"] = parameters["best_of"]
 
         if "top_n_tokens" in parameters:

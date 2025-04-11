@@ -12,13 +12,12 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 import types
-from typing import Optional, Tuple, Callable, Union, AsyncGenerator
+from typing import Optional, Union, AsyncGenerator
 
 from vllm import AsyncLLMEngine
 from vllm.entrypoints.openai.protocol import (
     ChatCompletionRequest,
     CompletionRequest,
-    ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
@@ -29,41 +28,20 @@ from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
+from djl_python.async_utils import handle_streaming_response, create_non_stream_output
+
+from .request_response_utils import (
+    ProcessedRequest,
+    vllm_stream_output_formatter,
+    vllm_non_stream_output_formatter,
+    convert_lmi_schema_to_completion_request,
+    lmi_with_details_stream_output_formatter,
+    lmi_stream_output_formatter,
+    lmi_with_details_non_stream_output_formatter,
+    lmi_non_stream_output_formatter,
+)
 
 logger = logging.getLogger(__name__)
-
-
-async def handle_streaming_response(
-        response: AsyncGenerator[str, None],
-        properties: dict) -> AsyncGenerator[Output, None]:
-    async for chunk in response:
-        # TODO: support LMI output schema
-        output = Output()
-        for k, v in properties.items():
-            output.add_property(k, v)
-        trimmed_chunk = chunk[6:]
-        if trimmed_chunk == "[DONE]\n\n":
-            data = ""
-            last = True
-        else:
-            data = trimmed_chunk
-            last = False
-        resp = {"data": data, "last": last}
-        output.add(Output.binary_encode(resp))
-        yield output
-
-
-def convert_lmi_schema_to_completion_request(
-        payload: dict) -> CompletionRequest:
-    completion_dict = {
-        "prompt": payload.get("inputs"),
-        "stream": payload.get("stream", False),
-        "model": payload.get("model"),
-        "max_tokens": payload.pop("max_new_tokens",
-                                  payload.pop("max_tokens", 30))
-    }
-    # TODO: Sampling Param conversion
-    return CompletionRequest(**completion_dict)
 
 
 class VLLMHandler:
@@ -72,6 +50,7 @@ class VLLMHandler:
         super().__init__()
 
         self.vllm_engine = None
+        self.tokenizer = None
         self.chat_completion_service = None
         self.completion_service = None
         self.model_registry = None
@@ -88,6 +67,7 @@ class VLLMHandler:
             async_engine=True)
         self.vllm_engine = AsyncLLMEngine.from_engine_args(
             self.vllm_engine_args)
+        self.tokenizer = await self.vllm_engine.get_tokenizer()
         model_config = await self.vllm_engine.get_model_config()
 
         model_names = self.vllm_engine_args.served_model_name or self.vllm_engine_args.model
@@ -129,58 +109,81 @@ class VLLMHandler:
         )
         self.initialized = True
 
-    def preprocess_request(
-        self, inputs: Input
-    ) -> Tuple[Union[CompletionRequest, ChatCompletionRequest], Callable]:
+    def preprocess_request(self, inputs: Input) -> ProcessedRequest:
         batch = inputs.get_batches()
         assert len(batch) == 1, "only one request per batch allowed"
         raw_request = batch[0]
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
+        # For TGI streaming responses, the last chunk requires the full generated text to be provided.
+        # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
+        # The full generation at the end... TODO is there a better way?
+        accumulate_chunks = False
+        include_prompt = False
+        # completions/chat completions require model in the payload
         if "model" not in decoded_payload:
             decoded_payload["model"] = self.model_name
+        # completions request
         if "prompt" in decoded_payload:
             vllm_request = CompletionRequest(**decoded_payload)
             vllm_invoke_function = self.completion_service.create_completion
+            non_stream_output_formatter = vllm_non_stream_output_formatter
+            stream_output_formatter = vllm_stream_output_formatter
+        # TGI request gets mapped to completions
         elif "inputs" in decoded_payload:
-            vllm_request = convert_lmi_schema_to_completion_request(
+            vllm_request, include_details, include_prompt = convert_lmi_schema_to_completion_request(
                 decoded_payload)
             vllm_invoke_function = self.completion_service.create_completion
+            non_stream_output_formatter = lmi_with_details_non_stream_output_formatter if include_details else lmi_non_stream_output_formatter
+            stream_output_formatter = lmi_with_details_stream_output_formatter if include_details else lmi_stream_output_formatter
+            accumulate_chunks = True
+        # chat completions request
         elif "messages" in decoded_payload:
             vllm_request = ChatCompletionRequest(**decoded_payload)
             vllm_invoke_function = self.chat_completion_service.create_chat_completion
+            non_stream_output_formatter = vllm_non_stream_output_formatter
+            stream_output_formatter = vllm_stream_output_formatter
         else:
             raise RuntimeError(
                 "invalid payload. must contain prompt, inputs, or messages")
-        return vllm_request, vllm_invoke_function
+        processed_request = ProcessedRequest(
+            vllm_request,
+            vllm_invoke_function,
+            non_stream_output_formatter,
+            stream_output_formatter,
+            accumulate_chunks,
+            include_prompt,
+        )
+        return processed_request
 
     async def inference(
             self,
             inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
-        properties = inputs.get_properties()
         try:
-            request, invoke_call = self.preprocess_request(inputs)
+            processed_request = self.preprocess_request(inputs)
         except Exception as e:
             logger.exception("Input parsing failed")
-            output = Output()
-            for k, v in properties.items():
-                output.add_property(k, str(v))
-            output.error(str(e), 424, "Input Parsing failed")
+            output = create_non_stream_output(
+                "", error=f"Input parsing failed: {str(e)}", code=424)
             return output
 
-        response = await invoke_call(request)
-        if isinstance(response, types.AsyncGeneratorType):
-            return handle_streaming_response(response, properties)
+        response = await processed_request.inference_invoker(
+            processed_request.vllm_request)
 
-        output = Output()
-        response_dict = {"data": response.model_dump_json(), "last": True}
-        if isinstance(response, ErrorResponse):
-            response_dict["code"] = response.code
-            response_dict["error"] = response.message
-        for k, v in properties.items():
-            output.add_property(k, str(v))
-        output.add(Output.binary_encode(response_dict))
-        return output
+        if isinstance(response, types.AsyncGeneratorType):
+            return handle_streaming_response(
+                response,
+                processed_request.stream_output_formatter,
+                tokenizer=self.tokenizer,
+                request=processed_request.vllm_request,
+                accumulate_chunks=processed_request.accumulate_chunks,
+                include_prompt=processed_request.include_prompt,
+            )
+
+        return processed_request.non_stream_output_formatter(
+            response,
+            request=processed_request.vllm_request,
+            tokenizer=self.tokenizer)
 
 
 service = VLLMHandler()
