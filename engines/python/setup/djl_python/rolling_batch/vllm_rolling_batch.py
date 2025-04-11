@@ -63,7 +63,7 @@ class VLLMRollingBatch(RollingBatch):
             except Exception as e:
                 raise TypeError("Error in tool parser creation.") from e
         if self.vllm_configs.enable_reasoning:
-            from vllm.entrypoints.openai.reasoning_parsers import ReasoningParserManager
+            from vllm.reasoning.abs_reasoning_parsers import ReasoningParserManager
             try:
                 self.reasoning_parser = ReasoningParserManager.get_reasoning_parser(
                     self.vllm_configs.reasoning_parser)

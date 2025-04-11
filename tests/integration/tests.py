@@ -591,7 +591,7 @@ class TestVllm1:
     def test_phi2(self):
         with Runner('lmi', 'phi-2') as r:
             prepare.build_vllm_model("phi-2")
-            r.launch()
+            r.launch("VLLM_USE_V1=0")
             client.run("vllm phi-2".split())
 
     def test_starcoder2_7b(self):
