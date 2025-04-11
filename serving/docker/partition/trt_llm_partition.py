@@ -15,18 +15,35 @@ import argparse
 import logging
 import os
 import sys
-from tensorrt_llm_toolkit import create_model_repo
+from tensorrt_llm.llmapi import LLM, BuildConfig
 
 from utils import update_kwargs_with_env_vars, load_properties, remove_option_from_properties
 
 
 def create_trt_llm_repo(properties, args):
     kwargs = remove_option_from_properties(properties)
-    kwargs['trt_llm_model_repo'] = args.trt_llm_model_repo
-    kwargs["tensor_parallel_degree"] = args.tensor_parallel_degree
-    kwargs["pipeline_parallel_degree"] = args.pipeline_parallel_degree
     model_id_or_path = args.model_path or kwargs['model_id']
-    create_model_repo(model_id_or_path, **kwargs)
+
+    # https://nvidia.github.io/TensorRT-LLM/llm-api/reference.html
+    build_config = BuildConfig(
+        max_batch_size=int(kwargs.get("max_rolling_batch_size", 256)),
+        max_input_len=int(kwargs.get("max_input_len", 1024)),
+        max_num_tokens=int(kwargs.get("max_num_tokens", 8192)),
+        max_seq_len=int(kwargs.get("max_seq_len", 256)),
+    )
+    llm = LLM(
+        model_id_or_path,
+        trust_remote_code=kwargs.get("trust_remote_code", False),
+        tensor_parallel_size=args.tensor_parallel_degree,
+        dtype=kwargs.get("dtype", "auto"),
+        revision=kwargs.get("revision", None),
+        pipeline_parallel_size=args.pipeline_parallel_degree,
+        build_config=build_config,
+        max_batch_size=kwargs.get("max_rolling_batch_size", 256),
+        max_num_tokens=kwargs.get("max_num_tokens", 8192),
+    )
+    llm.save(args.trt_llm_model_repo)
+    logging.info(f"Successfully compiled and saved TensorRT-LLM Engine")
 
 
 def main():
