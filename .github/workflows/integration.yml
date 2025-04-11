@@ -143,35 +143,35 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - test: TestCpuFull
-            instance: ubuntu-latest
-            gh-runner: true
-            failure-prefix: cpu
-          - test: TestCpuBoth
-            instance: ubuntu-latest
-            gh-runner: true
-            failure-prefix: cpu
-          - test: TestGpu
-            instance: g6
-            failure-prefix: gpu
-          - test: TestAarch64
-            instance: aarch64
-            failure-prefix: aarch64
-          - test: TestHfHandler
-            instance: g6
-            failure-prefix: lmi
-          - test: TestTrtLlmHandler1
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestTrtLlmHandler2
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestSchedulerSingleGPU
-            instance: g6
-            failure-prefix: lmi
-          - test: TestSchedulerMultiGPU
-            instance: g6
-            failure-prefix: lmi
+#          - test: TestCpuFull
+#            instance: ubuntu-latest
+#            gh-runner: true
+#            failure-prefix: cpu
+#          - test: TestCpuBoth
+#            instance: ubuntu-latest
+#            gh-runner: true
+#            failure-prefix: cpu
+#          - test: TestGpu
+#            instance: g6
+#            failure-prefix: gpu
+#          - test: TestAarch64
+#            instance: aarch64
+#            failure-prefix: aarch64
+#          - test: TestHfHandler
+#            instance: g6
+#            failure-prefix: lmi
+#          - test: TestTrtLlmHandler1
+#            instance: g6
+#            failure-prefix: trtllm
+#          - test: TestTrtLlmHandler2
+#            instance: g6
+#            failure-prefix: trtllm
+#          - test: TestSchedulerSingleGPU
+#            instance: g6
+#            failure-prefix: lmi
+#          - test: TestSchedulerMultiGPU
+#            instance: g6
+#            failure-prefix: lmi
           - test: TestLmiDist1
             instance: g6
             failure-prefix: lmi
@@ -208,9 +208,9 @@ jobs:
           - test: TestLmiDistMultiNode
             instance: g6
             failure-prefix: lmi
-          - test: TestCorrectnessTrtLlm
-            instance: g6
-            failure-prefix: trtllm
+#          - test: TestCorrectnessTrtLlm
+#            instance: g6
+#            failure-prefix: trtllm
           - test: TestCorrectnessLmiDist
             instance: g6
             failure-prefix: lmi

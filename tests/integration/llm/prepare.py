@@ -1522,13 +1522,6 @@ handler_performance_model_list = {
     },
 }
 
-vllm_async_model_list = {
-    "llama-3-1-8b-instruct": {
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
-        "option.tensor_parallel_degree": 4,
-    }
-}
-
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1697,14 +1690,14 @@ def build_lmi_dist_model(model):
 
 
 def build_vllm_async_model(model):
-    if model not in vllm_async_model_list.keys():
+    if model not in vllm_model_list.keys():
         raise ValueError(
-            f"{model} is not one of the supported models for vllm_async")
-    options = vllm_async_model_list[model]
+            f"{model} is not one of the supported models for vllm")
+    options = vllm_model_list[model]
     options["engine"] = "Python"
     options["option.rolling_batch"] = "disable"
     options["option.async_mode"] = "true"
-    options["option.entryPoint"] = "djl_python.vllm_async_service"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
     options["option.pythonExecutable"] = "/opt/djl/vllm_venv/bin/python"
 
     write_model_artifacts(options)
@@ -1721,6 +1714,10 @@ def build_vllm_model(model):
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])
+
+    if len(adapter_ids) == 0:
+        print(f"using async mode for non lora tests")
+        return build_vllm_async_model(model)
 
     write_model_artifacts(options,
                           adapter_ids=adapter_ids,
@@ -1826,7 +1823,6 @@ supported_handler = {
     'transformers_neuronx_neo': build_transformers_neuronx_neo_model,
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
-    'vllm_async': build_vllm_async_model,
 }
 
 if __name__ == '__main__':
