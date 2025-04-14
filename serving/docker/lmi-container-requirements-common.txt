@@ -29,5 +29,3 @@ optimum==1.23.2
 torch
 torchvision
 uvloop
-# sequence scheduler wheel for hf accelerate rolling batch
-https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl

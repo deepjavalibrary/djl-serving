@@ -6,7 +6,6 @@ import logging
 import pytest
 import llm.prepare as prepare
 import llm.client as client
-import rb_client as rb_client
 import test_client
 import time
 
@@ -358,34 +357,6 @@ class TestTrtLlmHandler2:
             prepare.build_trtllm_handler_model("flan-t5-xl")
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm flan-t5-xl".split())
-
-
-@pytest.mark.lmi_dist
-@pytest.mark.gpu_4
-class TestSchedulerSingleGPU:
-
-    def test_gpt2(self):
-        with Runner('lmi', 'gpt2') as r:
-            prepare.build_rolling_batch_model("gpt2")
-            r.launch()
-            rb_client.run("correctness gpt2".split())
-
-    def test_bllm(self):
-        with Runner('lmi', 'bloom-560m') as r:
-            prepare.build_rolling_batch_model("bloom-560m")
-            r.launch()
-            rb_client.run("scheduler_single_gpu bloom-560m".split())
-
-
-@pytest.mark.lmi_dist
-@pytest.mark.gpu_4
-class TestSchedulerMultiGPU:
-
-    def test_gptj_6b(self):
-        with Runner('lmi', 'gpt-j-6b') as r:
-            prepare.build_rolling_batch_model("gpt-j-6b")
-            r.launch()
-            rb_client.run("scheduler_multi_gpu gpt-j-6b".split())
 
 
 @pytest.mark.lmi_dist

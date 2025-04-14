@@ -21,7 +21,6 @@ class RollingBatchEnum(str, Enum):
     vllm = "vllm"
     tnx = "tnx"
     lmidist = "lmi-dist"
-    scheduler = "scheduler"
     auto = "auto"
     disable = "disable"
     trtllm = "trtllm"

@@ -1669,16 +1669,6 @@ def build_transformers_neuronx_handler_model(model):
     write_model_artifacts(options)
 
 
-def build_rolling_batch_model(model):
-    if model not in rolling_batch_model_list.keys():
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(rolling_batch_model_list.keys())}"
-        )
-    options = rolling_batch_model_list[model]
-    options["option.rolling_batch"] = "scheduler"
-    write_model_artifacts(options)
-
-
 def build_lmi_dist_model(model):
     if model not in lmi_dist_model_list.keys():
         raise ValueError(
@@ -1816,7 +1806,6 @@ supported_handler = {
     'transformers_neuronx': build_transformers_neuronx_handler_model,
     'performance': build_performance_model,
     'handler_performance': build_handler_performance_model,
-    'rolling_batch_scheduler': build_rolling_batch_model,
     'lmi_dist': build_lmi_dist_model,
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,

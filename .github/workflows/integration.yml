@@ -173,12 +173,6 @@ jobs:
           - test: TestTrtLlmHandler2
             instance: g6
             failure-prefix: trtllm
-          - test: TestSchedulerSingleGPU
-            instance: g6
-            failure-prefix: lmi
-          - test: TestSchedulerMultiGPU
-            instance: g6
-            failure-prefix: lmi
           - test: TestLmiDist1
             instance: g6
             failure-prefix: lmi

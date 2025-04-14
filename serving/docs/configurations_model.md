@@ -70,7 +70,6 @@ option.parallel_loading=true
 option.tensor_parallel_degree=2
 option.enable_venv=true
 option.rolling_batch=auto
-#option.rolling_batch=lmi-dist
 option.max_rolling_batch_size=64
 
 # max output size in bytes, default to 60M
@@ -180,9 +179,7 @@ To enable rolling batch for Python engine:
 engine=Python
 option.mpi_mode=true
 option.rolling_batch=auto
-# use FlashAttention
-#option.rolling_batch=lmi-dist
-#option.rolling_batch=scheduler
+#option.rolling_batch=vllm
 option.max_rolling_batch_size=64
 ```
 

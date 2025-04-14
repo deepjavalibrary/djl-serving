@@ -15,12 +15,6 @@ HuggingFace Accelerate expects the model to be in the [standard HuggingFace form
 
 LMI's HuggingFace Accelerate supports most models that are supported by HuggingFace Transformers.
 
-For text-generation models (i.e. `*ForCausalLM`, `*LMHeadModel`, and `ForConditionalGeneration` architectures), LMI provides continuous batching support.
-This significantly increases throughput compared to the base Transformers and Accelerate library implementations, and is the recommended operating mode for such models.
-
-For non text-generation models, LMI will create the model via the Transformers [`pipeline`](https://huggingface.co/docs/transformers/en/main_classes/pipelines) API.
-These models are not compatible with continuous batching, and have not been extensively tested with LMI.
-
 The set of supported tasks in LMI, and corresponding model architectures are:
 
 * text-generation (`*ForCausalLM`, `*LMHeadModel`)
@@ -40,8 +34,6 @@ You can leverage HuggingFace Accelerate with LMI using the following configurati
 
 ```
 engine=Python
-# use "scheduler" if deploying a text-generation model, and "disable" for other tasks (can also the config omit entirely)
-option.rolling_batch=scheduler
 option.model_id=<your model id>
 # use max to partition the model across all gpus. This is naive sharding, where the model is sharded vertically (as opposed to horizontally with tensor parallelism)
 option.tensor_parallel_degree=max
@@ -54,7 +46,6 @@ You can follow [this example](../deployment_guide/deploying-your-endpoint.md#con
 ```
 HF_MODEL_ID=<your model id>
 TENSOR_PARALLEL_DEGREE=max
-OPTION_ROLLING_BATCH=scheduler
 ```
 
 You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
