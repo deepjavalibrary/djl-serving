@@ -74,17 +74,15 @@ def stop_on_any_exception(func):
 
 class RollingBatch(ABC):
     """
-    This class initializes and maintains the SequenceBatchScheduler.
-    Scheduler maintains the batch and also its search states such as past key values,
-    attention masks and position ids for each decoding strategy requests.
-
+    This class initializes a RollingBatch instance, which controls the rolling batch process for LLM backends.
+    It maintains the current batch of requests, and manages adding/evicting requests through the batch lifecycle.
     """
 
     def __init__(self, configs: Properties):
         """
-        Initializes the rolling batch scheduler.
+        Initializes the RollingBatch instance.
 
-        :param  passed while loading the model
+        :param configs passed while loading the model
         """
 
         self.active_requests: List[Request] = []

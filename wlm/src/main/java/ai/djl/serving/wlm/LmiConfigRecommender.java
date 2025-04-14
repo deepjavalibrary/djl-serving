@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.util.Ec2Utils;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
@@ -75,8 +74,6 @@ public final class LmiConfigRecommender {
             rollingBatch = "vllm";
         } else if (isTrtLlmEnabled(features)) {
             rollingBatch = "trtllm";
-        } else if (Ec2Utils.isSageMaker()) {
-            rollingBatch = "scheduler";
         } else {
             rollingBatch = "disable";
         }
