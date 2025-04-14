@@ -1,4 +1,4 @@
-peft==0.13.2
+peft
 llmcompressor
 # flash infer kernels for vllm/lmi-dist
 https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl
