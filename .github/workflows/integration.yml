@@ -69,6 +69,15 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_inf2 $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
@@ -76,22 +85,28 @@ jobs:
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
       inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
       inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
-
+      cpu_instance_id: ${{ steps.create_cpu.outputs.action_cpu_instance_id }}
 
   test:
-    runs-on: [ "${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}", "${{ matrix.test.instance }}" ]
-    timeout-minutes: 90
+    runs-on:
+      - 'self-hosted'
+      - ${{ format('RUN_ID-{0}', github.run_id) }}
+      - ${{ format('RUN_NUMBER-{0}', github.run_number) }}
+      - ${{ format('SHA-{0}', github.sha) }}
+      - ${{ format('JOB-{0}', 'create-runners') }}
+      - ${{ matrix.test.instance }}
+    timeout-minutes: 120
     needs: create-runners
     strategy:
       fail-fast: false
       matrix:
         test:
           - test: TestCpuFull
-            instance: ubuntu-latest
-            gh-runner: true
+            instance: cpu
+            failure-prefix: cpu
           - test: TestCpuBoth
-            instance: ubuntu-latest
-            gh-runner: true
+            instance: cpu
+            failure-prefix: cpu
           - test: TestGpu
             instance: g6
           - test: TestAarch64
@@ -260,4 +275,6 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.inf2_instance_id_1 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id }}
           ./stop_instance.sh $instance_id
