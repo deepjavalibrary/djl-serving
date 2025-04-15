@@ -40,18 +40,10 @@ jobs:
             djl-version: ${{ needs.build.outputs.djl_version }}
             tag-suffix: ${{ inputs.mode == 'release' && github.sha || format('{0}-{1}', 'nightly', github.sha) }}
 
-    optimization-integration-test:
-        needs: [build]
-        uses: ./.github/workflows/optimization_integration.yml
-        secrets: inherit
-        with:
-            djl-version: ${{ needs.build.outputs.djl_version }}
-            tag-suffix: ${{ inputs.mode == 'release' && github.sha || format('{0}-{1}', 'nightly', github.sha) }}
 
-            
     determine_images_to_publish:
         if: always()
-        needs: [ integration-test, optimization-integration-test ]
+        needs: [ integration-test ]
         runs-on: ubuntu-latest
         outputs:
             images: ${{ steps.generate-images.outputs.images }}

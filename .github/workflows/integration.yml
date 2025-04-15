@@ -173,12 +173,6 @@ jobs:
           - test: TestTrtLlmHandler2
             instance: g6
             failure-prefix: trtllm
-          - test: TestLmiDist1
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDist2
-            instance: g6
-            failure-prefix: lmi
           - test: TestVllm1
             instance: g6
             failure-prefix: lmi
@@ -197,24 +191,15 @@ jobs:
           - test: TestNeuronxRollingBatch
             instance: inf2
             failure-prefix: neuron
-          - test: TestMultiModal
+          - test: TestMultiModalVllm
             instance: g6
             failure-prefix: lmi
           - test: TestTextEmbedding
             instance: g6
             failure-prefix: lmi
-          - test: TestLmiDistPipelineParallel
-            instance: g6
-            failure-prefix: lmi
-          - test: TestLmiDistMultiNode
-            instance: g6
-            failure-prefix: lmi
           - test: TestCorrectnessTrtLlm
             instance: g6
             failure-prefix: trtllm
-          - test: TestCorrectnessLmiDist
-            instance: g6
-            failure-prefix: lmi
           - test: TestCorrectnessNeuronx
             instance: inf2
             failure-prefix: neuron

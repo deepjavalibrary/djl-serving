@@ -56,7 +56,14 @@ public final class LmiConfigRecommender {
         }
 
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
-        if (!"auto".equals(rollingBatch)) {
+        if ("lmi-dist".equals(rollingBatch)) {
+            logger.warn(
+                    "lmi-dist has been removed in DJL Serving 0.33.0. We recommend using vllm which"
+                            + " serves as a drop-in replacement for most use-cases. Overriding"
+                            + " specified rolling batch of lmi-dist to vllm");
+            rollingBatch = "vllm";
+            lmiProperties.setProperty("option.mpi_mode", "false");
+        } else if (!"auto".equals(rollingBatch)) {
             return;
         } else if (!isTextGenerationModel(modelConfig)) {
             // Non text-generation use-cases are not compatible with rolling batch
@@ -68,8 +75,6 @@ public final class LmiConfigRecommender {
             } else {
                 rollingBatch = "tnx";
             }
-        } else if (isLmiDistEnabled(features)) {
-            rollingBatch = "lmi-dist";
         } else if (isVllmEnabled(features)) {
             rollingBatch = "vllm";
         } else if (isTrtLlmEnabled(features)) {
@@ -82,7 +87,7 @@ public final class LmiConfigRecommender {
 
     private static void setMpiMode(Properties lmiProperties) {
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
-        if ("lmi-dist".equals(rollingBatch) || "trtllm".equals(rollingBatch)) {
+        if ("trtllm".equals(rollingBatch)) {
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
     }
@@ -126,7 +131,7 @@ public final class LmiConfigRecommender {
         }
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
         int rollingBatchSize = 32;
-        if ("vllm".equals(rollingBatch) || "lmi-dist".equals(rollingBatch)) {
+        if ("vllm".equals(rollingBatch)) {
             rollingBatchSize = 256;
         }
         if ("trtllm".equals(rollingBatch)) {
@@ -165,10 +170,6 @@ public final class LmiConfigRecommender {
 
     private static boolean isVllmEnabled(String features) {
         return features != null && features.contains("vllm");
-    }
-
-    private static boolean isLmiDistEnabled(String features) {
-        return features != null && features.contains("lmi-dist");
     }
 
     private static boolean isTrtLlmEnabled(String features) {
@@ -212,11 +213,6 @@ public final class LmiConfigRecommender {
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
         if ("vllm".equals(rollingBatch) && !isTnxEnabled(features)) {
             lmiProperties.setProperty("option.pythonExecutable", "/opt/djl/vllm_venv/bin/python");
-            return;
-        }
-        if ("lmi-dist".equals(rollingBatch)) {
-            lmiProperties.setProperty(
-                    "option.pythonExecutable", "/opt/djl/lmi_dist_venv/bin/python");
         }
     }
 }
