@@ -1,3 +1,5 @@
+torch==2.6.0
+torchvision
 peft==0.15.1
 protobuf==3.20.3
 transformers==4.51.3
@@ -10,7 +12,7 @@ tiktoken
 blobfile
 einops
 accelerate==1.0.1
-bitsandbytes==0.44.1
+bitsandbytes
 auto-gptq==0.7.1
 pandas
 pyarrow
@@ -22,10 +24,8 @@ scipy
 onnx
 sentence_transformers
 onnxruntime-gpu==1.20.0
-autoawq==0.2.5
+autoawq
 tokenizers
 pydantic==2.9.2
 optimum==1.23.2
-torch
-torchvision
 uvloop
