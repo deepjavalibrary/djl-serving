@@ -77,6 +77,13 @@ public final class LmiUtils {
             if (features != null && features.contains("trtllm")) {
                 prop.setProperty("option.mpi_mode", "true");
             }
+            logger.warn(
+                    "Unable to fetch the HuggingFace Model Config for the specified model. If the"
+                        + " model is a compiled model, or not a HuggingFace Pretrained Model, this"
+                        + " is expected. If this is a HuggingFace Pretrained model, ensure that the"
+                        + " model artifacts contain a config.json or params.json file. If you are"
+                        + " using a HuggingFace Hub modelId, ensure that you are providing the"
+                        + " HF_TOKEN environment variable for gated models.");
             return;
         }
 
