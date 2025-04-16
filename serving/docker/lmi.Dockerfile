@@ -87,12 +87,10 @@ RUN scripts/patch_oss_dlc.sh python \
     && chown -R djl:djl /opt/djl \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-COPY lmi-container-requirements-common.txt ./requirements-common.txt
-COPY requirements-vllm.txt ./requirements-vllm.txt
+COPY lmi-container-requirements.txt ./requirements.txt
 RUN pip3 install torch==2.6.0 torchvision \
-    && pip3 install -r requirements-common.txt \
-    && pip3 install ${djl_converter_wheel} --no-deps \
-    && scripts/create_virtual_env.sh /opt/djl/vllm_venv requirements-vllm.txt
+    && pip3 install -r requirements.txt \
+    && pip3 install ${djl_converter_wheel} --no-deps
 
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
