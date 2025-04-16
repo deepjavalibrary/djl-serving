@@ -70,6 +70,7 @@ def convert_lmi_schema_to_completion_request(
     include_prompt = False
     if completion_dict["stream"]:
         completion_dict["logprobs"] = 1
+        completion_dict["return_tokens_as_token_ids"] = True
         completion_dict["stream_options"] = {
             "include_usage": True,
             "continuous_usage_stats": True
@@ -78,6 +79,7 @@ def convert_lmi_schema_to_completion_request(
     if parameters.pop("details", False):
         include_details_in_response = True
         completion_dict["logprobs"] = 1
+        completion_dict["return_tokens_as_token_ids"] = True
         if parameters.pop("decoder_input_details", False):
             completion_dict["prompt_logprobs"] = 1
     do_sample = parameters.pop("do_sample", None)
@@ -93,14 +95,19 @@ def convert_lmi_schema_to_completion_request(
 
 
 def convert_completion_logprobs_to_tgi_tokens(
-        completion_logprobs: CompletionLogProbs,
-        tokenizer: AnyTokenizer) -> List[dict]:
+    completion_logprobs: CompletionLogProbs,
+    tokenizer: AnyTokenizer,
+) -> List[dict]:
     token_logprobs = completion_logprobs.token_logprobs
     tokens = completion_logprobs.tokens
     tgi_tokens = []
     for token, logprob in zip(tokens, token_logprobs):
-        token_id = tokenizer.convert_tokens_to_ids(token)
-        tgi_token = {"id": token_id, "text": token, "logprob": logprob}
+        token_id = int(token.split(':')[1])
+        tgi_token = {
+            "id": token_id,
+            "text": tokenizer.decode(token_id),
+            "logprob": logprob
+        }
         tgi_tokens.append(tgi_token)
     return tgi_tokens
 
@@ -181,10 +188,10 @@ def vllm_stream_output_formatter(
 def convert_completion_chunk_response_to_lmi_schema(
     chunk: str,
     include_details: bool = False,
-    tokenizer: AnyTokenizer = None,
     history: List[str] = None,
     request: CompletionRequest = None,
     include_prompt: bool = False,
+    **_,
 ) -> Tuple[str, bool, List[str]]:
     # Vllm returns chunks in string format, and the conversion process to TGI
     # currently converts the string to an object, and then the object back to a string.
@@ -206,8 +213,8 @@ def convert_completion_chunk_response_to_lmi_schema(
     index = choice["index"]
     token_text = choice["text"]
     history.append(token_text)
-    token_id = tokenizer.convert_tokens_to_ids(token_text)
     logprob = choice["logprobs"]["token_logprobs"][0]
+    token_id = int(choice["logprobs"]["tokens"][0].split(":")[1])
     finish_reason = choice["finish_reason"]
     stop_reason = choice["stop_reason"]
     usage = vllm_completion_chunk["usage"]
@@ -242,9 +249,10 @@ def convert_completion_chunk_response_to_lmi_schema(
 
 
 def lmi_with_details_non_stream_output_formatter(
-        response: CompletionResponse,
-        request: CompletionRequest = None,
-        tokenizer: AnyTokenizer = None) -> Output:
+    response: CompletionResponse,
+    request: CompletionRequest = None,
+    tokenizer: AnyTokenizer = None,
+) -> Output:
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=True,
                                                      request=request,
@@ -252,11 +260,14 @@ def lmi_with_details_non_stream_output_formatter(
 
 
 def lmi_non_stream_output_formatter(
-        response: CompletionResponse,
-        request: CompletionRequest = None) -> Output:
+    response: CompletionResponse,
+    request: CompletionRequest = None,
+    tokenizer: AnyTokenizer = None,
+) -> Output:
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=False,
-                                                     request=request)
+                                                     request=request,
+                                                     tokenizer=tokenizer)
 
 
 def lmi_with_details_stream_output_formatter(

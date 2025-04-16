@@ -70,7 +70,7 @@ class VLLMHandler:
         self.tokenizer = await self.vllm_engine.get_tokenizer()
         model_config = await self.vllm_engine.get_model_config()
 
-        model_names = self.vllm_engine_args.served_model_name or self.vllm_engine_args.model
+        model_names = self.vllm_engine_args.served_model_name or "lmi"
         if not isinstance(model_names, list):
             model_names = [model_names]
         # Users can provide multiple names that refer to the same model
@@ -174,16 +174,17 @@ class VLLMHandler:
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
-                tokenizer=self.tokenizer,
                 request=processed_request.vllm_request,
                 accumulate_chunks=processed_request.accumulate_chunks,
                 include_prompt=processed_request.include_prompt,
+                tokenizer=self.tokenizer,
             )
 
         return processed_request.non_stream_output_formatter(
             response,
             request=processed_request.vllm_request,
-            tokenizer=self.tokenizer)
+            tokenizer=self.tokenizer,
+        )
 
 
 service = VLLMHandler()
