@@ -1689,8 +1689,6 @@ def build_vllm_async_model(model):
     options["option.rolling_batch"] = "disable"
     options["option.async_mode"] = "true"
     options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
-    options["option.pythonExecutable"] = "/opt/djl/vllm_venv/bin/python"
-
     write_model_artifacts(options)
 
 
