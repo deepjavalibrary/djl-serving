@@ -53,7 +53,7 @@ ENV SAFETENSORS_FAST_GPU=1
 ENV TORCH_NCCL_BLOCKING_WAIT=0
 ENV TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 ENV TORCH_NCCL_AVOID_RECORD_STREAMS=1
-ENV SERVING_FEATURES=vllm,lmi-dist
+ENV SERVING_FEATURES=vllm
 ENV DEBIAN_FRONTEND=noninteractive
 # Making s5cmd discoverable
 ENV PATH="/opt/djl/bin:${PATH}"
@@ -88,13 +88,11 @@ RUN scripts/patch_oss_dlc.sh python \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 COPY lmi-container-requirements-common.txt ./requirements-common.txt
-COPY requirements-lmi.txt ./requirements-lmi.txt
 COPY requirements-vllm.txt ./requirements-vllm.txt
 RUN pip3 install torch==2.6.0 torchvision \
     && pip3 install -r requirements-common.txt \
     && pip3 install ${djl_converter_wheel} --no-deps \
-    && scripts/create_virtual_env.sh /opt/djl/vllm_venv requirements-vllm.txt \
-    && scripts/create_virtual_env.sh /opt/djl/lmi_dist_venv requirements-lmi.txt
+    && scripts/create_virtual_env.sh /opt/djl/vllm_venv requirements-vllm.txt
 
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true

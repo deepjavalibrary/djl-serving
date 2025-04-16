@@ -63,7 +63,7 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=2.1.2
 ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:+ExitOnOutOfMemoryError"
 ENV NEURON_CC_FLAGS="--logfile /tmp/compile.log --temp-dir=/tmp"
-ENV SERVING_FEATURES=vllm,lmi-dist,tnx
+ENV SERVING_FEATURES=vllm,tnx
 # Making s5cmd discoverable
 ENV PATH="/opt/djl/bin:${PATH}"
 
