@@ -179,9 +179,6 @@ jobs:
           - test: TestVllmLora
             instance: g6
             failure-prefix: lmi
-          - test: TestLmiDistLora
-            instance: g6
-            failure-prefix: lmi
           - test: TestNeuronx1
             instance: inf2
             failure-prefix: neuron

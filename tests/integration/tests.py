@@ -1183,12 +1183,6 @@ class TestTextEmbedding:
 @pytest.mark.handler_performance
 class TestGPUHandlerPerformance:
 
-    def test_lmi_dist(self):
-        with Runner('lmi', 'handler-performance-lmi-dist') as r:
-            prepare.build_handler_performance_model("tiny-llama-lmi")
-            r.launch("CUDA_VISIBLE_DEVICES=0")
-            client.run("handler_performance lmi".split())
-
     def test_vllm(self):
         with Runner('lmi', 'handler-performance-vllm') as r:
             prepare.build_handler_performance_model("tiny-llama-vllm")
