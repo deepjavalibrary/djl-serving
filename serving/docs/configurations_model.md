@@ -80,8 +80,8 @@ Most of the options can also be overridden by an environment variable with the `
 For example:
 
 ```
-# to enable rolling batch with only environment variable:
-export OPTION_ROLLING_BATCH=auto
+# to enable model loading timeout with only environment variable:
+export OPTION_MODEL_LOADING_TIMEOUT=120
 ```
 
 ## Basic Model Configurations
@@ -175,13 +175,22 @@ max_batch_delay=1
 To enable rolling batch for Python engine:
 
 ```
-# lmi-dist requires running mpi mode
 engine=Python
-option.mpi_mode=true
 option.rolling_batch=auto
-#option.rolling_batch=vllm
 option.max_rolling_batch_size=64
 ```
+
+### async mode
+To enable async mode for Python engine:
+
+```
+engine=Python
+option.async_mode=true
+option.rolling_batch=disable
+```
+
+**Note: async mode and rolling batch mode are mutually exclusive.
+You can only enable async mode or rolling batch mode, but not both.**
 
 ## Appendix
 

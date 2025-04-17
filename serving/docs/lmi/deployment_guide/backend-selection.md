@@ -15,25 +15,26 @@ This guide will focus on important factors you should consider when selecting a 
 * Traffic Pattern behavior with respect to input and output length variability
 * Cost to host 
 
-If you are looking for a quick start recommendation, we recommend you start with either [lmi-dist](../user_guides/lmi-dist_user_guide.md) or [TensorRT-LLM](../user_guides/trt_llm_user_guide.md).
+If you are looking for a quick start recommendation, we recommend you start with either [vLLM](../user_guides/vllm_user_guide.md) or [TensorRT-LLM](../user_guides/trt_llm_user_guide.md).
 These backends are consistently at the top with respect to throughput and latency based on our internal benchmarks.
 
-lmi-dist is easier to get started with because it does not require model compilation, and is more flexible with respect to input and output length variability.
-lmi-dist also provides support for more model architectures out-of-the-box than TensorRT-LLM.
-TensorRT-LLM typically performs slightly better than lmi-dist, but the model compilation requirement makes it less flexible. Changes in your configuration likely require the model to be compiled again. 
+vLLM is easier to get started with because it does not require model compilation, and is more flexible with respect to input and output length variability.
+vLLM also provides support for more model architectures out-of-the-box than TensorRT-LLM.
+TensorRT-LLM can perform better than vLLM, but the model compilation requirement makes it less flexible. 
+Changes in your configuration likely require the model to be compiled again. 
 
-In terms of use-cases, chat based applications typically exhibit high input/output length variability, and are best served by lmi-dist.
+In terms of use-cases, chat based applications typically exhibit high input/output length variability, and are best served by vLLM.
 For lower variability use cases like information extraction and summarization, TensorRT-LLM is a good choice.
 You can learn more about each of these backends from the respective user guides:
 
-* [lmi-dist user guide](../user_guides/lmi-dist_user_guide.md)
+* [vLLM user guide](../user_guides/vllm_user_guide.md)
 * [TensorRT-LLM user guide](../user_guides/trt_llm_user_guide.md)
 
 
 ## Factor 1: Model Architecture Support
 
 The most important factor when selecting a backend is to use a backend that supports your model architecture.
-Some architectures are only supported by a few backends. For example, T5 models are only supported by lmi-dist and TensorRT-LLM while Llama2 models are supported by all backends.
+Some architectures are only supported by a few backends. For example, T5 models are only TensorRT-LLM while all backends support Llama3.x models.
 
 You can find out model architecture support by referencing the backend [user guides](../user_guides/README.md).
 
@@ -54,8 +55,8 @@ An example of uneven traffic would be if, across requests, you observe an even s
 Use-cases that may exhibit uneven traffic patterns are *Chat bots*, *Conversational AI*, and *Code Generation*.
 
 Unless you have a good understanding of your traffic patterns upfront, it may be hard to fully optimize compiled backends like TensorRT-LLM and Transformers NeuronX.
-We recommend starting with a backend like lmi-dist that may not be as performant as a compiled backend that has been fully tuned, but still achieves high performance and is more resilient to variable traffic patterns.
-Starting with lmi-dist allows you to collect data on your traffic patterns, and then use that data to understand whether a backend like TensorRT-LLM could be a better fit to achieve higher performance.
+We recommend starting with a backend like vLLM that may not be as performant as a compiled backend that has been fully tuned, but still achieves high performance and is more resilient to variable traffic patterns.
+Starting with vLLM allows you to collect data on your traffic patterns, and then use that data to understand whether a backend like TensorRT-LLM could be a better fit to achieve higher performance.
 
 Even traffic and Uneven traffic represent extremes on a continuum.
 The traffic you expect or observe will likely be a combination of both types of traffic, but may lean towards one type more than the other.
@@ -63,7 +64,7 @@ When launching LLMs in production, you might best be served with multiple endpoi
 
 To summarize the above:
 
-* For uneven traffic patterns, we recommend `lmi-dist`. 
+* For uneven traffic patterns, we recommend `vLLM`. 
 * For even traffic patterns, we recommend `TensorRT-LLM`. 
 
 ## Factor 3: Cost to Host

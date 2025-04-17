@@ -10,7 +10,6 @@ You specify this operating mode through the `option.mpi_mode=<true|false>` confi
 The operating modes for the built-in inference engines are described below.
 
 - TensorRT-LLM (MPI): Use multiple MPI processes to run the backends
-- LMI-Dist (MPI): Launching using multiple MPI processes to control for different GPUs
 - vLLM (Python): vLLM internally will use Ray to spin up multiple processes
 - HuggingFace Accelerate (Python): HF Accelerate internally managed the process workflow
 - TransformerNeuronX (Python): The Neuron backend engine, internally it will use multi-threading to run with Neuron cores.

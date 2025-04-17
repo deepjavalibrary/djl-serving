@@ -18,12 +18,8 @@ For a concrete usage, there are several notebook examples:
 
 ## Backend Support
 
-There are several backends that support the use of adapters.
-Depending on the backend, additional configurations may be required to enable adapter support or available to configure it.
-More details can be found in the user guide.
-
-- [LMI-Dist](https://docs.djl.ai/master/docs/serving/serving/docs/lmi/user_guides/lmi-dist_user_guide.html#lora-adapter-support)
-- [vLLM](https://docs.djl.ai/master/docs/serving/serving/docs/lmi/user_guides/vllm_user_guide.html#lora-adapter-support)
+vLLM is the only backend that supports LoRA adapter hosting. 
+More details can be found in the [vLLM user guide](https://docs.djl.ai/master/docs/serving/serving/docs/lmi/user_guides/vllm_user_guide.html#lora-adapter-support)
 
 ## Configurations
 

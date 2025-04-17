@@ -12,19 +12,37 @@ Also see the options for [model configurations](configurations_model.md).
 
 ## Python Mode
 
-This section walks through how to serve Python based model with DJL Serving.
+This section walks through how to serve Python-based model with DJL Serving.
 
 ### Define a Model
 
+
 To get started, implement a python source file named `model.py` as the entry point. DJL Serving will run your request by invoking a `handle` function that you provide. The `handle` function should have the following signature:
 
+**For Python Sync Mode:**
+
+Python sync mode is the default, and can be controlled with the configuration `option.async_mode=<false|true>`.
+Omitting `option.async_mode`, or setting `option.async_mode=false` will run the Python engine in sync mode.
+
 ```
-def handle(inputs: Input)
+def handle(inputs: Input) -> Optional[Output]:
 ```
 
-If there are other packages you want to use with your script, you can include a `requirements.txt` file in the same directory with your model file to install other dependencies at runtime. A `requirements.txt` file is a text file that contains a list of items that are installed by using pip install. You can also specify the version of an item to install.
+**For Python Async Mode:**
 
-If you don't want to install package from internet, you can bundle the python installation wheel in the model directory and install the package from model directory:
+Python async mode allows inference handlers to leverage asyncio. 
+This is useful for writing handler code at the single-request level and leveraging asyncio to handle multiple concurrent requests.
+
+To enable async mode, you must set `option.async_mode=true` and define a `model.py` file with a `handle` function. The `handle` function must have the following signature:
+
+```
+async def handle(inputs: Input) -> Optional[Output]:
+```
+
+If there are other packages you want to use with your script, you can include a `requirements.txt` file in the same directory with your model file to install other dependencies at runtime. 
+A `requirements.txt` file is a text file that contains a list of items that are installed by using pip install. You can also specify the version of an item to install.
+
+If you don't want to install packages over the network at runtime, you can bundle the package wheel in the model directory and install the package from model directory:
 
 ```
 ./local_wheels/ABC-0.0.2-py3-none-any.whl

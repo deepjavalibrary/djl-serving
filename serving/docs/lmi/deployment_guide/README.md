@@ -5,7 +5,7 @@ This is an in-depth guide that will cover all phases from model artifacts throug
 If you are new to LMI, we recommend starting with the [example notebooks](../README.md#sample-notebooks) and [starting guide](../user_guides/starting-guide.md).
 
 Before starting this tutorial, you should have your model artifacts ready.
-If you are deploying a model directly from the HuggingFace Hub, you will need the model-id (e.g. `TheBloke/Llama-2-7B-fp16`).
+If you are deploying a model directly from the HuggingFace Hub, you will need the model-id (e.g. `meta-llama/Llama-3.3-70B-Instruct`).
 If you are deploying a model stored in S3, you will need the s3 uri pointing to your model artifacts (e.g. `s3://my-bucket/my-model/`).
 If you have a custom model, it must be saved in the HuggingFace Transformers Pretrained format.
 You can read [this guide](model-artifacts.md) to verify your model is saved in the correct format for LMI.
@@ -15,15 +15,13 @@ This guide is organized as follows:
 - [1. Selecting an Instance Type](instance-type-selection.md)
   - Pick a SageMaker instance type based on your model size and expected runtime usage 
 - [2. Backend Selection](backend-selection.md)
-  - Pick a backend (vLLM, TensorRT-LLM, LMI-Dist, Transformers NeuronX) and corresponding container
+  - Pick a backend (vLLM, TensorRT-LLM, Transformers NeuronX) and corresponding container
 - [3. Model and Container Configurations](configurations.md)
   - Configure your model for optimized performance based on your use-case 
 - [4. Deploying a SageMaker Endpoint](deploying-your-endpoint.md)
   - Deploy your model to a SageMaker Endpoint and make inference requests
 - [5. Benchmarking your setup](benchmarking-your-endpoint.md)
   - Benchmark your setup to determine whether additional tuning is needed
-- [6. Advanced Guides]()
-  - A collection of advanced guides to further tune your deployment
 
 Next: [Selecting an Instance Type](instance-type-selection.md)
 
@@ -38,21 +36,21 @@ Brief overviews of the components relevant to LMI are presented below.
 
 ### Model Server
 LMI containers use [DJL Serving](https://github.com/deepjavalibrary/djl-serving) as the Model Server.
-A full architectural overview of DJL Serving is available [here](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/architecture.md).
+A full architectural overview of DJL Serving is available [here](../../architecture.md).
 At a high level, DJL Serving consists of Netty front-end that manages request routing to the backend workers that execute inference for the target model.
 The backend manages model worker scaling, with each model being executed in an Engine.
 The Engine is an abstraction provided by DJL that you can think of as the interface that allows DJL to run inference for a model with a specific deep learning framework.
 In LMI, we use the Python Engine as it allows us to directly leverage the growing Python ecosystem of LLM inference libraries.
 
 ### Python Engine and Inference Backends
-The Python Engine allows LMI containers to leverage many Python-based inference libraries like lmi-dist, vLLM, TensorRT-LLM, and Transformers NeuronX.
+The Python Engine allows LMI containers to leverage many Python-based inference libraries like vLLM, TensorRT-LLM, and Transformers NeuronX.
 These libraries expose Python APIs for loading and executing models with optimized inference on accelerators like GPUs and AWS Inferentia.
 LMI containers integrate the front-end model server with backend workers running Python processes to provide high-performance inference of LLMs.
 
 To support multi-gpu inference of large models using model parallelism techniques like tensor parallelism, many of the inference libraries support distributed inference through MPI.
-LMI supports running the Python Engine in mpi mode (referred to as the MPI Engine) to leverage tensor parallelism in mpi-aware libraries like LMI-Dist, and TensorRT-LLM.
+LMI supports running the Python Engine in mpi mode (referred to as the MPI Engine) to leverage tensor parallelism in mpi-aware libraries like TensorRT-LLM.
 
-Throughout the LMI documentation, we will use the term `backend` to refer to a combination of Engine and Inference Library (e.g., MPI Engine + LMI-Dist library).
+Throughout the LMI documentation, we will use the term `backend` to refer to a combination of Engine and Inference Library (e.g., Python Engine + vLLM library).
 
 You can learn more about the Python and MPI engines in the [engine conceptual guide](../conceptual_guide/lmi_engine.md).
 
@@ -74,19 +72,3 @@ The configuration provided to LMI specifies your entire setup. The configuration
 
 Configurations can be provided as either a `serving.properties` file, or through environment variables passed to the container.
 A more in-depth explanation about configurations is presented in the deployment guide in the [Container and Model Configurations](configurations.md) section.
-
-## Feature Matrix
-
-|                                       | HuggingFace Accelerate                                                                                                       | LMI_dist (9.0.0)                                                                                                             | TensorRTLLM (0.8.0)                                                                                                            | TransformersNeuronX (2.18.0)                                                                                                                   | vLLM (0.3.3)                                                                                                                 |
-|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
-| DLC                                   | LMI                                                                                                                          | LMI                                                                                                                          | LMI TRTLLM                                                                                                                     | LMI Neuron                                                                                                                                     | LMI                                                                                                                          |
-| Default handler                       | [huggingface](https://github.com/deepjavalibrary/djl-serving/blob/0.30.0-dlc/engines/python/setup/djl_python/huggingface.py) | [huggingface](https://github.com/deepjavalibrary/djl-serving/blob/0.30.0-dlc/engines/python/setup/djl_python/huggingface.py) | [tensorrt-llm](https://github.com/deepjavalibrary/djl-serving/blob/0.30.0-dlc/engines/python/setup/djl_python/tensorrt_llm.py) | [transformers-neuronx](https://github.com/deepjavalibrary/djl-serving/blob/0.30.0-dlc/engines/python/setup/djl_python/transformers_neuronx.py) | [huggingface](https://github.com/deepjavalibrary/djl-serving/blob/0.30.0-dlc/engines/python/setup/djl_python/huggingface.py) |
-| support quantization                  | BitsandBytes/GPTQ                                                                                                            | GPTQ/AWQ                                                                                                                     | SmoothQuant, AWQ, GPTQ                                                                                                         | INT8                                                                                                                                           | GPTQ/AWQ                                                                                                                     |
-| AWS machine supported                 | G4/G5/G6/P4D/P5                                                                                                              | G5/G6/P4D/P5                                                                                                                 | G5/G6/P4D/P5                                                                                                                   | INF2/TRN1                                                                                                                                      | G4/G5/G6/P4D/P5                                                                                                              |
-| execution mode                        | Python                                                                                                                       | MPI                                                                                                                          | MPI                                                                                                                            | Python                                                                                                                                         | Python                                                                                                                       |
-| multi-accelerator weight loading      | Yes                                                                                                                          | Yes                                                                                                                          | Yes                                                                                                                            | Yes                                                                                                                                            | Yes                                                                                                                          |
-| tensor parallel                       | No                                                                                                                           | Yes                                                                                                                          | Yes                                                                                                                            | Yes                                                                                                                                            | Yes                                                                                                                          |
-| continuous batching streaming         | Yes                                                                                                                          | Yes                                                                                                                          | Yes                                                                                                                            | Yes                                                                                                                                            | Yes                                                                                                                          |
-| need to compile                       | No                                                                                                                           | No                                                                                                                           | Yes                                                                                                                            | Yes                                                                                                                                            | No                                                                                                                           |
-| SageMaker Inference Component support | Yes                                                                                                                          | Yes                                                                                                                          | Yes                                                                                                                            | Yes                                                                                                                                            | Yes                                                                                                                          |
-| support logprob                       | Yes                                                                                                                          | Yes                                                                                                                          | Yes                                                                                                                            | No                                                                                                                                             | Yes                                                                                                                          |

@@ -2,81 +2,40 @@
 
 This document details breaking changes for LMI container version releases.
 
-## LMI Container v12 (0.30.0)
+## LMI Container v15 (0.33.0)
 
-### Changes to model loading/warmup behavior.
+### Removal of Sequence Scheduler and LMI-Dist Engines
 
-#### Summary
-Starting in LMI v12 (0.30.0), the default behavior for `option.max_rolling_batch_prefill_tokens` when using the lmi-dist 
-rolling-batch backend has changed.
-This configuration maps to vLLM's `max_num_batched_tokens` configuration, and will be updated to match this name in a future version.
-In previous versions (v11 and earlier), this value would default to 4096 tokens.
-Starting in v12, the default behavior for lmi-dist will rely on vLLM's default behavior.
-vLLM's default behavior is described [here](https://github.com/vllm-project/vllm/blob/9cc373f39036af789fb1ffc1e06b23766996d3f4/vllm/config.py#L959C9-L988).
-The previous behavior was implemented to improve the default experience for model loading, 
-especially on memory-constrained instances. 
-vLLM's default behavior is to set this value to `option.max_model_len`, and use this as part of the warmup phase. 
-After the warmup phase, lmi-dist would set this value back to `option.max_model_len`.
-This allowed users to deploy models with long context lengths on smaller instances without needing
-to configure `option.max_rolling_batch_prefill_tokens` or `option.max_model_len`. 
-However, if users attempted requests with longer than 4096 tokens of prefill, 
-there was a chance this could lead to out-of-memory scenarios.
+We have removed the sequence scheduler and lmi dist rolling batch implementations in this release due to most users leveraging vLLM and TensorRT-LLM.
 
-#### What to expect
-We have decided to make this change because of chunked prefill, our observation that more users are leveraging longer prompts, 
-and our belief that the previous motivation is no longer the correct default experience.
-This change means that if `option.max_rolling_batch_prefill_tokens` is not specified, some deployments that worked previously
-with v11 and earlier may start failing in v12 due to higher memory requirements during model loading and warmup 
-for models with greater than a supported sequence length greater than 4096 tokens.
+#### Sequence Scheduler Deprecation
 
-In v12, the default behavior is to allocate enough memory to store the KV-cache for `option.max_model_len` tokens.
-For models with large context lengths (or any context length above 4096 tokens), more memory will be required by default
-during model load and startup time. As a result, some previous configurations when deployed with v12 will require
-additional memory by default, which can lead to failures at startup.
+If you are using `option.rolling_batch=scheduler`, this deprecation impacts you.
+The Sequence Scheduler Rolling Batch enabled continuous batching behavior using the HuggingFace Transformers Library.
+This implementation is no longer needed as vLLM supports the same set of models that Sequence Scheduler did with better performance.
+To migrate from the sequence scheduler rolling batch, we recommend you move to vLLM by specifying `option.rolling_batch=vllm`.
+More details on the vLLM rolling batch implementation can be found in the [vllm user guide](../user_guides/vllm_user_guide.md).
 
-#### Guidance
-As a result of this change, we recommend you take the following actions:
+If you still require using the Sequence Scheduler implementation, you can use LMI v14.
 
-* Enable chunked-prefill. You can do this by setting `option.enable_chunked_prefill=true`. 
-  * You can learn more about chunked prefill here https://docs.vllm.ai/en/latest/models/performance.html#chunked-prefill.
-  * We expect that chunked prefill will be beneficial for most users and use-cases. But, you should confirm this for your specific use-case.
-  * With chunked-prefill, the default value for `option.max_rolling_batch_prefill_tokens` is 512, which is set to optimize inter token latency (ITL).
-  * Starting in LMI v12 (0.30.0), the default value for `option.enable_chunked_prefill` is `None` rather than `False`. This brings LMI default
-    in line with OSS vllm default, which results in chunked prefill being enabled by default for models with a context length greater than 32k.
-  * The default logic in vLLM is described [here](https://github.com/vllm-project/vllm/blob/9cc373f39036af789fb1ffc1e06b23766996d3f4/vllm/config.py#L959C9-L988).
-* Tune `option.max_rolling_batch_prefill_tokens` and `option.max_model_len` based on available accelerator memory (instance type), use-case, and model. 
-  * `option.max_model_len` should be set to the maximum input + output token count you expect to support at inference time.
-    * If you are unable to use a certain `option.max_model_len` for a model on an instance, you will need to reduce this value, use an instance type with more gpu memory, or explore techniques like quantization to reduce the memory required for the model.
-  * `option.max_rolling_batch_prefill_tokens` depends on whether you use chunked prefill.
-    * With chunked prefill, you can typically expect higher throughput with larger values, and better latency with lower values.
-    * Without chunked prefill, you should set this to the maximum input length you aim to support.
+#### LMI-Dist Deprecation
 
-## LMI-TensorrtLLM v12 (0.30.0)
+If you are using `option.rolling_batch=lmi-dist`, this deprecation impacts you.
+The LMI-Dist Rolling Batch has not been updated since LMI v12. 
+We are deprecating LMI-Dist in favor of vLLM.
+We expect that existing users of lmi-dist can easily transfer to vLLM, as LMI-Dist was largely based on vLLM.
 
-### T5 model family memory increase 
+To migrate from lmi-dist to vLLM, you must take the following actions:
 
-We have observed slightly different behavior for the t5 model family compared to our previous v11 release (0.29.0).
-We have raised an issue with Tensorrt-LLM [here](https://github.com/NVIDIA/TensorRT-LLM/issues/2398). 
-The change in behavior is likely due to how Tensorrt-LLM handles memory for the kv-cache.
+* disable MPI mode by setting `engine=Python` and `option.mpi_mode=false`
+* swap rolling batch to vllm by setting `option.rolling_batch=vllm`
 
-#### Guidance
-As a result, we recommend that you carefully tune the batch size and sequence length for your model.
-Configurations that previously worked on v11 may lead to Out-Of-Memory scenarios with v12.
+You can also explore the new async mode support for vLLM [here](../user_guides/vllm_user_guide.md#async-mode-configurations).
 
-### T5 model family batch scheduler policy
+We have tested this migration process for models and use-cases in our LMI-Dist Integration tests.
+The following use-cases in LMI-Dist will not work with vLLM:
 
-We have noticed runtime issues when using the default `batch_scheduler_policy` of `max_utilization` for t5 models.
-When this is combined with in-flight batching (the default), it leads to inference errors.
+* using Tensor Parallel>1 and Pipeline Parallel>1 in addition to draft model speculative decoding
+* multi-node inference
 
-#### Guidance
-We recommend users that are deploying t5 model variants to specify `option.batch_scheduler_policy=guaranteed_no_evict`
-to ensure proper inference execution.
-
-## LMI-NeuronX v12 (0.30.0)
-
-### Legacy partition is removed
-
-Before Neuron SDK version 2.18, it was necessary to load a safetensors model using Hugging Face on the CPU, save it as a pre-sharded version, and then load the model using NeuronAutoModel. Starting with Neuron SDK version 2.18, this step is no longer needed. In our code, although we have been loading the safetensors format on the CPU and loading them, the split_model_path is not used anywhere when using the safetensors format. Since we moved to Neuron SDK version 2.20.1, legacy partition is no longer needed.
-
-### Guidance
-You no longer need to specify a partition schema, as the LMI container can deduce it for you using our auto-detection partition schema. If you don't use option.partition_schema, this change does not affect you. If you do, consider making use of our auto-detection partition schema, safetensors, or Optimum.
+If neither of those use-cases apply to you, we expect a seamless transition to vLLM.
