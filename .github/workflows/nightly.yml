@@ -62,8 +62,7 @@ jobs:
                   if [[ "${{ needs.integration-test.outputs.failure_aarch64 }}" == "0" ]]; then
                     images+=("aarch64")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" &&
-                        "${{ needs.optimization-integration-test.outputs.failure_lmi }}" == "0" ]]; then
+                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]]; then
                     images+=("lmi")
                   fi
                   if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" == "0" ]]; then
