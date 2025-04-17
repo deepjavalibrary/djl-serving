@@ -77,8 +77,9 @@ class Connection {
             int basePort,
             int rank,
             String hostname,
-            Consumer<Output> responseCallback) {
-        requestHandler = new RequestHandler(responseCallback);
+            Consumer<Output> responseCallback,
+            Runnable errorCallback) {
+        requestHandler = new RequestHandler(responseCallback, errorCallback);
         port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank, hostname);
     }
@@ -444,10 +445,12 @@ class Connection {
 
         private CompletableFuture<Output> future;
         private Consumer<Output> responseCallback;
+        private Runnable errorCallback;
 
-        RequestHandler(Consumer<Output> responseCallback) {
+        RequestHandler(Consumer<Output> responseCallback, Runnable errorCallback) {
             super();
             this.responseCallback = responseCallback;
+            this.errorCallback = errorCallback;
         }
 
         /** {@inheritDoc} */
@@ -472,6 +475,9 @@ class Connection {
             ctx.fireChannelInactive();
             if (future != null) {
                 future.completeExceptionally(new IOException("Python worker disconnected."));
+            }
+            if (errorCallback != null) {
+                errorCallback.run();
             }
         }
 

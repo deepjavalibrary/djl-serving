@@ -88,6 +88,7 @@ class PyProcess {
         }
         Consumer<Output> responseCallback =
                 pyEnv.isAsyncMode() ? asyncRequestManager::addOutput : null;
+        Runnable errorCallback = pyEnv.isAsyncMode() ? this::restartPythonWorkerAsyncMode : null;
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
@@ -105,18 +106,22 @@ class PyProcess {
                                     port,
                                     i,
                                     hosts[i / connectionsPerHost],
-                                    responseCallback));
+                                    responseCallback,
+                                    errorCallback));
                 }
             } else {
                 for (int i = 0; i < worldSize; ++i) {
-                    connections.add(new Connection(pyEnv, port, i, "127.0.0.1", responseCallback));
+                    connections.add(
+                            new Connection(
+                                    pyEnv, port, i, "127.0.0.1", responseCallback, errorCallback));
                 }
             }
             counter.set(port + worldSize);
         } else {
             connections =
                     Collections.singletonList(
-                            new Connection(pyEnv, port, -1, "127.0.0.1", responseCallback));
+                            new Connection(
+                                    pyEnv, port, -1, "127.0.0.1", responseCallback, errorCallback));
         }
     }
 
@@ -135,10 +140,16 @@ class PyProcess {
             } else {
                 connections.get(0).send(input);
             }
-        } catch (InterruptedException e) {
-            logger.info("error", e);
+        } catch (Throwable e) {
+            logger.error("Error sending request to python", e);
             throw new EngineException(e);
         }
+    }
+
+    void restartPythonWorkerAsyncMode() {
+        logger.error("Restarting python worker");
+        stopPythonProcess(true);
+        restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
@@ -202,7 +213,7 @@ class PyProcess {
 
             return output;
         } catch (Throwable e) { // use Throwable to workaround spotbug false alarm
-            logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
+            logger.error("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
             stopPythonProcess(!initialLoad);
             if (!initialLoad) {
                 logger.info("Restart python process ...");
