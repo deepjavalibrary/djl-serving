@@ -8,11 +8,11 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 **Text Generation Models**
 
-Here is the list of text generation models supported in [vllm 0.7.3](https://docs.vllm.ai/en/v0.7.3/models/supported_models.html#decoder-only-language-models).
+Here is the list of text generation models supported in [vLLM 0.8.4](https://docs.vllm.ai/en/v0.8.4/models/supported_models.html#decoder-only-language-models).
 
 **Multi Modal Models**
 
-Here is the list of multi-modal models supported in [vllm 0.7.3](https://docs.vllm.ai/en/v0.7.3/models/supported_models.html#decoder-only-language-models).
+Here is the list of multi-modal models supported in [vLLM 0.8.4](https://docs.vllm.ai/en/v0.8.4/models/supported_models.html#decoder-only-language-models).
 
 ### Model Coverage in CI
 
@@ -34,12 +34,12 @@ The following set of models are tested in our nightly tests
 
 ## Quantization Support
 
-The quantization techniques supported in vLLM 0.7.3 are listed [here](https://docs.vllm.ai/en/v0.7.3/quantization/supported_hardware.html).
+The quantization techniques supported in vLLM 0.8.4 are listed [here](https://docs.vllm.ai/en/v0.8.4/quantization/supported_hardware.html).
 
 We recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time.
 Depending on the quantization technique, this can be significant overhead.
-If you are using a pre-quantized model, you should not set any quantization specific configurations.
+If you are using a pre-quantized model, you should not set any quantization-specific configurations.
 vLLM will deduce the quantization from the model config, and apply optimizations at runtime.
 If you explicitly set the quantization configuration for a pre-quantized model, it limits the optimizations that vLLM can apply.
 
@@ -53,12 +53,12 @@ The following quantization techniques are supported for runtime quantization:
 You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
 
 Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
-You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.7.3/quantization/supported_hardware.html).
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.8.4/quantization/supported_hardware.html).
 
 ### Ahead of time (AOT) quantization
 
 If you bring a pre-quantized model to LMI, you should not set the `option.quantize` configuration.
-The lmi-dist engine will directly parse the quantization configuration from the model and load it for inference.
+The vLLM engine will directly parse the quantization configuration from the model and load it for inference.
 This is especially important if you are using a technique that has a Marlin variant like GPTQ, AWQ, or FP8.
 The engine will determine if it can use the Marlin kernels at runtime, and use them if it can (hardware support).
 
@@ -68,9 +68,41 @@ If you omit the `option.quantize` configuration, then the engine will determine 
 
 ## Quick Start Configurations 
 
-You can leverage `vllm` with LMI using the following starter configurations:
+Starting with LMI v15, the recommended mode for running vLLM is async mode.
+Async mode integrates with the vLLM Async Engine via the OpenAI modules. 
+This ensures that LMI's vLLM support is always in parity with upstream vLLM with respect to both engine-configurations and API schemas.
+Async mode will become the default, and only supported mode, in an upcoming release.
 
-### serving.properties
+Currently, async mode does not support multi-lora hosting.
+This functionality will be added to async mode soon.
+If you are not using LMI's vLLM implementation to deploy multiple lora adapters, 
+async mode is the recommended deployment mode.
+
+### Async Mode Configurations
+
+**serving.properties**
+
+```
+engine=Python
+option.async_mode=true
+option.rolling_batch=disable
+option.entryPoint=djl_python.lmi_vllm.vllm_async_service
+option.tensor_parallel_degree=max
+```
+
+**environment variables**
+
+```
+HF_MODEL_ID=<model id or model path>
+OPTION_ASYNC_MODE=true
+OPTION_ROLLING_BATCH=disable
+OPTION_ENTRYPOINT=djl_python.lmi_vllm.vllm_async_service
+TENSOR_PARALLEL_DEGREE=max
+```
+
+### Rolling Batch Configurations
+
+**serving.properties**
 
 ```
 engine=Python
@@ -80,8 +112,6 @@ option.rolling_batch=vllm
 # Adjust the following based on model size and instance type
 option.max_rolling_batch_size=64
 ```
-
-You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
 
 ### environment variables 
 
@@ -93,9 +123,9 @@ OPTION_ROLLING_BATCH=vllm
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 
-You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
-
 ### LoRA Adapter Support
+
+**Note: LoRA adapter support is only supported in rolling batch mode. It will be added to async mode soon.**
 
 vLLM has support for LoRA adapters using the [adapters API](../../adapters.md).
 In order to use the adapters, you must begin by enabling them by setting `option.enable_lora=true`.
@@ -131,7 +161,7 @@ Those situations will be called out specifically.
 
 In addition to the configurations specified in the table above, LMI supports all additional vLLM EngineArguments in Pass-Through mode.
 Pass-Through configurations are not processed or validated by LMI.
-You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.6.3.post1/models/engine_args.html#engine-args).
+You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.8.4_a/serving/engine_args.html).
 
 You can specify these pass-through configurations in the serving.properties file by prefixing the configuration with `option.<config>`,
 or as environment variables by prefixing the configuration with `OPTION_<CONFIG>`.
@@ -151,3 +181,12 @@ If you want to set the Engine Argument `tokenizer_mode`, you can do:
 
 * `option.tokenizer_mode=mistral` in serving.properties
 * `OPTION_TOKENIZER_MODE=true` in serving.properties
+
+**Mapping Configuration**
+
+Some configurations expect an object to be passed.
+These are supported in LMI.
+For example, if you want to enable the `speculative_config`, you can do:
+
+* `option.speculative_config={"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}`
+* `OPTION_SPECULATIVE_CONFIG={"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}`

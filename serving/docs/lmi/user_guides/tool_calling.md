@@ -2,7 +2,7 @@
 
 Tool calling is currently supported in LMI through the [vLLM](vllm_user_guide.md) backend only.
 
-Details on vLLM's tool calling support can be found [here](https://docs.vllm.ai/en/v0.7.3/features/tool_calling.html#how-to-write-a-tool-parser-plugin).
+Details on vLLM's tool calling support can be found [here](https://docs.vllm.ai/en/v0.8.4/features/tool_calling.html#how-to-write-a-tool-parser-plugin).
 
 To enable tool calling in LMI, you must set the following environment variable configurations:
 

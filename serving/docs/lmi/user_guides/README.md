@@ -25,7 +25,6 @@ LMI provides backend-specific user guides that cover the following topics:
 
 The available backends and their respective user guides are available below:
 
-* [LMI-Dist](lmi-dist_user_guide.md)
 * [vLLM](vllm_user_guide.md)
 * [TensorRT-LLM](trt_llm_user_guide.md)
 * [Transformers-NeuronX](tnx_user_guide.md)

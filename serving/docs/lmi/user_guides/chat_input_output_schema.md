@@ -1,7 +1,7 @@
 # Chat Completions API Schema
 
 This document describes the API schema for the chat completions endpoints (`v1/chat/completions`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.32.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
+This schema is applicable to our latest release, v0.33.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
 Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.30.0-dlc).
 
 On SageMaker, Chat Completions API schema is supported with the `/invocations` endpoint without additional configurations.
@@ -205,6 +205,8 @@ Example:
 
 #### Vision/Image Support
 
+**Note: Image/MultiModal support is only enabled for the vLLM backend.**
+
 You can specify an image as part of the content when using a vision language model.
 Image data can either be specified as a url, or via a base64 encoding of the image data.
 
@@ -384,6 +386,8 @@ Example:
 ```
 
 ### Tools
+
+**Note: Tool usage has only been validated for the vLLM backend.**
 
 The tools object provides function defitions for the model to use.
 Tools and function calling are only supported by vLLM currently.

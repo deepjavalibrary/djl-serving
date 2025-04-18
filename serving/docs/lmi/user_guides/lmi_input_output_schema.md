@@ -267,7 +267,7 @@ The following sections describe each of the request or response objects in more 
 
 ### GenerationParameters
 
-The following parameters are available with every rolling batch backend (vLLM, lmi-dist, tensorrt-llm, hf-accelerate)
+The following parameters are available with every rolling batch backend (vLLM, tensorrt-llm, hf-accelerate)
 
 ```
 "parameters": {
@@ -281,7 +281,7 @@ The following parameters are available with every rolling batch backend (vLLM, l
   'details' : boolean (default = false, details only available for rolling batch),
   'return_full_text': boolean (default = false),
   'stop_sequences' : list[str] (default = None)
-  'decoder_input_details' : boolean (default = false, only for vllm, lmi-dist)
+  'decoder_input_details' : boolean (default = false, only for vllm, cannot be used with streaming)
 }
 ```
 

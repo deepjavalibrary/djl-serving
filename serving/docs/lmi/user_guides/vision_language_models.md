@@ -1,7 +1,7 @@
 # Vision Language Models in LMI
 
 
-LMI supports deploying the following types of Vision Language Models:
+LMI supports deploying the following types of Vision Language Models through the vLLM backend:
 
 * llava (e.g. llava-hf/llava-1.5-7b-hf)
 * llava_next (e.g. llava-hf/llava-v1.6-mistral-7b-hf)
