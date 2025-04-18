@@ -1,0 +1,2 @@
+tensorrt_llm==0.17.0.post1
+uvloop
