@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+import os
 import types
 from typing import Optional, Union, AsyncGenerator
 
@@ -22,6 +23,7 @@ from vllm.entrypoints.openai.protocol import (
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
+from vllm.utils import kill_process_tree
 
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
@@ -156,9 +158,17 @@ class VLLMHandler:
         )
         return processed_request
 
+    async def check_health(self):
+        try:
+            await self.vllm_engine.check_health()
+        except Exception as e:
+            logger.fatal("vLLM engine is dead, terminating process")
+            kill_process_tree(os.getpid())
+
     async def inference(
             self,
             inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
+        await self.check_health()
         try:
             processed_request = self.preprocess_request(inputs)
         except Exception as e:
