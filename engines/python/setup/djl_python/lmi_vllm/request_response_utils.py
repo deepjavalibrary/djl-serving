@@ -27,28 +27,6 @@ from djl_python.outputs import Output
 from djl_python.async_utils import create_non_stream_output, create_stream_chunk_output
 
 
-class ProcessedRequest:
-
-    def __init__(
-        self,
-        vllm_request: Union[CompletionRequest, ChatCompletionRequest],
-        inference_invoker: Callable,
-        non_stream_output_formatter: Callable,
-        stream_output_formatter: Callable,
-        accumulate_chunks: bool,
-        include_prompt: bool,
-    ):
-        self.vllm_request = vllm_request
-        self.inference_invoker = inference_invoker
-        # We need access to both the stream and non-stream output formatters here
-        # because even with streaming requests, there may be some errors before inference that
-        # result in a return of ErrorResponse object instead of AsyncGenerator
-        self.non_stream_output_formatter = non_stream_output_formatter
-        self.stream_output_formatter = stream_output_formatter
-        self.accumulate_chunks = accumulate_chunks
-        self.include_prompt = include_prompt
-
-
 def convert_lmi_schema_to_completion_request(
     payload: dict, ) -> Tuple[CompletionRequest, bool, bool]:
     parameters = payload.get("parameters", {})
