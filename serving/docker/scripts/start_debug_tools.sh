@@ -54,7 +54,7 @@ nsys profile \
   --trace "${LMI_DEBUG_NSYS_PROFILE_TRACE}" \
   --cudabacktrace all:10000 \
   --output "$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8).nsys-rep" \
-  -- djl-serving "$@" || true   # Nsys exits with non-zero code when the application is terminated due to a timeout which is expected
+  -- djl-serving "$@" || true # Nsys exits with non-zero code when the application is terminated due to a timeout which is expected
 
 if [ -n "${LMI_DEBUG_S3_ARTIFACT_PATH}" ]; then
   s5cmd cp /opt/djl/*.nsys-rep "$LMI_DEBUG_S3_ARTIFACT_PATH"

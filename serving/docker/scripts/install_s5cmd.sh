@@ -17,4 +17,4 @@ tar -xvf s5cmd.tar.gz -C "${INSTALL_DIR}"
 rm -rf s5cmd.tar.gz
 
 export PATH="${INSTALL_DIR}:${PATH}"
-echo "export PATH=${INSTALL_DIR}:\$PATH" >> ~/.bashrc
+echo "export PATH=${INSTALL_DIR}:\$PATH" >>~/.bashrc
