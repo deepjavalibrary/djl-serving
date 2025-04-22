@@ -13,7 +13,6 @@ blobfile
 einops
 accelerate==1.0.1
 bitsandbytes
-auto-gptq==0.7.1
 pandas
 pyarrow
 jinja2
@@ -34,4 +33,4 @@ peft
 llmcompressor
 vllm==0.8.4
 xgrammar==0.1.18
-https://github.com/flashinfer-ai/flashinfer/releases/download/v0.2.4/flashinfer_python-0.2.4+cu124torch2.6-cp38-abi3-linux_x86_64.whl
+flashinfer-python==0.2.5

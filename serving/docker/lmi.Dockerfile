@@ -14,7 +14,7 @@ FROM nvidia/cuda:$version
 ARG cuda_version=cu128
 ARG djl_version
 ARG djl_serving_version
-ARG python_version=3.11
+ARG python_version=3.12
 ARG djl_torch_version=2.5.1
 ARG djl_onnx_version=1.20.0
 
@@ -89,6 +89,7 @@ RUN scripts/patch_oss_dlc.sh python \
 
 COPY lmi-container-requirements.txt ./requirements.txt
 RUN pip3 install torch==2.6.0 torchvision \
+    && pip3 install flashinfer-python -i https://flashinfer.ai/whl/cu126/torch2.6/ \
     && pip3 install -r requirements.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 

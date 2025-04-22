@@ -5,19 +5,19 @@ BASE_URL="https://developer.download.nvidia.com/devtools/nsight-systems/"
 
 # Check for LMI_DEBUG_NSIGHT_VERSION
 if [ -n "${LMI_DEBUG_NSIGHT_VERSION}" ]; then
-    # Check if the variable contains only numbers, dots, and hyphens
-    echo "LMI_DEBUG_NSIGHT_VERSION is set: ${LMI_DEBUG_NSIGHT_VERSION}"
+  # Check if the variable contains only numbers, dots, and hyphens
+  echo "LMI_DEBUG_NSIGHT_VERSION is set: ${LMI_DEBUG_NSIGHT_VERSION}"
 else
-    # Find the latest version dynamically
-    echo "Fetching the latest Nsight Systems version..."
-    LMI_DEBUG_NSIGHT_VERSION=$(wget -qO- "$BASE_URL" | grep -oP 'NsightSystems-linux-public-\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+' | sort -V | tail -1)
+  # Find the latest version dynamically
+  echo "Fetching the latest Nsight Systems version..."
+  LMI_DEBUG_NSIGHT_VERSION=$(wget -qO- "$BASE_URL" | grep -oP 'NsightSystems-linux-public-\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+' | sort -V | tail -1)
 
-    if [ -z "$LMI_DEBUG_NSIGHT_VERSION" ]; then
-        echo "Failed to fetch the latest version. Exiting."
-        exit 1
-    fi
+  if [ -z "$LMI_DEBUG_NSIGHT_VERSION" ]; then
+    echo "Failed to fetch the latest version. Exiting."
+    exit 1
+  fi
 
-    echo "Latest Nsight Systems version found: $LMI_DEBUG_NSIGHT_VERSION"
+  echo "Latest Nsight Systems version found: $LMI_DEBUG_NSIGHT_VERSION"
 fi
 
 # Security Validation
@@ -45,8 +45,8 @@ aria2c -x 16 "$DOWNLOAD_URL" -o nsight-systems-installer.run
 
 # Verify the download
 if [ ! -f "nsight-systems-installer.run" ]; then
-    echo "Download failed. Exiting."
-    exit 1
+  echo "Download failed. Exiting."
+  exit 1
 fi
 
 # Make the installer executable
@@ -70,17 +70,17 @@ EOF
 # Add Nsight Systems to PATH
 echo "Adding Nsight Systems to PATH..."
 export PATH="${INSTALL_DIR}/pkg/bin:${PATH}"
-echo "export PATH=${INSTALL_DIR}/pkg/bin:\$PATH" >> ~/.bashrc
+echo "export PATH=${INSTALL_DIR}/pkg/bin:\$PATH" >>~/.bashrc
 source ~/.bashrc
 
 # Verify installation
 echo "Verifying Nsight Systems installation..."
 if command -v nsys &>/dev/null; then
-    echo "Nsight Systems installed successfully!"
-    nsys --version
+  echo "Nsight Systems installed successfully!"
+  nsys --version
 else
-    echo "Nsight Systems installation failed."
-    exit 1
+  echo "Nsight Systems installation failed."
+  exit 1
 fi
 
 # Clean up
