@@ -45,8 +45,8 @@ from djl_python.outputs import Output
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.encode_decode import decode
 
-from .request_response_utils import trtllm_non_stream_output_formatter, trtllm_stream_output_formatter
-
+from .request_response_utils import trtllm_non_stream_output_formatter, trtllm_stream_output_formatter, \
+    convert_lmi_schema_to_completion_request, lmi_with_details_stream_output_formatter, lmi_stream_output_formatter, lmi_with_details_non_stream_output_formatter, lmi_non_stream_output_formatter
 
 logger = logging.getLogger(__name__)
 
@@ -110,23 +110,35 @@ class TensorRTLlmAsyncService:
         raw_request = batch[0]
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
+        accumulate_chunks = False
+        include_prompt = False
         if "model" not in decoded_payload:
             decoded_payload["model"] = self.model_name
         if "prompt" in decoded_payload:
             request = CompletionRequest(**decoded_payload)
             invoke_call = self.openai_completion
+            non_stream_output_formatter = trtllm_non_stream_output_formatter
+            stream_output_formatter = trtllm_stream_output_formatter
         elif "messages" in decoded_payload:
             request = ChatCompletionRequest(**decoded_payload)
             invoke_call = self.openai_chat
+            non_stream_output_formatter = trtllm_non_stream_output_formatter
+            stream_output_formatter = trtllm_stream_output_formatter
+        elif "inputs" in decoded_payload:
+            request, include_details, include_prompt = convert_lmi_schema_to_completion_request(decoded_payload)
+            invoke_call = self.openai_completion
+            non_stream_output_formatter = lmi_with_details_non_stream_output_formatter if include_details else lmi_non_stream_output_formatter
+            stream_output_formatter = lmi_with_details_stream_output_formatter if include_details else lmi_stream_output_formatter
+            accumulate_chunks = True
         else:
             raise RuntimeError("invalid payload. must contain prompt, inputs, or messages")
         processed_request = ProcessedRequest(
             request,
             invoke_call,
-            trtllm_non_stream_output_formatter,
-            trtllm_stream_output_formatter,
-            False,
-            False,
+            non_stream_output_formatter,
+            stream_output_formatter,
+            accumulate_chunks,
+            include_prompt,
         )
         return processed_request
 
@@ -143,12 +155,16 @@ class TensorRTLlmAsyncService:
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
+                accumulate_chunks=processed_request.accumulate_chunks,
+                include_prompt=processed_request.include_prompt,
+                tokenizer=self.tokenizer,
                 request=processed_request.request,
             )
 
         return processed_request.non_stream_output_formatter(
             response,
             request=processed_request.request,
+            tokenizer=self.tokenizer,
         )
 
     @staticmethod
