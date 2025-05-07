@@ -16,7 +16,7 @@ from typing import Optional, Any, Dict, Tuple, Literal, Union
 from pydantic import field_validator, model_validator, ConfigDict, Field
 from vllm import EngineArgs, AsyncEngineArgs
 from vllm.utils import FlexibleArgumentParser
-from vllm.engine.arg_utils import StoreBoolean
+from vllm.utils import StoreBoolean
 
 from djl_python.properties_manager.properties import Properties
 
