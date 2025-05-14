@@ -40,7 +40,7 @@ sudo snap alias djlbench djl-bench
 - Or download .deb package from S3
 
 ```
-curl -O https://publish.djl.ai/djl-bench/0.30.0/djl-bench_0.33.0-1_all.deb
+curl -O https://publish.djl.ai/djl-bench/0.33.0/djl-bench_0.33.0-1_all.deb
 sudo dpkg -i djl-bench_0.33.0-1_all.deb
 ```
 
