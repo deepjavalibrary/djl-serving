@@ -58,7 +58,7 @@ if __name__ == '__main__':
     test_requirements = [
         'numpy<2', 'requests', 'Pillow', 'transformers', 'torch', 'einops',
         'accelerate', 'sentencepiece', 'protobuf', "peft", 'yapf',
-        'pydantic>=2.0', "objgraph", "vllm==0.8.4"
+        'pydantic>=2.0', "objgraph", "vllm"
     ]
 
     setup(name='djl_python',
