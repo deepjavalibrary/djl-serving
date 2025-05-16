@@ -11,20 +11,17 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import json
-from typing import Callable, Tuple, Union, List, Dict
-from vllm.entrypoints.openai.protocol import (
-    CompletionRequest,
-    ChatCompletionRequest,
-    CompletionResponse,
-    ChatCompletionResponse,
+from typing import Union, Tuple, List
+from tensorrt_llm.serve.openai_protocol import (
     ErrorResponse,
+    ChatCompletionResponse,
+    CompletionResponse,
+    CompletionRequest,
     CompletionLogProbs,
 )
-from vllm.sequence import Logprob
-from vllm.transformers_utils.tokenizer import AnyTokenizer
-
+from tensorrt_llm.llmapi.tokenizer import TokenizerBase
+from djl_python.async_utils import create_non_stream_output
 from djl_python.outputs import Output
-from djl_python.async_utils import create_non_stream_output, create_stream_chunk_output
 
 
 def convert_lmi_schema_to_completion_request(
@@ -41,15 +38,10 @@ def convert_lmi_schema_to_completion_request(
         "ignore_eos": parameters.pop("ignore_eos_token", False),
         "stream": payload.pop("stream", False),
     }
-    # 1. when details are requested, return token details for the likely tokens (logprobs=1)
-    # TGI only returns prompt token details when details is also enabled
-    # 2. For streaming requests, echo throws an error. To maintain backwards compatibility for TGI schema,
-    # we maintain a flag that the output formatter uses to know if prompt should be prepended to generated_text
+    # TRTLLM does not support logprobs in completions API. If provided, rely on TRTLLM validation error
     include_details_in_response = False
     include_prompt = False
     if completion_dict["stream"]:
-        completion_dict["logprobs"] = 1
-        completion_dict["return_tokens_as_token_ids"] = True
         completion_dict["stream_options"] = {
             "include_usage": True,
             "continuous_usage_stats": True
@@ -57,10 +49,8 @@ def convert_lmi_schema_to_completion_request(
         include_prompt = completion_dict.pop("echo", False)
     if parameters.pop("details", False):
         include_details_in_response = True
-        completion_dict["logprobs"] = 1
-        completion_dict["return_tokens_as_token_ids"] = True
         if parameters.pop("decoder_input_details", False):
-            completion_dict["prompt_logprobs"] = 1
+            completion_dict["return_context_logits"] = 1
     do_sample = parameters.pop("do_sample", None)
     # when do_sample is None, just passthrough sampling params as sampling is dictated by the value of other params
     # when do_sample is False, set sampling params such that we disable sampling
@@ -73,47 +63,11 @@ def convert_lmi_schema_to_completion_request(
         **completion_dict), include_details_in_response, include_prompt
 
 
-def convert_completion_logprobs_to_tgi_tokens(
-    completion_logprobs: CompletionLogProbs,
-    tokenizer: AnyTokenizer,
-) -> List[dict]:
-    token_logprobs = completion_logprobs.token_logprobs
-    tokens = completion_logprobs.tokens
-    tgi_tokens = []
-    for token, logprob in zip(tokens, token_logprobs):
-        token_id = int(token.split(':')[1])
-        tgi_token = {
-            "id": token_id,
-            "text": tokenizer.decode(token_id),
-            "logprob": logprob
-        }
-        tgi_tokens.append(tgi_token)
-    return tgi_tokens
-
-
-def convert_completion_prefill_to_tgi_prefill(
-        prompt_logprobs: List[Dict[int, Logprob]]) -> List[dict]:
-    tgi_tokens = []
-    for logprob_dict in prompt_logprobs:
-        if logprob_dict is None:
-            continue
-        token_id = next(iter(logprob_dict))
-        logprob = logprob_dict[token_id]
-        tgi_token = {
-            "id": token_id,
-            "text": logprob.decoded_token,
-            "logprob": logprob.logprob,
-        }
-        tgi_tokens.append(tgi_token)
-    return tgi_tokens
-
-
 def convert_completion_response_to_lmi_schema(
-    response: CompletionResponse,
-    request: CompletionRequest = None,
-    include_details: bool = False,
-    tokenizer: AnyTokenizer = None,
-) -> Output:
+        response: CompletionResponse,
+        request: CompletionRequest = None,
+        include_details: bool = False,
+        tokenizer: TokenizerBase = None) -> Output:
     primary_choice = response.choices[0]
     lmi_response = {"generated_text": primary_choice.text}
     if not include_details:
@@ -122,46 +76,10 @@ def convert_completion_response_to_lmi_schema(
         "finish_reason": primary_choice.stop_reason,
         "generated_tokens": response.usage.completion_tokens,
         "seed": request.seed,
-        "prefill": [],
-        "tokens": []
     }
-    if primary_choice.logprobs is not None:
-        details["tokens"] = convert_completion_logprobs_to_tgi_tokens(
-            primary_choice.logprobs, tokenizer)
-    if primary_choice.prompt_logprobs is not None:
-        details["prefill"] = convert_completion_prefill_to_tgi_prefill(
-            primary_choice.prompt_logprobs)
-
     lmi_response["details"] = details
     output = create_non_stream_output(lmi_response)
     return output
-
-
-def vllm_non_stream_output_formatter(
-    response: Union[ErrorResponse, ChatCompletionResponse, CompletionResponse],
-    **_,
-) -> Output:
-    if isinstance(response, ErrorResponse):
-        return create_non_stream_output("",
-                                        error=response.message,
-                                        code=response.code)
-    response_data = response.model_dump_json()
-    return create_non_stream_output(response_data)
-
-
-def vllm_stream_output_formatter(
-    chunk: str,
-    **_,
-) -> Tuple[str, bool]:
-    # vllm returns responses in sse format, 'data: {...}'
-    trimmed_chunk = chunk[6:].strip()
-    if trimmed_chunk == '[DONE]':
-        data = ""
-        last = True
-    else:
-        data = trimmed_chunk
-        last = False
-    return data, last
 
 
 def convert_completion_chunk_response_to_lmi_schema(
@@ -170,9 +88,10 @@ def convert_completion_chunk_response_to_lmi_schema(
     history: List[str] = None,
     request: CompletionRequest = None,
     include_prompt: bool = False,
+    tokenizer: TokenizerBase = None,
     **_,
 ) -> Tuple[str, bool, List[str]]:
-    # Vllm returns chunks in string format, and the conversion process to TGI
+    # TRTLLM returns chunks in string format, and the conversion process to TGI
     # currently converts the string to an object, and then the object back to a string.
     # It's much easier to work with the object instead of manipulating the string, but inefficient
     trimmed_chunk = chunk[6:].strip()
@@ -180,28 +99,27 @@ def convert_completion_chunk_response_to_lmi_schema(
         data = ""
         return data, True, history
 
-    vllm_completion_chunk = json.loads(trimmed_chunk)
-    if "error" in vllm_completion_chunk:
-        return json.dumps(vllm_completion_chunk,
+    trt_completion_chunk = json.loads(trimmed_chunk)
+    if "error" in trt_completion_chunk:
+        return json.dumps(trt_completion_chunk,
                           ensure_ascii=False), True, history
 
-    if len(vllm_completion_chunk["choices"]) == 0:
+    if len(trt_completion_chunk["choices"]) == 0:
         # penultimate chunk
         return "", False, history
-    choice = vllm_completion_chunk["choices"][0]
+    choice = trt_completion_chunk["choices"][0]
     index = choice["index"]
     token_text = choice["text"]
     history.append(token_text)
-    logprob = choice["logprobs"]["token_logprobs"][0]
-    token_id = int(choice["logprobs"]["tokens"][0].split(":")[1])
     finish_reason = choice["finish_reason"]
     stop_reason = choice["stop_reason"]
-    usage = vllm_completion_chunk["usage"]
+    usage = trt_completion_chunk["usage"]
 
+    # TODO: TokenId and LogProb here
     token = {
-        "id": token_id,
+        "id": None,
         "text": token_text,
-        "logprob": logprob,
+        "logprob": None,
     }
     tgi_chunk = {
         "index": index,
@@ -230,7 +148,7 @@ def convert_completion_chunk_response_to_lmi_schema(
 def lmi_with_details_non_stream_output_formatter(
     response: CompletionResponse,
     request: CompletionRequest = None,
-    tokenizer: AnyTokenizer = None,
+    tokenizer: TokenizerBase = None,
 ) -> Output:
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=True,
@@ -241,7 +159,7 @@ def lmi_with_details_non_stream_output_formatter(
 def lmi_non_stream_output_formatter(
     response: CompletionResponse,
     request: CompletionRequest = None,
-    tokenizer: AnyTokenizer = None,
+    tokenizer: TokenizerBase = None,
 ) -> Output:
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=False,
@@ -262,3 +180,30 @@ def lmi_stream_output_formatter(
     **kwargs,
 ) -> Tuple[str, bool, List[str]]:
     return convert_completion_chunk_response_to_lmi_schema(chunk, **kwargs)
+
+
+def trtllm_non_stream_output_formatter(
+    response: Union[ErrorResponse, ChatCompletionResponse, CompletionResponse],
+    **_,
+) -> Output:
+    if isinstance(response, ErrorResponse):
+        return create_non_stream_output("",
+                                        error=response.message,
+                                        code=response.code)
+    response_data = response.model_dump_json()
+    return create_non_stream_output(response_data)
+
+
+def trtllm_stream_output_formatter(
+    chunk: str,
+    **_,
+) -> Tuple[str, bool]:
+    # trtllm returns responses in sse format, 'data: {...}'
+    trimmed_chunk = chunk[6:].strip()
+    if trimmed_chunk == '[DONE]':
+        data = ""
+        last = True
+    else:
+        data = trimmed_chunk
+        last = False
+    return data, last
