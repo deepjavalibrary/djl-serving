@@ -358,6 +358,12 @@ class TestTrtLlmHandler2:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm flan-t5-xl".split())
 
+    def test_trtllm_performance(self):
+        with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-trtllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance trtllm".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4
@@ -647,6 +653,12 @@ class TestVllm1:
             assert req_time < 20
             client.run(
                 "vllm tinyllama-input-len-exceeded --in_tokens 10".split())
+
+    def test_vllm_performance(self):
+        with Runner('lmi', 'handler-performance-vllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-vllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance vllm".split())
 
 
 @pytest.mark.vllm
@@ -1177,20 +1189,3 @@ class TestTextEmbedding:
             prepare.build_text_embedding_model("bge-base-onnx")
             r.launch()
             client.run("text_embedding bge-base-onnx".split())
-
-
-@pytest.mark.gpu
-@pytest.mark.handler_performance
-class TestGPUHandlerPerformance:
-
-    def test_vllm(self):
-        with Runner('lmi', 'handler-performance-vllm') as r:
-            prepare.build_handler_performance_model("tiny-llama-vllm")
-            r.launch("CUDA_VISIBLE_DEVICES=0")
-            client.run("handler_performance vllm".split())
-
-    def test_trtllm(self):
-        with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
-            prepare.build_handler_performance_model("tiny-llama-trtllm")
-            r.launch("CUDA_VISIBLE_DEVICES=0")
-            client.run("handler_performance trtllm".split())
