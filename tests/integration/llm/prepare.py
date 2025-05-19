@@ -1500,24 +1500,17 @@ text_embedding_model_list = {
 }
 
 handler_performance_model_list = {
-    "tiny-llama-lmi": {
-        "engine": "MPI",
-        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        "option.rolling_batch": "lmi-dist",
-        "option.max_rolling_batch_size": 512,
-    },
     "tiny-llama-vllm": {
         "engine": "Python",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
         "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        "option.task": "text-generation",
-        "option.rolling_batch": "vllm",
         "option.gpu_memory_utilization": "0.9",
         "option.max_rolling_batch_size": 512,
     },
     "tiny-llama-trtllm": {
         "engine": "Python",
         "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        "option.rolling_batch": "trtllm",
         "option.max_rolling_batch_size": 512,
     },
 }
