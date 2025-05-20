@@ -1507,6 +1507,7 @@ handler_performance_model_list = {
         "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         "option.gpu_memory_utilization": "0.9",
         "option.max_rolling_batch_size": 512,
+        "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",
     },
     "tiny-llama-trtllm": {
         "engine": "Python",
