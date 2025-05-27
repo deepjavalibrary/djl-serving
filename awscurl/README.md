@@ -12,7 +12,7 @@ You can download `awscurl` like this:
 
 ```sh
 # download stable release version:
-curl -O https://publish.djl.ai/awscurl/0.30.0/awscurl \
+curl -O https://publish.djl.ai/awscurl/0.33.0/awscurl \
 && chmod +x awscurl
 
 # or download nightly release
