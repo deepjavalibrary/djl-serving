@@ -44,6 +44,10 @@ class _JSONEncoder(json.JSONEncoder):
         return super(_JSONEncoder, self).default(obj)
 
 
+def remove_crlf(input: str) -> str:
+    return input.replace("\r\n", " ")
+
+
 class Output(object):
 
     def __init__(self, code=200, message='OK'):
@@ -183,7 +187,7 @@ class Output(object):
     def send(self, cl_socket):
         msg = bytearray()
         msg += struct.pack('>h', self.code)
-        self.write_utf8(msg, self.message)
+        self.write_utf8(msg, remove_crlf(self.message))
 
         msg += struct.pack('>h', len(self.properties))
         for k, v in self.properties.items():
