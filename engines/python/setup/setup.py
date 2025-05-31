@@ -12,74 +12,34 @@
 # the specific language governing permissions and limitations under the License.
 
 import os
-import setuptools.command.build_py
-from setuptools import setup, find_packages
 
-pkgs = find_packages(exclude='src')
+from setuptools import setup
 
 
-def detect_version():
-    with open("../../../gradle/libs.versions.toml", "r") as f:
+def read_from_file(file, key):
+    with open(file, "r") as f:
         for line in f:
             if not line.startswith('#'):
-                prop = line.split('=')
-                if prop[0].strip() == "serving":
+                prop = line.split("=")
+                if prop[0].strip() == key:
                     return prop[1].strip().replace('"', '')
-
     return None
 
 
-def add_version(version_str):
-    djl_version_string = f"__version__ = '{version_str}'"
-    with open(os.path.join("djl_python", "__init__.py"), 'r') as f:
-        existing = [i.strip() for i in f.readlines()]
-    with open(os.path.join("djl_python", "__init__.py"), 'a') as f:
-        if djl_version_string not in existing:
-            f.writelines(['\n', djl_version_string])
+def detect_version():
+    version_file = os.path.join("djl_python", "__init__.py")
+    djl_version = read_from_file(version_file, "__version__")
 
+    if not djl_version:
+        current_dir = os.path.dirname(__file__)
+        toml_file = f"{current_dir}/../../../gradle/libs.versions.toml"
+        djl_version = read_from_file(toml_file, "serving")
+        with open(version_file, "a") as f:
+            f.writelines(['\n', f"__version__ = \"{djl_version}\""])
 
-def pypi_description():
-    with open('PyPiDescription.rst') as df:
-        return df.read()
-
-
-class BuildPy(setuptools.command.build_py.build_py):
-
-    def run(self):
-        setuptools.command.build_py.build_py.run(self)
+    return djl_version
 
 
 if __name__ == '__main__':
     version = detect_version()
-    add_version(version)
-
-    requirements = ['psutil', 'packaging', 'wheel']
-
-    test_requirements = [
-        'numpy<2', 'requests', 'Pillow', 'transformers', 'torch', 'einops',
-        'accelerate', 'sentencepiece', 'protobuf', "peft", 'yapf',
-        'pydantic>=2.0', "objgraph", "vllm==0.8.4"
-    ]
-
-    setup(name='djl_python',
-          version=version,
-          description=
-          'djl_python is a tool to build and test DJL Python model locally',
-          author='Deep Java Library team',
-          author_email='djl-dev@amazon.com',
-          long_description=pypi_description(),
-          url='https://github.com/deepjavalibrary/djl.git',
-          keywords='DJL Serving Deep Learning Inference AI',
-          packages=pkgs,
-          cmdclass={
-              'build_py': BuildPy,
-          },
-          install_requires=requirements,
-          extras_require={'test': test_requirements + requirements},
-          entry_points={
-              'console_scripts': [
-                  'djl-test-model=djl_python.test_model:run',
-              ]
-          },
-          include_package_data=True,
-          license='Apache License Version 2.0')
+    setup(version=version)

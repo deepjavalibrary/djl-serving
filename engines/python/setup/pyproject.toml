@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "djl_python"
+description = "djl_python is a tool to build and test DJL Python model locally"
+readme = "README.rst"
+authors = [
+    { name = "Deep Java Library team", email = "djl-dev@amazon.com" }
+]
+license = "Apache-2.0"
+requires-python = ">=3.9"
+keywords = ["DJL", "Serving", "Deep Learning", "Inference", "GenAI"]
+dependencies = [
+    "psutil",
+    "packaging",
+    "wheel"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "numpy<2",
+    "requests",
+    "Pillow",
+    "transformers",
+    "torch",
+    "einops",
+    "accelerate",
+    "sentencepiece",
+    "protobuf",
+    "peft",
+    "yapf",
+    "pydantic>=2.0",
+    "objgraph",
+    "vllm==0.8.4"
+]
+
+[project.scripts]
+djl-test-model = "djl_python.test_model:run"
+
+[project.urls]
+Homepage = "https://github.com/deepjavalibrary/djl-serving"
+Issues = "https://github.com/deepjavalibrary/djl-serving/issues"
+
+[tool.setuptools.packages.find]
+exclude = ["djl_python.tests*"]

@@ -323,8 +323,8 @@ jobs:
         working-directory: engines/python/setup
         run: |
           # Setup
-          pip install setuptools
-          python3 -m setup bdist_wheel
+          python3 -m pip install setuptools build
+          python3 -m build
           mkdir logs
           docker run -t --rm --network="host" \
           --name neuron-test \

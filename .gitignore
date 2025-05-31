@@ -36,5 +36,6 @@ engines/python/setup/djl_python/tests/resources*
 tests/integration/awscurl
 #Python
 __pycache__
+dist/
 *.egg-info/
 *.pt

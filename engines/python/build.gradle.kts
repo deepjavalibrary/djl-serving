@@ -7,7 +7,7 @@ group = "ai.djl.python"
 
 fun stripPackageVersion() {
     val initFile = projectDir / "setup/djl_python/__init__.py"
-    initFile.text = initFile.text.replace(Regex("\\n*__version__.*"), "")
+    initFile.text = initFile.text.replace(Regex("\\n*__version__.*"), "\n")
 }
 
 dependencies {
@@ -42,10 +42,10 @@ tasks {
         doFirst {
             stripPackageVersion()
             val f = file("setup/djl_python/__init__.py")
-            f.text += "\n__version__ = '${libs.versions.djl.get()}'\n"
+            f.text += "\n__version__ = '${libs.versions.djl.get()}'"
         }
 
-        exclude("build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py", "djl_python/tests", "*.pt")
+        exclude("build", "dist", "*.egg-info", "__pycache__", "README.rst", "setup.py", "djl_python/tests", "*.pt")
         doLast {
             val list = ArrayList<String>()
             val dir = projectDir / "setup/djl_python"
@@ -77,11 +77,15 @@ tasks {
     clean {
         doFirst {
             delete("setup/build/")
+            delete("setup/dist/")
             delete("setup/djl_python.egg-info/")
             delete("setup/__pycache__/")
             delete("setup/djl_python/__pycache__/")
+            delete("setup/djl_python/aws/__pycache__/")
+            delete("setup/djl_python/properties_manager/__pycache__/")
             delete("setup/djl_python/tests/__pycache__/")
             delete("setup/djl_python/scheduler/__pycache__/")
+            delete("src/test/resources/accumulate/__pycache__/")
             delete("src/test/resources/accumulate/__pycache__/")
             delete("$home/.djl.ai/python")
             stripPackageVersion()
