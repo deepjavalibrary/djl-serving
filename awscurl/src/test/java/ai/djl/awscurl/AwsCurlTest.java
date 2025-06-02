@@ -431,6 +431,32 @@ public class AwsCurlTest {
     }
 
     @Test
+    public void testOpenAiError() {
+        System.setProperty("TOKENIZER", "gpt2");
+        TokenUtils.setTokenizer(); // reset tokenizer
+        AsciiString contentType = AsciiString.cached("application/jsonlines");
+        TestHttpHandler.setContent(
+                "{\"id\": \"0\", \"choices\": [{\"delta\": {\"content\": \" Hello\"}}]}\n"
+                    + "{\"id\": \"1\", \"choices\": [{\"delta\": {\"content\": \" World\"}}]}\n",
+                contentType);
+        String[] args = {
+            "http://localhost:18080/invocations",
+            "-H",
+            "Content-type: application/json",
+            "-d",
+            "{}",
+            "-c",
+            "1",
+            "-N",
+            "2",
+            "-P",
+            "-t"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertEquals(ret.getTotalTokens(), 0);
+    }
+
+    @Test
     public void testTritonServerOutput() {
         System.setProperty("TOKENIZER", "gpt2");
         TokenUtils.setTokenizer(); // reset tokenizer
