@@ -326,6 +326,7 @@ public final class AwsCurl {
             ret.setErrorRate(100d * errorReq / totalRequests);
             ret.setConcurrentClients(clients);
 
+            String warning = null;
             if (successReq > 0) {
                 ret.setTps(successReq * 1000000000d / totalTime * clients);
                 ret.setAverageLatency(totalTime / 1000000d / successReq);
@@ -334,10 +335,16 @@ public final class AwsCurl {
                 ret.setP99Latency(success.get(successReq * 99 / 100) / 1000000d);
                 if (tokens != null) {
                     int totalTokens = tokens.get();
-                    ret.setTotalTokens(totalTokens);
-                    ret.setTokenPerRequest(totalTokens / totalRequests);
-                    ret.setTokenThroughput(totalTokens * 1000000000d / totalTime * clients);
-                    ret.setAverageTokenLatency(totalTime / 1000000d * clients / totalTokens);
+                    if (totalTokens > 0) {
+                        ret.setTotalTokens(totalTokens);
+                        ret.setTokenPerRequest(totalTokens / totalRequests);
+                        ret.setTokenThroughput(totalTokens * 1000000000d / totalTime * clients);
+                        ret.setAverageTokenLatency(totalTime / 1000000d * clients / totalTokens);
+                    } else {
+                        warning =
+                                "Warning: No token found, did you forget specify -jq in your"
+                                        + " command?";
+                    }
                 }
             }
             if (!firstTokens.isEmpty()) {
@@ -351,6 +358,10 @@ public final class AwsCurl {
             }
             AwsCurl.logger.debug("Total request time: {} ms", totalTime / 1000000d);
             ret.print(config.isJsonOutput(), config.getJsonOutputPath());
+            if (warning != null) {
+                System.out.println();
+                System.out.println(warning);
+            }
         } catch (IOException | InterruptedException e) {
             System.err.println(e.getMessage());
         } catch (ParseException e) {
