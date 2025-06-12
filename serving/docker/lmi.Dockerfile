@@ -15,7 +15,7 @@ ARG cuda_version=cu128
 ARG djl_version
 ARG djl_serving_version
 ARG python_version=3.12
-ARG djl_torch_version=2.5.1
+ARG djl_torch_version=2.6.0
 ARG djl_onnx_version=1.20.0
 
 # djl converter wheel for text-embedding use case
