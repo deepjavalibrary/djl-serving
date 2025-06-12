@@ -30,10 +30,9 @@ from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
-from djl_python.async_utils import handle_streaming_response, create_non_stream_output
+from djl_python.async_utils import handle_streaming_response, create_non_stream_output, ProcessedRequest
 
 from .request_response_utils import (
-    ProcessedRequest,
     vllm_stream_output_formatter,
     vllm_non_stream_output_formatter,
     convert_lmi_schema_to_completion_request,
@@ -178,13 +177,13 @@ class VLLMHandler:
             return output
 
         response = await processed_request.inference_invoker(
-            processed_request.vllm_request)
+            processed_request.request)
 
         if isinstance(response, types.AsyncGeneratorType):
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
-                request=processed_request.vllm_request,
+                request=processed_request.request,
                 accumulate_chunks=processed_request.accumulate_chunks,
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
@@ -192,7 +191,7 @@ class VLLMHandler:
 
         return processed_request.non_stream_output_formatter(
             response,
-            request=processed_request.vllm_request,
+            request=processed_request.request,
             tokenizer=self.tokenizer,
         )
 
