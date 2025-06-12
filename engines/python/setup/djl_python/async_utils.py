@@ -12,9 +12,31 @@
 # the specific language governing permissions and limitations under the License.
 import json
 import logging
-from typing import AsyncGenerator, Callable, Optional, Union
+from typing import AsyncGenerator, Callable, Optional, Union, Any
 
 from djl_python.outputs import Output
+
+
+class ProcessedRequest:
+
+    def __init__(
+        self,
+        request: Any,
+        inference_invoker: Callable,
+        non_stream_output_formatter: Callable,
+        stream_output_formatter: Callable,
+        accumulate_chunks: bool,
+        include_prompt: bool,
+    ):
+        self.request = request
+        self.inference_invoker = inference_invoker
+        # We need access to both the stream and non-stream output formatters here
+        # because even with streaming requests, there may be some errors before inference that
+        # result in a return of ErrorResponse object instead of AsyncGenerator
+        self.non_stream_output_formatter = non_stream_output_formatter
+        self.stream_output_formatter = stream_output_formatter
+        self.accumulate_chunks = accumulate_chunks
+        self.include_prompt = include_prompt
 
 
 def create_non_stream_output(data: Union[str, dict],
