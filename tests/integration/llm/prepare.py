@@ -1511,6 +1511,14 @@ handler_performance_model_list = {
         "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         "option.max_rolling_batch_size": 512,
     },
+    "tiny-llama-trtllm-async": {
+        "engine": "Python",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.model_loading_timeout": 1800,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
+    },
 }
 
 
