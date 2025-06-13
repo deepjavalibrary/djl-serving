@@ -364,6 +364,12 @@ class TestTrtLlmHandler2:
             r.launch("CUDA_VISIBLE_DEVICES=0")
             client.run("handler_performance trtllm".split())
 
+    def test_trtllm_async_performance(self):
+        with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-trtllm-async")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance trtllm".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4

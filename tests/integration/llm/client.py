@@ -1736,6 +1736,35 @@ def test_handler_rolling_batch_chat(model, model_spec):
                 req["max_tokens"] = seq_length
                 awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
+def test_handler_trtllm_rolling_batch_chat(model, model_spec):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
+    # dryrun phase
+    if spec.get("enable_reasoning", False):
+        req = {"messages": batch_generation_reasoning(1)[0]}
+    else:
+        req = {"messages": batch_generation_chat(1)[0]}
+    req["max_tokens"] = spec["seq_length"][0]
+    req["logprobs"] = True
+    if "adapters" in spec:
+        req["adapters"] = spec.get("adapters")[0]
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        LOGGER.info(f"res: {res.content}")
+        # awscurl little benchmark phase
+        for i, batch_size in enumerate(spec["batch_size"]):
+            for seq_length in spec["seq_length"]:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["max_tokens"] = seq_length
+                awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 def test_handler_rolling_batch_tool(model, model_spec):
     modelspec_checker(model, model_spec)
@@ -2151,7 +2180,7 @@ def run(raw_args):
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm_chat":
-        test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
+        test_handler_trtllm_rolling_batch_chat(args.model, trtllm_chat_model_spec)
     elif args.handler == "trtllm_neo":
         test_handler_rolling_batch(args.model, trtllm_neo_model_spec)
     elif args.handler == "no_code":
