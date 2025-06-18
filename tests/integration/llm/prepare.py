@@ -1257,7 +1257,9 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 41
     },
@@ -1284,7 +1286,9 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 213
     },
@@ -1311,7 +1315,9 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.quantize": "fp8"
     },
@@ -1319,14 +1325,18 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4
     },
     "trtllm-mistral-7b-instruct-v0.3-fp8": {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.quantize": "fp8"
     }
@@ -1513,10 +1523,10 @@ handler_performance_model_list = {
     },
     "tiny-llama-trtllm-async": {
         "engine": "Python",
-        "option.rolling_batch": "disable",
-        "option.async_mode": True,
         "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         "option.model_loading_timeout": 1800,
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
         "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
     },
 }
