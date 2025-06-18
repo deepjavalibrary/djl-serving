@@ -873,7 +873,7 @@ correctness_model_spec = {
         "num_run": 66,
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
-        "score": 0.6
+        "score": 0.45
     },
     "lmi-dist-llama3-1-8b": {
         "batch_size": [213],
@@ -897,7 +897,7 @@ correctness_model_spec = {
         "num_run": 66,
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
-        "score": 0.6
+        "score": 0.45
     },
     "trtllm-mistral-7b-instruct-v0.3": {
         "batch_size": [213],
@@ -905,7 +905,7 @@ correctness_model_spec = {
         "num_run": 66,
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
         "dataset": "mmlu",
-        "score": 0.59
+        "score": 0.45
     },
     "trtllm-mistral-7b-instruct-v0.3-fp8": {
         "batch_size": [213],
@@ -913,7 +913,7 @@ correctness_model_spec = {
         "num_run": 66,
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
         "dataset": "mmlu",
-        "score": 0.59
+        "score": 0.45
     }
 }
 
