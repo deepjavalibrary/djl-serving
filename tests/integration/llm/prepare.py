@@ -1165,7 +1165,6 @@ trtllm_handler_list = {
     "llama2-13b": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.tensor_parallel_degree": 4,
-        "option.rolling_batch": "trtllm",
     },
     "llama2-7b-smoothquant": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
@@ -1173,7 +1172,6 @@ trtllm_handler_list = {
         "option.quantize": "smoothquant",
         "option.smoothquant_per_token": "True",
         "option.smoothquant_per_channel": "True",
-        "option.rolling_batch": "trtllm",
     },
     "internlm-7b": {
         "option.model_id": "internlm/internlm-7b",
@@ -1195,7 +1193,6 @@ trtllm_handler_list = {
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
-        "option.rolling_batch": "trtllm",
     },
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
@@ -1260,7 +1257,9 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 41
     },
@@ -1287,7 +1286,9 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 213
     },
@@ -1314,7 +1315,9 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.quantize": "fp8"
     },
@@ -1322,14 +1325,18 @@ correctness_model_list = {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4
     },
     "trtllm-mistral-7b-instruct-v0.3-fp8": {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
-        "option.rolling_batch": "trtllm",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
         "option.tensor_parallel_degree": 4,
         "option.quantize": "fp8"
     }
@@ -1513,6 +1520,14 @@ handler_performance_model_list = {
         "engine": "Python",
         "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         "option.max_rolling_batch_size": 512,
+    },
+    "tiny-llama-trtllm-async": {
+        "engine": "Python",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.model_loading_timeout": 1800,
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_trtllm.trtllm_async_service",
     },
 }
 
@@ -1737,6 +1752,9 @@ def build_trtllm_handler_model(model):
             f"{model} is not one of the supporting handler {list(trtllm_handler_list.keys())}"
         )
     options = trtllm_handler_list[model]
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = True
+    options["option.entryPoint"] = "djl_python.lmi_trtllm.trtllm_async_service"
     # 30 minute waiting for conversion timeout
     options["model_loading_timeout"] = "1800"
     write_model_artifacts(options)

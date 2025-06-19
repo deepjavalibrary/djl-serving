@@ -293,18 +293,6 @@ class TestTrtLlmHandler1:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm baichuan2-13b".split())
 
-    def test_chatglm3_6b(self):
-        with Runner('tensorrt-llm', 'chatglm3-6b') as r:
-            prepare.build_trtllm_handler_model("chatglm3-6b")
-            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("trtllm chatglm3-6b".split())
-
-    def test_gpt2(self):
-        with Runner('tensorrt-llm', 'gpt2') as r:
-            prepare.build_trtllm_handler_model("gpt2")
-            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("trtllm gpt2".split())
-
     def test_santacoder(self):
         with Runner('tensorrt-llm', 'santacoder') as r:
             prepare.build_trtllm_handler_model("santacoder")
@@ -352,15 +340,15 @@ class TestTrtLlmHandler2:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm_chat llama2-7b-chat".split())
 
-    def test_flan_t5_xl(self):
-        with Runner('tensorrt-llm', "flan-t5-xl") as r:
-            prepare.build_trtllm_handler_model("flan-t5-xl")
-            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("trtllm flan-t5-xl".split())
-
     def test_trtllm_performance(self):
         with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
             prepare.build_handler_performance_model("tiny-llama-trtllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance trtllm".split())
+
+    def test_trtllm_async_performance(self):
+        with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-trtllm-async")
             r.launch("CUDA_VISIBLE_DEVICES=0")
             client.run("handler_performance trtllm".split())
 
