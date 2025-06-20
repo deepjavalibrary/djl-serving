@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import json
+import logging
 from pydantic import ConfigDict
 from typing import Optional
 
@@ -19,6 +20,8 @@ from tensorrt_llm._torch.pyexecutor.config import PyTorchConfig
 from tensorrt_llm.llmapi import QuantConfig, CalibConfig, QuantAlgo
 
 from djl_python.properties_manager.properties import Properties
+
+logger = logging.getLogger(__name__)
 
 
 class TensorRtLlmProperties(Properties):
@@ -97,9 +100,8 @@ class TensorRtLlmProperties(Properties):
         if "event_buffer_max_size" in self.__pydantic_extra__:
             kv_cache_config["event_buffer_max_size"] = int(
                 self.__pydantic_extra__["event_buffer_max_size"])
-        if kv_cache_config:
-            return KvCacheConfig(**kv_cache_config)
-        return None
+
+        return KvCacheConfig(**kv_cache_config)
 
     def get_pytorch_config(self) -> Optional[PyTorchConfig]:
         if self.backend != 'pytorch':

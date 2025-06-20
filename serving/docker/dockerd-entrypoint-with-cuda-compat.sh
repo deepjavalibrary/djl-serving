@@ -30,6 +30,10 @@ if [ -f /usr/local/cuda/compat/libcuda.so.1 ]; then
   fi
 else
   echo "Skip CUDA compat libs setup as package not found"
+  if [ -n "$TEST_DJL_VERSION" ]; then
+    echo "Error: CUDA compat libs not found"
+    exit 1
+  fi
 fi
 
 if [[ -n "$SM_NEO_EXECUTION_CONTEXT" ]]; then
