@@ -9,7 +9,7 @@ import llm.client as client
 import test_client
 import time
 
-djl_version = os.environ.get('TEST_DJL_VERSION', '0.33.0').strip()
+djl_version = os.environ.get('TEST_DJL_VERSION', '0.34.0').strip()
 override_image_tag_suffix = os.environ.get('IMAGE_TAG_SUFFIX', '').strip()
 image_repo = os.environ.get('IMAGE_REPO', '').strip()
 override_container = os.environ.get('OVERRIDE_TEST_CONTAINER', '').strip()
