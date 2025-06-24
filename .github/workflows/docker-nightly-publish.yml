@@ -130,6 +130,7 @@ jobs:
             export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
           else
+            ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
             rm -rf serving/docker/distributions
             export BUILD_VERSION_ARG_DJL="${DJL_VERSION}"
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}"
