@@ -17,9 +17,10 @@ ARG djl_serving_version
 ARG python_version=3.12
 ARG djl_torch_version=2.5.1
 ARG djl_onnx_version=1.20.0
+ARG djl_converter_version=0.33.0
 
 # djl converter wheel for text-embedding use case
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_version//-*/}-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_converter_version//-*/}-py3-none-any.whl"
 
 EXPOSE 8080
 
@@ -98,7 +99,7 @@ COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
-    && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
+    && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.33.0 \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$djl_onnx_version
 
 LABEL maintainer="djl-dev@amazon.com"

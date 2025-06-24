@@ -22,7 +22,10 @@ ARG onnx_version=1.20.0
 ARG python_version=3.12
 ARG numpy_version=1.26.4
 ARG pydantic_version=2.8.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_version//-*/}-py3-none-any.whl"
+ARG djl_converter_version=0.33.0
+
+# djl converter wheel for text-embedding use case
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-${djl_converter_version//-*/}-py3-none-any.whl"
 
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
@@ -58,7 +61,7 @@ SHELL ["/bin/bash", "-c"]
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} && \
-    djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
+    djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.33.0 && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \

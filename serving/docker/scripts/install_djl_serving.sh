@@ -33,6 +33,6 @@ rm djl-serving_all.deb
 
 mkdir -p /opt/djl/plugins
 if [ -n "$PYTORCH_JNI" ]; then
-  djl-serving -i "ai.djl.pytorch:pytorch-jni:${PYTORCH_JNI}-${DJL_VERSION}"
+  djl-serving -i "ai.djl.pytorch:pytorch-jni:${PYTORCH_JNI}-0.33.0"
   rm -rf /opt/djl/logs
 fi
