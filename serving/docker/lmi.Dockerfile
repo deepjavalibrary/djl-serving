@@ -98,7 +98,7 @@ COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
-    && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
+    && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.33.0 \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$djl_onnx_version
 
 LABEL maintainer="djl-dev@amazon.com"
