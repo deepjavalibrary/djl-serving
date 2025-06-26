@@ -2,7 +2,7 @@
 
 Tool calling is currently supported in LMI through the [vLLM](vllm_user_guide.md) backend only.
 
-Details on vLLM's tool calling support can be found [here](https://docs.vllm.ai/en/v0.9.0.1/features/tool_calling.html#how-to-write-a-tool-parser-plugin).
+Details on vLLM's tool calling support can be found [here](https://docs.vllm.ai/en/v0.9.1/features/tool_calling.html#how-to-write-a-tool-parser-plugin).
 
 To enable tool calling in LMI, you must set the following environment variable configurations:
 
@@ -12,7 +12,7 @@ OPTION_ENABLE_AUTO_TOOL_CHOICE=true
 OPTION_TOOL_CALL_PARSER=<parser_name>
 ```
 
-You can find built-in tool call parsers [here](https://docs.vllm.ai/en/v0.9.0.1/features/tool_calling.html#automatic-function-calling).
+You can find built-in tool call parsers [here](https://docs.vllm.ai/en/v0.9.1/features/tool_calling.html#automatic-function-calling).
 
 Additionally, you must provide a chat template that supports tool parsing.
 You can specify a specific chat template using the `OPTION_CHAT_TEMPLATE=<path/to/template>` environment variable.
