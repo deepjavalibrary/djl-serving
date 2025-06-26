@@ -1,4 +1,4 @@
-torch==2.6.0
+torch==2.7.0
 torchvision
 peft==0.15.1
 protobuf==3.20.3
@@ -31,6 +31,6 @@ uvloop
 ninja
 peft
 llmcompressor
-vllm==0.9.0.1
+vllm==0.9.1
 xgrammar==0.1.19
 flashinfer-python==0.2.5
