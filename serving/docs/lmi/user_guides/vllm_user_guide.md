@@ -8,11 +8,11 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 **Text Generation Models**
 
-Here is the list of text generation models supported in [vLLM 0.9.1](https://docs.vllm.ai/en/v0.9.1/models/supported_models.html#list-of-text-only-language-models).
+Here is the list of text generation models supported in [vLLM 0.9.0.1](https://docs.vllm.ai/en/v0.9.0.1/models/supported_models.html#list-of-text-only-language-models).
 
 **Multi Modal Models**
 
-Here is the list of multi-modal models supported in [vLLM 0.9.1](https://docs.vllm.ai/en/v0.9.1/models/supported_models.html#list-of-multimodal-language-models).
+Here is the list of multi-modal models supported in [vLLM 0.9.0.1](https://docs.vllm.ai/en/v0.9.0.1/models/supported_models.html#list-of-multimodal-language-models).
 
 ### Model Coverage in CI
 
@@ -34,7 +34,7 @@ The following set of models are tested in our nightly tests
 
 ## Quantization Support
 
-The quantization techniques supported in vLLM 0.9.1 are listed [here](https://docs.vllm.ai/en/v0.9.1/quantization/supported_hardware.html).
+The quantization techniques supported in vLLM 0.9.0.1 are listed [here](https://docs.vllm.ai/en/v0.9.0.1/quantization/supported_hardware.html).
 
 We recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time.
@@ -53,7 +53,7 @@ The following quantization techniques are supported for runtime quantization:
 You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
 
 Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
-You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.9.1/quantization/supported_hardware.html).
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.9.0.1/quantization/supported_hardware.html).
 
 ### Ahead of time (AOT) quantization
 
@@ -161,7 +161,7 @@ Those situations will be called out specifically.
 
 In addition to the configurations specified in the table above, LMI supports all additional vLLM EngineArguments in Pass-Through mode.
 Pass-Through configurations are not processed or validated by LMI.
-You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.9.1/serving/engine_args.html).
+You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.9.0.1/serving/engine_args.html).
 
 You can specify these pass-through configurations in the serving.properties file by prefixing the configuration with `option.<config>`,
 or as environment variables by prefixing the configuration with `OPTION_<CONFIG>`.
