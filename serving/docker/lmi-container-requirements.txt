@@ -25,7 +25,7 @@ sentence_transformers
 onnxruntime-gpu==1.20.0
 autoawq
 tokenizers
-pydantic==2.9.2
+pydantic==2.11.7
 optimum==1.23.2
 uvloop
 ninja
