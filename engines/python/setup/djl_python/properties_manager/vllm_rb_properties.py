@@ -75,7 +75,6 @@ class VllmRbProperties(Properties):
     tool_call_parser: Optional[str] = None
 
     # Reasoning properties
-    enable_reasoning: bool = False
     reasoning_parser: Optional[str] = None
 
     # Neuron vLLM properties
@@ -134,7 +133,7 @@ class VllmRbProperties(Properties):
 
     @model_validator(mode='after')
     def validate_reasoning_parser(self):
-        if self.enable_reasoning:
+        if self.reasoning_parser:
             from vllm.reasoning.abs_reasoning_parsers import ReasoningParserManager
             valid_reasoning_parses = ReasoningParserManager.reasoning_parsers.keys(
             )
