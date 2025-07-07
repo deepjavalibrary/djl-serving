@@ -40,7 +40,6 @@ public class WlmWorkflowFunction extends WorkflowFunction {
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override
     public CompletableFuture<Item> run(
             Workflow.WorkflowExecutor executor, List<Workflow.WorkflowArgument> args) {
@@ -54,12 +53,11 @@ public class WlmWorkflowFunction extends WorkflowFunction {
 
         return evaluateArgs(args)
                 .thenCompose(
-                        processedArgs ->
-                                executor.getWlm()
-                                        .runJob(
-                                                new Job<>(
-                                                        workerPoolConfig,
-                                                        processedArgs.get(0).getInput()))
-                                        .thenApply(Item::new));
+                        processedArgs -> {
+                            Input input = processedArgs.get(0).getInput();
+                            int priority = Integer.parseInt(input.getProperty("x-priority", "3"));
+                            Job<Input, Output> job = new Job<>(workerPoolConfig, input, priority);
+                            return executor.getWlm().runJob(job).thenApply(Item::new);
+                        });
     }
 }

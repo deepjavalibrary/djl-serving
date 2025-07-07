@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * a batch aggregator that never terminates by itself. the surrounding thread has to be interrupted
@@ -38,7 +38,7 @@ public class PermanentBatchAggregator<I, O> extends BatchAggregator<I, O> {
      * @param jobQueue the job queue for polling data from.
      */
     public PermanentBatchAggregator(
-            WorkerPoolConfig<I, O> wpc, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+            WorkerPoolConfig<I, O> wpc, BlockingQueue<WorkerJob<I, O>> jobQueue) {
         super(wpc, jobQueue);
     }
 

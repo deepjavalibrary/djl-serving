@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,7 +41,7 @@ public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
      * @param jobQueue reference to external job queue for polling.
      */
     public TemporaryBatchAggregator(
-            WorkerPoolConfig<I, O> wpc, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+            WorkerPoolConfig<I, O> wpc, BlockingQueue<WorkerJob<I, O>> jobQueue) {
         super(wpc, jobQueue);
         this.idleSince = System.currentTimeMillis();
         this.maxIdleSeconds = wpc.getMaxIdleSeconds();
