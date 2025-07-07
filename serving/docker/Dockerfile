@@ -81,5 +81,5 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-32-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-34-0.cpu-full="true"
 LABEL torch-version=$torch_version

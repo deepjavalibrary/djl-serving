@@ -2,8 +2,8 @@
 format.version = "1.1"
 
 [versions]
-djl = "0.33.0"
-serving = "0.33.0"
+djl = "0.34.0"
+serving = "0.34.0"
 onnxruntime = "1.20.0"
 commonsCli = "1.9.0"
 commonsCodec = "1.18.0"
