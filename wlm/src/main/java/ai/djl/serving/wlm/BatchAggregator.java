@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,7 +40,7 @@ abstract class BatchAggregator<I, O> {
     protected int batchSize;
     protected long maxBatchDelayMicros;
     protected List<WorkerJob<I, O>> wjs;
-    protected LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
+    protected BlockingQueue<WorkerJob<I, O>> jobQueue;
 
     /**
      * Constructs a new {@code BbatchAggregator} instance.
@@ -48,8 +48,7 @@ abstract class BatchAggregator<I, O> {
      * @param wpc the workerPoolConfig to use.
      * @param jobQueue the job queue for polling data from.
      */
-    public BatchAggregator(
-            WorkerPoolConfig<I, O> wpc, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+    public BatchAggregator(WorkerPoolConfig<I, O> wpc, BlockingQueue<WorkerJob<I, O>> jobQueue) {
         this.dimension = new Dimension("Model", wpc.getId());
         this.batchSize = wpc.getBatchSize();
         this.maxBatchDelayMicros = wpc.getMaxBatchDelayMillis() * 1000L;

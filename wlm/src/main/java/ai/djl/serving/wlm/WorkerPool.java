@@ -24,10 +24,11 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -43,7 +44,7 @@ public class WorkerPool<I, O> {
     private final WorkerPoolConfig<I, O> wpc;
     private ExecutorService threadPool;
     private Map<Device, WorkerGroup<I, O>> workerGroups;
-    private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
+    private BlockingQueue<WorkerJob<I, O>> jobQueue;
     private AtomicInteger refCnt;
 
     /**
@@ -111,7 +112,7 @@ public class WorkerPool<I, O> {
      *
      * @return the jobQueue
      */
-    public LinkedBlockingDeque<WorkerJob<I, O>> getJobQueue() {
+    public BlockingQueue<WorkerJob<I, O>> getJobQueue() {
         return jobQueue;
     }
 
@@ -204,7 +205,7 @@ public class WorkerPool<I, O> {
 
         // jobQueue should be initialized after model is configure
         if (jobQueue == null) {
-            jobQueue = new LinkedBlockingDeque<>(wpc.getQueueSize());
+            jobQueue = new PriorityBlockingQueue<>(wpc.getQueueSize());
         }
         cleanup();
 

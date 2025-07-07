@@ -14,10 +14,11 @@ package ai.djl.serving.wlm.util;
 
 import ai.djl.serving.wlm.Job;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /** A {@link Job} containing metadata from the {@link ai.djl.serving.wlm.WorkLoadManager}. */
-public final class WorkerJob<I, O> {
+public final class WorkerJob<I, O> implements Comparable<WorkerJob<I, O>> {
 
     private final Job<I, O> job;
     private final CompletableFuture<O> future;
@@ -49,5 +50,30 @@ public final class WorkerJob<I, O> {
      */
     public CompletableFuture<O> getFuture() {
         return future;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public int compareTo(WorkerJob<I, O> o) {
+        return Integer.compare(job.getPriority(), o.getJob().getPriority());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof WorkerJob)) {
+            return false;
+        }
+        WorkerJob<?, ?> workerJob = (WorkerJob<?, ?>) o;
+        return Objects.equals(job, workerJob.job);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(job);
     }
 }

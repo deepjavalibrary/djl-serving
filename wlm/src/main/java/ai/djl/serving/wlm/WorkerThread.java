@@ -20,7 +20,6 @@ import ai.djl.serving.wlm.util.AutoIncIdGenerator;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import ai.djl.translate.TranslateException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -275,7 +274,7 @@ public final class WorkerThread<I, O> implements Runnable {
         private WorkerPoolConfig<I, O> workerPoolConfig;
         private Device device;
         private BatchAggregator<I, O> aggregator;
-        private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
+        private BlockingQueue<WorkerJob<I, O>> jobQueue;
         private boolean fixPoolThread;
 
         Builder(WorkerPoolConfig<I, O> wpc) {
@@ -300,7 +299,7 @@ public final class WorkerThread<I, O> implements Runnable {
          * @param jobQueue the jobQueue to set
          * @return self-reference to this builder.
          */
-        public Builder<I, O> setJobQueue(LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+        public Builder<I, O> setJobQueue(BlockingQueue<WorkerJob<I, O>> jobQueue) {
             this.jobQueue = jobQueue;
             return this;
         }

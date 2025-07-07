@@ -22,11 +22,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * WorkLoadManager is responsible to manage the work load of worker thread. the manage scales
@@ -91,7 +91,7 @@ public class WorkLoadManager {
      * @param <I> the wpc input class
      * @param <O> the wpc output class
      * @param job an inference job to be executed.
-     * @return {@code true} if submit success, false otherwise.
+     * @return a {@code CompletableFuture}.
      */
     public <I, O> CompletableFuture<O> runJob(Job<I, O> job) {
         CompletableFuture<O> result = new CompletableFuture<>();
@@ -109,10 +109,11 @@ public class WorkLoadManager {
                             "All model workers has been shutdown: " + wpc.getId()));
             return result;
         }
-        LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
-        if ((queue.remainingCapacity() == 1 && pool.isAllWorkerBusy())
-                || pool.isAllWorkerDied()
-                || !queue.offer(new WorkerJob<>(job, result))) {
+        BlockingQueue<WorkerJob<I, O>> queue = pool.getJobQueue();
+        int remainingCapacity = wpc.getQueueSize() - queue.size();
+        if ((remainingCapacity == 1 && pool.isAllWorkerBusy())
+                || remainingCapacity < 1
+                || pool.isAllWorkerDied()) {
             result.completeExceptionally(
                     new WlmCapacityException(
                             "Worker queue capacity exceeded for model: " + wpc.getId()));
@@ -120,6 +121,9 @@ public class WorkLoadManager {
             return result;
         }
 
+        if (!queue.offer(new WorkerJob<>(job, result))) {
+            throw new AssertionError("Should never happen");
+        }
         int currentWorkers = getNumRunningWorkers(wpc);
         if (currentWorkers == 0
                 || currentWorkers < maxWorkers && queue.size() > wpc.getBatchSize() * 2) {

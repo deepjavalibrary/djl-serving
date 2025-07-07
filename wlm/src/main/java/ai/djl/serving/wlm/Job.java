@@ -27,17 +27,30 @@ public class Job<I, O> {
     private I input;
     private O output;
     private long begin;
+    private int priority;
     private JobFunction<I, O> runner;
+
+    /**
+     * Constructs a new {@code Job} instance with default priority.
+     *
+     * @param wpc the model to run the job
+     * @param input the input data
+     */
+    public Job(WorkerPoolConfig<I, O> wpc, I input) {
+        this(wpc, input, 3);
+    }
 
     /**
      * Constructs a new {@code Job} instance.
      *
      * @param wpc the model to run the job
      * @param input the input data
+     * @param priority the job priority
      */
-    public Job(WorkerPoolConfig<I, O> wpc, I input) {
+    public Job(WorkerPoolConfig<I, O> wpc, I input, int priority) {
         this.workerPoolConfig = wpc;
         this.input = input;
+        this.priority = priority;
 
         begin = System.nanoTime();
     }
@@ -121,6 +134,15 @@ public class Job<I, O> {
      */
     public void setOutput(O output) {
         this.output = output;
+    }
+
+    /**
+     * Returns the job priority.
+     *
+     * @return the job priority
+     */
+    public int getPriority() {
+        return priority;
     }
 
     /**
