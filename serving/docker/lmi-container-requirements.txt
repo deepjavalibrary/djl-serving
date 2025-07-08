@@ -2,7 +2,7 @@ torch==2.6.0
 torchvision
 peft==0.15.1
 protobuf==3.20.3
-transformers==4.51.3
+transformers==4.52.1
 hf-transfer
 zstandard
 datasets==3.0.1
