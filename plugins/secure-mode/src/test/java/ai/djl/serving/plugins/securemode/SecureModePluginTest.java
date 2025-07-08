@@ -54,7 +54,8 @@ public class SecureModePluginTest {
 
     @Test
     void testSecureModeEnabled() {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -69,7 +70,8 @@ public class SecureModePluginTest {
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
     void testMissingSecurityControl() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -86,7 +88,8 @@ public class SecureModePluginTest {
 
     @Test
     void testMissingUntrustedChannels() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -103,7 +106,8 @@ public class SecureModePluginTest {
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
     void testInvalidUntrustedChannels() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -202,7 +206,8 @@ public class SecureModePluginTest {
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
     void testTrustRemoteCodeEnvVar() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -223,7 +228,8 @@ public class SecureModePluginTest {
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
     void testEntrypointOptionEnvVar() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -247,7 +253,8 @@ public class SecureModePluginTest {
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
     void testEntrypointDJLEnvVar() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
@@ -324,7 +331,8 @@ public class SecureModePluginTest {
     private void mockSecurityEnv(
             String securityControl, Path file, String fileContent, String engine)
             throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+        try (MockedStatic<Utils> mockedUtils =
+                Mockito.mockStatic(Utils.class, Mockito.CALLS_REAL_METHODS)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
