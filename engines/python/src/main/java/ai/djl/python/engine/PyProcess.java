@@ -55,6 +55,7 @@ class PyProcess {
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean passiveWorkersMode;
+    private AtomicInteger processExitedAbruptly;
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
@@ -62,6 +63,7 @@ class PyProcess {
         this.model = model;
         this.pyEnv = pyEnv;
         this.workerId = workerId;
+        this.processExitedAbruptly = new AtomicInteger(0);
         int port = counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
@@ -145,6 +147,7 @@ class PyProcess {
             if (!initialLoad) {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
+                CompletableFuture.runAsync(this::monitorRestart);
             } else {
                 modelUnrecoverable = true;
             }
@@ -152,6 +155,35 @@ class PyProcess {
                 throw (EngineException) e;
             }
             throw new EngineException(e);
+        }
+    }
+
+    private void monitorRestart() {
+        try {
+            Thread.sleep(5000);
+            while (!restartFuture.isDone() && process != null) {
+                if (isProcessDead()) {
+                    logger.warn(
+                            "Python process exited unexpectedly with code: {}",
+                            process.exitValue());
+                    processExitedAbruptly.set(1);
+                    restartFuture.cancel(true);
+                    break;
+                }
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException e) {
+            logger.warn("Process monitoring interrupted", e);
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean isProcessDead() {
+        try {
+            process.exitValue();
+            return true;
+        } catch (IllegalThreadStateException e) {
+            return false;
         }
     }
 
@@ -267,6 +299,14 @@ class PyProcess {
         return modelUnrecoverable;
     }
 
+    boolean hasProcessExitedAbruptly() {
+        return processExitedAbruptly.get() > 0 && modelLoaded;
+    }
+
+    void resetProcessExitedAbruptlyFlag() {
+        processExitedAbruptly.set(0);
+    }
+
     private static String[] getHosts(int clusterSize) {
         String leaderAddr = Utils.getenv("DJL_LEADER_ADDR");
         String workerAddrFormat = Utils.getenv("DJL_WORKER_ADDR_FORMAT");
@@ -329,6 +369,10 @@ class PyProcess {
             } finally {
                 logger.info("ReaderThread({}) stopped - {}", processId, getName());
                 lifeCycle.setStarted(false, processId);
+                if (lifeCycle.pyEnv.isMpiMode() && lifeCycle.modelLoaded) {
+                    lifeCycle.processExitedAbruptly.set(1);
+                    logger.warn("MPI worker may have gone down unexpectedly");
+                }
                 try {
                     is.close();
                 } catch (IOException e) {
