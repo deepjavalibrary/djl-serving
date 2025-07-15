@@ -27,6 +27,9 @@ import ai.djl.translate.TranslatorContext;
 import ai.djl.util.Pair;
 import ai.djl.util.PairList;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +39,7 @@ import java.util.regex.Pattern;
 
 class PyPredictor<I, O> extends Predictor<I, O> {
 
+    private static final Logger logger = LoggerFactory.getLogger(PyPredictor.class);
     private static final Pattern BATCH_PATTERN = Pattern.compile("batch_(\\d+)\\.(.*)");
 
     private PyProcess process;
@@ -68,8 +72,17 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             throw new EngineException(
                     "Backend Python process is unrecoverable. Initiating worker termination");
         }
+        if (process.hasProcessExitedAbruptly()) {
+            logger.warn("Detected abrupt termination of Python worker process, attempting restart");
+            process.stopPythonProcess(true);
+            process.resetProcessExitedAbruptlyFlag();
+            try {
+                process.startPythonProcess();
+            } catch (Exception ex) {
+                logger.error("Failed to restart Python process after abrupt exit", ex);
+            }
+        }
         if (!process.isReady()) {
-            // TODO: wait for restart
             throw new TranslateException("Backend Python process is stopped.");
         }
         Object first = inputs.get(0);
