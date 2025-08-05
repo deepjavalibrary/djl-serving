@@ -1,4 +1,4 @@
-torch==2.6.0
+torch==2.7.0
 torchvision
 peft==0.15.1
 protobuf==3.20.3
@@ -25,12 +25,12 @@ sentence_transformers
 onnxruntime-gpu==1.20.0
 autoawq
 tokenizers
-pydantic==2.9.2
+pydantic==2.11.7
 optimum==1.23.2
 uvloop
 ninja
 peft
 llmcompressor
-vllm==0.8.4
-xgrammar==0.1.18
-flashinfer-python==0.2.5
+vllm==0.9.1
+xgrammar==0.1.19
+flashinfer-python==0.2.6.post1
