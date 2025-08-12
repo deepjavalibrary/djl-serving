@@ -46,7 +46,7 @@ public final class DependencyManager {
 
     private static final DependencyManager INSTANCE = new DependencyManager();
     private static final String OSS_URL =
-            "https://oss.sonatype.org/service/local/repositories/snapshots/content/";
+            "https://central.sonatype.com/repository/maven-snapshots/";
 
     private DependencyManager() {}
 
