@@ -83,7 +83,7 @@ DJL Serving 控制台是一个能实现模型管理，日志管理，依赖管�
 
 ![img.png](https://resources.djl.ai/images/djl-serving/management_console/dependency-list.png)
 
-如图所示，当前server已加载了pytorch、tensorflow、mxnet等引擎的相关依赖。
+如图所示，当前server已加载了pytorch、tensorflow等引擎的相关依赖。
 
 ### 依赖添加
 

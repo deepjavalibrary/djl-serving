@@ -83,7 +83,7 @@ Enter the list interface through the second-level menu **Dependency** under **Sy
 
 ![img.png](https://resources.djl.ai/images/djl-serving/management_console/dependency-list.png)
 
-As shown in the figure, the current server has loaded the relevant dependencies of pytorch, tensorflow, mxnet and other engines.
+As shown in the figure, the current server has loaded the relevant dependencies of pytorch, tensorflow and other engines.
 
 ### Add Dependency
 

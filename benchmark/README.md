@@ -17,9 +17,7 @@ djl-bench currently support benchmark the following type of models:
 
 - PyTorch TorchScript model
 - TensorFlow SavedModel bundle
-- Apache MXNet model
 - ONNX model
-- TensorRT model
 - XGBoost model
 - LightGBM model
 - Python script model
@@ -115,14 +113,6 @@ djl-bench -e OnnxRuntime -u https://s3.amazonaws.com/onnx-model-zoo/resnet/resne
 
 ### Benchmark from ModelZoo
 
-#### MXNet
-
-Resnet50 image classification model:
-
-```
-djl-bench -c 2 -s 1,3,224,224 -u djl://ai.djl.mxnet/resnet/0.0.1/resnet50_v2
-```
-
 #### PyTorch
 
 SSD object detection model:
@@ -178,14 +168,12 @@ usage: djl-bench [-p MODEL-PATH] -s INPUT-SHAPES [OPTIONS]
 
 ### Step 1: Pick your deep engine
 
-By default, the above script will use MXNet as the default Engine, but you can always change that by adding the followings:
+By default, the above script will use PyTorch as the default Engine, but you can always change that by adding the followings:
 
 ```
 -e TensorFlow # TensorFlow
 -e PyTorch # PyTorch
--e MXNet # Apache MXNet
 -e OnnxRuntime # pytorch
--e TensorRT # TensorRT
 -e XGBoost # XGBoost
 -e LightGBM # LightGBM
 -e Python # Python script

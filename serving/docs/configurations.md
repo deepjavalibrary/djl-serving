@@ -8,8 +8,8 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 
 | Key                            | Type                | Description                                                                         |
 |--------------------------------|---------------------|-------------------------------------------------------------------------------------|
-| DJL_DEFAULT_ENGINE             | env var/system prop | The preferred engine for DJL if there are multiple engines, default: MXNet          |
-| ai.djl.default_engine          | system prop         | The preferred engine for DJL if there are multiple engines, default: MXNet          |
+| DJL_DEFAULT_ENGINE             | env var/system prop | The preferred engine for DJL if there are multiple engines, default: PyTorch        |
+| ai.djl.default_engine          | system prop         | The preferred engine for DJL if there are multiple engines, default: PyTorch        |
 | DJL_CACHE_DIR                  | env var/system prop | The cache directory for DJL: default: $HOME/.djl.ai/                                |
 | ENGINE_CACHE_DIR               | env var/system prop | The cache directory for engine native libraries: default: $DJL_CACHE_DIR            |
 | ai.djl.dataiterator.autoclose  | system prop         | Automatically close data set iterator, default: true                                |
@@ -45,19 +45,6 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | TF_CPP_MIN_LOG_LEVEL        | env var             | TensorFlow log level                              |
 | ai.djl.tensorflow.debug     | env var             | Enable devicePlacement logging, default: false    |
 
-### MXNet
-
-| Key                               | Type                | Description                                                                    |
-|-----------------------------------|---------------------|--------------------------------------------------------------------------------|
-| MXNET_LIBRARY_PATH                | env var/system prop | User provided custom MXNet native library                                      |
-| MXNET_VERSION                     | env var/system prop | The version of custom MXNet build                                              |
-| MXNET_EXTRA_LIBRARY_PATH          | env var/system prop | Load extra MXNet custom libraries, e.g. Elastice Inference                     |
-| MXNET_EXTRA_LIBRARY_VERBOSE       | env var/system prop | Set verbosity for MXNet custom library                                         |
-| ai.djl.mxnet.static_alloc         | system prop         | CachedOp options, default: true                                                |
-| ai.djl.mxnet.static_shape         | system prop         | CachedOp options, default: true                                                |
-| ai.djl.use_local_parameter_server | system prop         | Use java parameter server instead of MXNet native implemention, default: false |
-
-
 ### Huggingface tokenizers
 
 | Key              | Type    | Description                                               |
@@ -83,7 +70,7 @@ DJL support 12 deep learning frameworks, each framework has their own settings. 
 each framework’s document for detail.
 
 A common setting for most of the engines is ``OMP_NUM_THREADS``, for the best throughput,
-DJLServing set this to 1 by default. For some engines (e.g. **MXNet**, this value must be one).
+DJLServing set this to 1 by default.
 Since this is a global environment variable, setting this value will impact all other engines.
 
 The follow table show some engine specific environment variables that is override by default by DJLServing:
@@ -93,5 +80,4 @@ The follow table show some engine specific environment variables that is overrid
 | TF_NUM_INTEROP_THREADS | TensorFlow | default 1, OMP_NUM_THREADS will override this value |
 | TF_NUM_INTRAOP_THREADS | TensorFlow | default 1                                           |
 | TF_CPP_MIN_LOG_LEVEL	  | TensorFlow | default 1                                           |
-| MXNET_ENGINE_TYPE      | MXNet      | this value must be `NaiveEngine`                    |
 

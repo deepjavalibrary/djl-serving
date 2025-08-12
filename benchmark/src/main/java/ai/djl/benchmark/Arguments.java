@@ -119,9 +119,6 @@ public class Arguments {
                     logger.warn(
                             "Number of threads is less than GPU count, adjust to: {}",
                             devices.length);
-                } else if ("MXNet".equals(engine) && threads > devices.length) {
-                    threads = devices.length;
-                    logger.warn("MXNet inference can only have one worker per GPU.");
                 } else if (threads % devices.length != 0) {
                     threads = threads / devices.length * devices.length;
                     logger.warn("threads should be multiple of GPU count, change to: {}", threads);

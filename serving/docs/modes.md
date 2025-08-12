@@ -189,7 +189,6 @@ public String processOutput(TranslatorContext ctx, NDList list) throws Exception
 
 Next, you need to include a model file. DJL Serving supports model artifacts for the following engines:
 
-- MXNet
 - PyTorch (torchscript only)
 - TensorFlow
 - ONNX
@@ -456,7 +455,6 @@ For Binary Mode, you just need to place the model file in a folder.
 
 DJL Serving supports model artifacts for the following engines:
 
-- MXNet
 - PyTorch (torchscript only)
 - TensorFlow
 - ONNX

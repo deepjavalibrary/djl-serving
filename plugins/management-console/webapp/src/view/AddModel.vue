@@ -35,12 +35,11 @@
           <el-col :span="8">
             <el-form-item label="engine:" prop="engine">
               <template slot="label">
-                <el-tooltip class="item" effect="dark" content="the name of engine to load the model. The default is MXNet if the model doesn't define its engine." placement="top"><span>Engine:</span></el-tooltip>
+                <el-tooltip class="item" effect="dark" content="the name of engine to load the model. The default is PyTorch if the model doesn't define its engine." placement="top"><span>Engine:</span></el-tooltip>
               </template>
               <el-select v-model="form.engine">
                 <el-option label="Auto detect" value=""></el-option>
                 <el-option label="PyTorch" value="PyTorch"></el-option>
-                <el-option label="MXNet" value="MXNet"></el-option>
                 <el-option label="TensorFlow" value="TensorFlow"></el-option>
                 <el-option label="PaddlePaddle" value="PaddlePaddle"></el-option>
                 <el-option label="ONNXRuntime" value="OnnxRuntime"></el-option>

@@ -29,7 +29,6 @@ dependencies {
     runtimeOnly("ai.djl.tensorflow:tensorflow-model-zoo")
     runtimeOnly("ai.djl.pytorch:pytorch-model-zoo")
     runtimeOnly("ai.djl.huggingface:tokenizers")
-    runtimeOnly("ai.djl.tensorrt:tensorrt")
     runtimeOnly(project(":engines:python"))
 
     testRuntimeOnly("org.bouncycastle:bcpkix-jdk18on:1.78")
@@ -105,7 +104,6 @@ tasks {
             ":plugins:static-file-plugin:jar"
         )
         environment("TF_CPP_MIN_LOG_LEVEL", "1") // turn off TensorFlow print out
-        environment("MXNET_ENGINE_TYPE", "NaiveEngine")
         environment("OMP_NUM_THREADS", "1")
         environment("MODEL_SERVER_HOME", "$projectDir")
         systemProperties = System.getProperties().toMap() as Map<String, Any>
@@ -142,7 +140,7 @@ tasks {
                         "    export TF_NUM_INTRAOP_THREADS=1\n" +
                         "fi\n" +
                         "export APP_HOME\n" +
-                        "exec env MXNET_ENGINE_TYPE=\"NaiveEngine\" \"\$JAVACMD\" \"\$@\""
+                        "exec \"\$JAVACMD\" \"\$@\""
             ).replace(
                 "DEFAULT_JVM_OPTS=\"\"",
                 "if [ \"\${MODEL_SERVER_HOME}\" = \"\" ] ; then\n" +

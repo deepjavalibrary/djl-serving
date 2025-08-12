@@ -11,9 +11,7 @@ description: |
   Currently djl-bench support the models from the following framework:
   - PyTorch
   - TensorFlow
-  - Apache MXNet
   - ONNXRuntime
-  - TensorRT
   - XGBoost
   - LightGBM
   - Python

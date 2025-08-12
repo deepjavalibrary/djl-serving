@@ -75,7 +75,7 @@ Each model individually would be an object describing how to load the model. The
 ```
 models:
   modelA: "https://example.com/path/to/model.mar"
-  modelB: "djl://ai.djl.mxnet/ssd/0.0.1/ssd_512_resnet50_v1_voc"
+  modelB: "djl://ai.djl.pytorch/ssd"
 ```
 
 
@@ -86,8 +86,8 @@ A more advanced case can use an object representing the DJL criteria:
 models:
   resnet:
     application: "cv/image_classification"
-    engine: "MXNet"
-    groupId: "ai.djl.mxnet"
+    engine: "PyTorch"
+    groupId: "ai.djl.pytorch"
     artifactId: "resnet"
     name: "Resnet"
     translator: "com.package.TranslatorClass"
