@@ -8,9 +8,7 @@ HTTP endpoint. It can serve the following model types out of the box:
 
 - PyTorch TorchScript model
 - TensorFlow SavedModel bundle
-- Apache MXNet model
 - ONNX model (CPU)
-- TensorRT model
 - Python script model
 
 You can install extra extensions to enable the following models:

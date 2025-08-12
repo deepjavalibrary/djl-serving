@@ -18,9 +18,7 @@ dependencies {
 
     runtimeOnly("ai.djl.pytorch:pytorch-model-zoo")
     runtimeOnly("ai.djl.tensorflow:tensorflow-model-zoo")
-    runtimeOnly("ai.djl.mxnet:mxnet-model-zoo")
     runtimeOnly("ai.djl.ml.xgboost:xgboost")
-    runtimeOnly("ai.djl.tensorrt:tensorrt")
     runtimeOnly("ai.djl.huggingface:tokenizers")
     runtimeOnly(project(":engines:python"))
 
@@ -62,7 +60,6 @@ tasks {
                             environment("OMP_NUM_THREADS", "1")
                             environment("TF_NUM_INTRAOP_THREADS", "1")
                         } else {
-                            environment("MXNET_ENGINE_TYPE", "NaiveEngine")
                             environment("OMP_NUM_THREADS", "1")
                         }
                     }
@@ -136,7 +133,6 @@ tasks {
                     "if [[ \"\\\$*\" == *-t* || \"\\\$*\" == *--threads* ]]\n" +
                     "then\n" +
                     "    export TF_CPP_MIN_LOG_LEVEL=1\n" +
-                    "    export MXNET_ENGINE_TYPE=NaiveEngine\n" +
                     "    export OMP_NUM_THREADS=1\n" +
                     "    export TF_NUM_INTRAOP_THREADS=1\n" +
                     "fi"

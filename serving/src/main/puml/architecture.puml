@@ -5,7 +5,6 @@ database "Model Store" as ms {
     file URL [
         https://my.com/resnet.zip
         s3://djl/BERT.tar.gz
-        djl://mxnet/ssd
         /opt/ml/bigGAN
     ]
 }
@@ -47,7 +46,6 @@ package "DJL Serving - single process" {
         package Engines [
             PyTorch
             TensorFlow
-            MXNet
             OnnxRuntime
             TFLite
             XGBoost

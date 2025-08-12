@@ -160,12 +160,6 @@ class TestCpuBoth:
             )
             os.system("./test_client.sh image/jpg models/kitten.jpg")
 
-    def test_mxnet(self, arch):
-        with Runner(arch, 'mxnet', download=True) as r:
-            r.launch(
-                cmd='serve -m test::MXNet=file:/opt/ml/model/ssd_resnet50.zip')
-            os.system("./test_client.sh image/jpg models/kitten.jpg")
-
     def test_onnx(self, arch):
         with Runner(arch, 'onnx', download=True) as r:
             r.launch(

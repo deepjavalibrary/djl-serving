@@ -62,12 +62,6 @@ public class KServeDescribeModelResponse {
 
     void setPlatform(String engineName) {
         switch (engineName) {
-            case "TensorRT":
-                platform = "tensorrt_plan";
-                break;
-            case "MXNet":
-                platform = "mxnet_mxnet";
-                break;
             case "PyTorch":
                 platform = "pytorch_torchscript";
                 break;

@@ -9,7 +9,7 @@ djl-serving
 The model server will be listening on port 8080. You can also load a model for serving on start up:
 
 ```sh
-djl-serving -m "https://resources.djl.ai/demo/mxnet/resnet18_v1.zip"
+djl-serving -m "https://resources.djl.ai/demo/pytorch/traced_resnet18.zip"
 ```
 
 Open another terminal, and type the following command to test the inference REST API:

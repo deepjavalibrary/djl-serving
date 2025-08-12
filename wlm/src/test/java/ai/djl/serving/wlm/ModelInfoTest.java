@@ -176,23 +176,11 @@ public class ModelInfoTest {
         model.initialize();
         assertEquals(model.getEngineName(), "XGBoost");
 
-        Path tensorRt = modelDir.resolve("test_model.uff");
-        Files.createFile(tensorRt);
-        model = new ModelInfo<>("build/models/test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "TensorRT");
-
         Path onnx = modelDir.resolve("test_model.onnx");
         Files.createFile(onnx);
         model = new ModelInfo<>("build/models/test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "OnnxRuntime");
-
-        Path mxnet = modelDir.resolve("test_model-symbol.json");
-        Files.createFile(mxnet);
-        model = new ModelInfo<>("build/models/test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "MXNet");
 
         Path tensorflow = modelDir.resolve("saved_model.pb");
         Files.createFile(tensorflow);

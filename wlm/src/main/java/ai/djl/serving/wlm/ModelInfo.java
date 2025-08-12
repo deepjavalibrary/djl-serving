@@ -496,8 +496,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
         if (Device.Type.GPU.equals(device.getDeviceType())) {
             String eng = manager.getEngine().getEngineName();
-            if ("MXNet".equals(eng) || "Python".equals(eng)) {
-                // FIXME: MXNet GPU Model doesn't support multi-threading
+            if ("Python".equals(eng)) {
                 return 1;
             }
             return 1;
@@ -772,14 +771,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             return "TritonServer";
         } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
             return "TensorFlow";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + "-symbol.json"))) {
-            return "MXNet";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".onnx"))
                 || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
             return "OnnxRuntime";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".trt"))
-                || Files.isRegularFile(modelDir.resolve(prefix + ".uff"))) {
-            return "TensorRT";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".xgb"))
                 || Files.isRegularFile(modelDir.resolve("model.xgb"))) {

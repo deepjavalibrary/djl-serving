@@ -38,7 +38,7 @@ class FakeRollingBatch(RollingBatch):
             " With DJL-Serving, developers can quickly expose their models as web services or APIs,"
             " allowing them to integrate their deep learning models into various applications "
             "and systems seamlessly. The framework supports various deep learning frameworks like "
-            "TensorFlow, PyTorch, MXNet, and more, making it versatile and adaptable to different model"
+            "TensorFlow, PyTorch, nd more, making it versatile and adaptable to different model"
             " architectures. DJL-Serving is designed to be highly scalable and efficient, ensuring that"
             " models can handle high volumes of requests with low latency. Whether you are a researcher"
             " or a developer, DJL-Serving simplifies the process of serving deep learning models,"
