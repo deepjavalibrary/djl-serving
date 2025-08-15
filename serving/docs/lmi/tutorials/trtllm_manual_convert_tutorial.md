@@ -24,13 +24,13 @@ Refer [here](https://github.com/aws/deep-learning-containers/blob/master/availab
 For example:
 
 ```
-docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-tensorrtllm0.12.0-cu125
+docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.33.0-tensorrtllm0.21.0-cu128
 ```
 
 You can also pull the container from DockerHub:
 
 ```
-docker pull deepjavalibrary/djl-serving:0.30.0-tensorrt-llm
+docker pull deepjavalibrary/djl-serving:0.33.0-tensorrt-llm
 ```
 
 ### Step 3: Login the container and prepare the environment
