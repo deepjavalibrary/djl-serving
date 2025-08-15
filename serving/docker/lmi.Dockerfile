@@ -61,6 +61,7 @@ ENV PATH="/opt/djl/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
+COPY cuda-compat /etc/apt/preferences.d/cuda-compat
 COPY scripts scripts/
 RUN chmod -R +x scripts
 RUN mkdir -p /opt/djl/conf \
