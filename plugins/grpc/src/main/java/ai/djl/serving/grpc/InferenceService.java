@@ -109,7 +109,7 @@ class InferenceService extends InferenceGrpc.InferenceImplBase {
                 () -> {
                     logger.debug("grpc client call already cancelled");
                     observer.onError(
-                            io.grpc.Status.CANCELLED
+                            Status.CANCELLED
                                     .withDescription("call already cancelled")
                                     .asRuntimeException());
                 });

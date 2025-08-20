@@ -107,8 +107,7 @@ public class ConfigurableHttpRequestHandler extends HttpRequestHandler {
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             return findRequestHandler((FullHttpRequest) msg).isPresent();
-        } else {
-            return false;
         }
+        return false;
     }
 }
