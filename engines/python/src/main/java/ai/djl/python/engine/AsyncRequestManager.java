@@ -37,7 +37,7 @@ class AsyncRequestManager {
 
     private Dimension dimension;
     private Metrics metrics;
-    private ConcurrentHashMap<String, Request> activeRequests;
+    private Map<String, Request> activeRequests;
     private PyProcess process;
 
     AsyncRequestManager(PyProcess process, Model model) {
