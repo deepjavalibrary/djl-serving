@@ -36,7 +36,7 @@ jobs:
         run: |
           cd serving && ./gradlew --refresh-dependencies createDeb
           sudo dpkg -i build/distributions/*.deb
-          sudo apt-get update && apt-get install tree
+          sudo apt-get update && sudo apt-get install tree
           cd ../engines/python/setup
           pip install -e ".[test]"
       - name: Run Java binary mode tests
