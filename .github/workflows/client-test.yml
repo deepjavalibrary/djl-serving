@@ -36,12 +36,13 @@ jobs:
         run: |
           cd serving && ./gradlew --refresh-dependencies createDeb
           sudo dpkg -i build/distributions/*.deb
+          sudo apt-get update && apt-get install tree
           cd ../engines/python/setup
           pip install -e ".[test]"
       - name: Run Java binary mode tests
         run: |
           cd tests/binary && python prepare.py pt && cd ..
-          ls -l file://$PWD/
+          tree file:///home/runner/work/djl-serving
           djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
           sleep 40
           cat output.log
