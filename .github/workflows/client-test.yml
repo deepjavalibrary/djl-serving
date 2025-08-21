@@ -41,7 +41,7 @@ jobs:
       - name: Run Java binary mode tests
         run: |
           cd tests/binary && python prepare.py pt && cd ..
-          ls -l file://$PWD/binary/
+          ls -l file://$PWD/
           djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
           sleep 40
           cat output.log
