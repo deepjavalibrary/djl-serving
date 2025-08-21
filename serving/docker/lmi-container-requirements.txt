@@ -31,6 +31,6 @@ uvloop
 ninja
 peft
 llmcompressor
-vllm==0.8.4
+vllm==0.10.1.1
 xgrammar==0.1.18
 flashinfer-python==0.2.5
