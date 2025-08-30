@@ -776,6 +776,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             return "OnnxRuntime";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".xgb"))
+                || Files.isRegularFile(modelDir.resolve(prefix + ".bst"))
+                || Files.isRegularFile(modelDir.resolve("model.json"))
+                || Files.isRegularFile(modelDir.resolve("model.bst"))
                 || Files.isRegularFile(modelDir.resolve("model.xgb"))) {
             return "XGBoost";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".gguf"))) {
