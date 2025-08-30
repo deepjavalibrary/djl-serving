@@ -29,6 +29,7 @@ dependencies {
     runtimeOnly("ai.djl.tensorflow:tensorflow-model-zoo")
     runtimeOnly("ai.djl.pytorch:pytorch-model-zoo")
     runtimeOnly("ai.djl.huggingface:tokenizers")
+    runtimeOnly("ai.djl.ml.xgboost:xgboost")
     runtimeOnly(project(":engines:python"))
 
     testRuntimeOnly("org.bouncycastle:bcpkix-jdk18on:1.78")
