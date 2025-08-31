@@ -38,7 +38,7 @@ public final class PyEngine extends Engine {
     @Override
     public Engine getAlternativeEngine() {
         if (!mpiMode && !initialized && !Boolean.getBoolean("ai.djl.python.disable_alternative")) {
-            Engine engine = Engine.getInstance();
+            Engine engine = getInstance();
             if (engine.getRank() < getRank()) {
                 // alternativeEngine should not have the same rank as OnnxRuntime
                 alternativeEngine = engine;

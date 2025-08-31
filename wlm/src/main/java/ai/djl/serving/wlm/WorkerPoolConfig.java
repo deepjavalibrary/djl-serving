@@ -21,6 +21,7 @@ import ai.djl.translate.TranslateException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
@@ -345,7 +346,7 @@ public abstract class WorkerPoolConfig<I, O> {
      */
     public abstract static class ThreadConfig<I, O> {
         private Device device;
-        protected LinkedBlockingDeque<Job<I, O>> configJobs;
+        protected BlockingDeque<Job<I, O>> configJobs;
 
         protected ThreadConfig(Device device) {
             this.device = device;
@@ -365,7 +366,7 @@ public abstract class WorkerPoolConfig<I, O> {
          *
          * @return the configuration jobs for the worker
          */
-        public LinkedBlockingDeque<Job<I, O>> getConfigJobs() {
+        public BlockingDeque<Job<I, O>> getConfigJobs() {
             return configJobs;
         }
 

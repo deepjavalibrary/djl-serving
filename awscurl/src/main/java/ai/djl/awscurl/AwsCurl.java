@@ -211,7 +211,7 @@ public final class AwsCurl {
             final AtomicInteger tokens = config.countTokens ? new AtomicInteger(0) : null;
 
             ExecutorService executor = Executors.newFixedThreadPool(clients);
-            ArrayList<Callable<Void>> tasks = new ArrayList<>(clients);
+            List<Callable<Void>> tasks = new ArrayList<>(clients);
             long stopTime = config.getStopTime();
             if (stopTime != Long.MAX_VALUE) {
                 logger.info("Benchmark will stop at: {}", new Date(stopTime));
@@ -356,7 +356,7 @@ public final class AwsCurl {
                 ret.setP90TimeToFirstByte(firstTokens.get(size * 9 / 10) / 1000000d);
                 ret.setP99TimeToFirstByte(firstTokens.get(size * 99 / 100) / 1000000d);
             }
-            AwsCurl.logger.debug("Total request time: {} ms", totalTime / 1000000d);
+            logger.debug("Total request time: {} ms", totalTime / 1000000d);
             ret.print(config.isJsonOutput(), config.getJsonOutputPath());
             if (warning != null) {
                 System.out.println();
@@ -1138,7 +1138,7 @@ public final class AwsCurl {
                     }
                 }
                 if (key == null || value == null) {
-                    AwsCurl.logger.warn("Ignore invalid form data: {}", parameter);
+                    logger.warn("Ignore invalid form data: {}", parameter);
                     continue;
                 }
 

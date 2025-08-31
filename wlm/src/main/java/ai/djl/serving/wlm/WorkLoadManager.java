@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -39,7 +40,7 @@ public class WorkLoadManager {
     private static final Logger logger = LoggerFactory.getLogger(WorkLoadManager.class);
 
     private ExecutorService threadPool;
-    private ConcurrentHashMap<WorkerPoolConfig<?, ?>, WorkerPool<?, ?>> workerPools;
+    private Map<WorkerPoolConfig<?, ?>, WorkerPool<?, ?>> workerPools;
 
     /** Constructs a {@link WorkLoadManager} instance. */
     public WorkLoadManager() {
