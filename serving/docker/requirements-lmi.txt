@@ -1,5 +1,7 @@
 peft==0.13.2
 llmcompressor
+# required for vllm 0.6.3, nolonger on pypi
+git+https://github.com/NICTA/pyairports.git@9699eae8c6b03c97239018dea92e01daa8594936
 # flash infer kernels for vllm/lmi-dist
 https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp311-cp311-linux_x86_64.whl
 # vllm wheel built with pt2.5.1
