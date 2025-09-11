@@ -1096,7 +1096,6 @@ vllm_model_list = {
         "option.model_id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
-        "option.enable_reasoning": True,
         "option.reasoning_parser": "deepseek_r1",
     },
     "tinyllama-input-len-exceeded": {
