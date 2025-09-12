@@ -16,10 +16,10 @@ on:
         required: false
         default: ''
       arch:
-        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        description: 'which images to build [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
         type: string
         required: false
-        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
+        default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   workflow_call:
     inputs:
       mode:
@@ -33,10 +33,10 @@ on:
         required: false
         default: ''
       arch:
-        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        description: 'which images to build [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
         type: string
         required: false
-        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
+        default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
 
 permissions:
   id-token: write
