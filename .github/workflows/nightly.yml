@@ -68,9 +68,9 @@ jobs:
                   if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" == "0" ]]; then
                     images+=("tensorrt-llm")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_neuron }}" == "0" ]]; then
-                    images+=("pytorch-inf2")
-                  fi
+                  # if [[ "${{ needs.integration-test.outputs.failure_neuron }}" == "0" ]]; then
+                  #   images+=("pytorch-inf2")
+                  # fi
                   json_images=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${images[@]}")
                   echo "images are ${json_images}"
                   echo "images=${json_images}" >> "$GITHUB_OUTPUT"
