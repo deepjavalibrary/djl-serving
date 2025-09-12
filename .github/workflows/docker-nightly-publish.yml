@@ -8,10 +8,10 @@ on:
         required: true
         default: 'nightly'
       arch:
-        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        description: 'which images to build [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
         type: string
         required: false
-        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
+        default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   workflow_call:
     inputs:
       mode:
@@ -20,10 +20,10 @@ on:
         required: true
         default: 'nightly'
       arch:
-        description: 'which images to build [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        description: 'which images to build [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
         type: string
         required: false
-        default: '["cpu", "cpu-full", "pytorch-inf2", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
+        default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
     outputs:
       djl_version:
         description: "djl version"
@@ -63,7 +63,6 @@ jobs:
     outputs:
       instance_id_cpu: ${{ steps.create_cpu.outputs.instance_id_cpu }}
       instance_id_cpu-full: ${{ steps.create_cpu.outputs.instance_id_cpu-full }}
-      instance_id_pytorch-inf2: ${{ steps.create_cpu.outputs.instance_id_pytorch-inf2 }}
       instance_id_pytorch-gpu: ${{ steps.create_cpu.outputs.instance_id_pytorch-gpu }}
       instance_id_tensorrt-llm: ${{ steps.create_cpu.outputs.instance_id_tensorrt-llm }}
       instance_id_lmi: ${{ steps.create_cpu.outputs.instance_id_lmi }}
