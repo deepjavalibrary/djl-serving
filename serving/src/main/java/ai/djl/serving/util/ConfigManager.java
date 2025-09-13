@@ -229,10 +229,7 @@ public final class ConfigManager {
             return true;
         }
         limiter = limiters.get(ERROR_RATE_ANY);
-        if (limiter != null) {
-            return limiter.exceed();
-        }
-        return false;
+        return limiter != null && limiter.exceed();
     }
 
     /**
@@ -535,6 +532,7 @@ public final class ConfigManager {
      *
      * @return a string representation of this configuration
      */
+    @SuppressWarnings("PMD.ConsecutiveLiteralAppends")
     public String dumpConfigurations() {
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         Runtime runtime = Runtime.getRuntime();

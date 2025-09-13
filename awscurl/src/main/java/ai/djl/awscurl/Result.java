@@ -226,7 +226,6 @@ class Result {
         System.out.println("Total requests: " + getTotalRequests());
         if (getTps() != null) {
             System.out.printf("TPS: %.2f/s%n", getTps());
-            System.out.printf("Average Token Latency: %.2f ms.%n", getAverageTokenLatency());
             System.out.printf("Average Latency: %.2f ms.%n", getAverageLatency());
             System.out.printf("P50: %.2f ms.%n", getP50Latency());
             System.out.printf("P90: %.2f ms.%n", getP90Latency());
@@ -235,6 +234,7 @@ class Result {
         if (getTotalTokens() > 0) {
             String n = getTokenizer() == null ? "word" : "token";
             System.out.printf("Total %s: %d%n", n, getTotalTokens());
+            System.out.printf("Average Token Latency: %.2f ms.%n", getAverageTokenLatency());
             System.out.printf("%s/req: %d%n", n, getTokenPerRequest());
             System.out.printf("%s/s: %.2f/s%n", n, getTokenThroughput());
         }

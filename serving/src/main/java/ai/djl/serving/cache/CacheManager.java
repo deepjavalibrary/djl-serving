@@ -34,6 +34,6 @@ public final class CacheManager {
      * @param instance the {@code CacheEngine} instance
      */
     public static void setCacheEngine(CacheEngine instance) {
-        CacheManager.engine = instance;
+        engine = instance;
     }
 }
