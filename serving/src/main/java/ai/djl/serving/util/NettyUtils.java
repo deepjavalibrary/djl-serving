@@ -251,43 +251,43 @@ public final class NettyUtils {
      * @param t the exception to be send
      */
     public static void sendError(ChannelHandlerContext ctx, Throwable t) {
-        String requestId = NettyUtils.getRequestId(ctx.channel());
+        String requestId = getRequestId(ctx.channel());
         String requestIdLogPrefix = "RequestId=[" + requestId + "]";
         if (t instanceof ResourceNotFoundException
                 || t instanceof ModelNotFoundException
                 || t instanceof NoSuchElementException) {
             logger.debug(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
+            sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
         } else if (t instanceof BadRequestException) {
             logger.debug(requestIdLogPrefix, t);
             BadRequestException e = (BadRequestException) t;
             HttpResponseStatus status = HttpResponseStatus.valueOf(e.getCode(), e.getMessage());
-            NettyUtils.sendError(ctx, status, t);
+            sendError(ctx, status, t);
         } else if (t instanceof EngineException) {
             if ("OOM".equals(t.getMessage())) {
                 logger.warn("{}: CUDA out of memory", requestIdLogPrefix, t);
-                NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
+                sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
             }
             logger.error(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
+            sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
         } else if (t instanceof WlmOutOfMemoryException) {
             logger.warn(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
+            sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
         } else if (t instanceof ModelException || t instanceof IllegalConfigurationException) {
             logger.debug(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
+            sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
         } else if (t instanceof MethodNotAllowedException) {
             logger.debug(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, t);
+            sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, t);
         } else if (t instanceof ServiceUnavailableException || t instanceof WlmException) {
             logger.warn(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, t);
+            sendError(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, t);
         } else if (t instanceof IllegalArgumentException) {
             logger.warn(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.CONFLICT, t);
+            sendError(ctx, HttpResponseStatus.CONFLICT, t);
         } else {
             logger.error(requestIdLogPrefix, t);
-            NettyUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
+            sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
         }
     }
 
@@ -345,7 +345,7 @@ public final class NettyUtils {
         Channel channel = ctx.channel();
         Session session = channel.attr(SESSION_KEY).getAndSet(null);
         HttpHeaders headers = resp.headers();
-        String requestId = NettyUtils.getRequestId(channel);
+        String requestId = getRequestId(channel);
         String requestIdLogPrefix = "RequestId=[" + requestId + "]: ";
 
         ConfigManager configManager = ConfigManager.getInstance();

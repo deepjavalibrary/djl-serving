@@ -149,7 +149,7 @@ public class FolderScanPluginManager implements PluginManager {
         @SuppressWarnings("unchecked")
         Class<? extends RequestHandler> handlerClass =
                 (Class<? extends RequestHandler>) ucl.loadClass(handlerClassName);
-        RequestHandler<?> handler = handlerClass.getConstructor(new Class<?>[] {}).newInstance();
+        RequestHandler<?> handler = handlerClass.getConstructor().newInstance();
         injectDependenciesIntoComponent(handler);
 
         componentRegistry.register(plugin, handler);

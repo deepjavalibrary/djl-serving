@@ -32,7 +32,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -562,9 +561,9 @@ public class PyEnv {
     }
 
     String[] getEnvironmentVars(Model model) {
-        ArrayList<String> envList = new ArrayList<>();
+        List<String> envList = new ArrayList<>();
         StringBuilder pythonPath = new StringBuilder();
-        HashMap<String, String> environment = new HashMap<>(Utils.getenv());
+        Map<String, String> environment = new ConcurrentHashMap<>(Utils.getenv());
         if (Utils.getenv("PYTHONPATH") != null) {
             pythonPath.append(Utils.getenv("PYTHONPATH")).append(File.pathSeparatorChar);
         }

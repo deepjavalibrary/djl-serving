@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,7 +50,7 @@ public class PyModel extends BaseModel {
 
     private PyEnv pyEnv;
     private boolean parallelLoading;
-    private LinkedBlockingDeque<PyProcess> workerQueue;
+    private BlockingDeque<PyProcess> workerQueue;
 
     /**
      * Constructs a new Model on a given device.
@@ -265,7 +266,7 @@ public class PyModel extends BaseModel {
             }
             mpiWorkers = intProperty("gpu.maxWorkers", -1);
 
-            properties.forEach((k, v) -> pyEnv.addParameter(k, v));
+            properties.forEach(pyEnv::addParameter);
 
             createAllPyProcesses(mpiWorkers, partitions);
         } else {
@@ -278,7 +279,7 @@ public class PyModel extends BaseModel {
                 setProperty("tensor_parallel_degree", String.valueOf(tensorParallelDegree));
             }
 
-            properties.forEach((k, v) -> pyEnv.addParameter(k, v));
+            properties.forEach(pyEnv::addParameter);
         }
     }
 

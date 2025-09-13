@@ -71,18 +71,14 @@ public final class DependencyManager {
         }
 
         String djlVersion = Engine.getDjlVersion();
-        switch (engineName) {
-            case "OnnxRuntime":
-                installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
-                String ortVersion = getOrtVersion(djlVersion);
-                if (CudaUtils.hasCuda()) {
-                    installDependency("com.microsoft.onnxruntime:onnxruntime_gpu:" + ortVersion);
-                } else {
-                    installDependency("com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
-                }
-                break;
-            default:
-                break;
+        if ("OnnxRuntime".equals(engineName)) {
+            installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
+            String ortVersion = getOrtVersion(djlVersion);
+            if (CudaUtils.hasCuda()) {
+                installDependency("com.microsoft.onnxruntime:onnxruntime_gpu:" + ortVersion);
+            } else {
+                installDependency("com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
+            }
         }
         refreshProviders();
     }

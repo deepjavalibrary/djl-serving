@@ -20,6 +20,7 @@ package ai.djl.serving.plugins;
  *
  * @author erik.bamberg@web.de
  */
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface PluginMetaDataReader {
 
     /**

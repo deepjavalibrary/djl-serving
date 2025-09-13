@@ -1283,7 +1283,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 validJobs.add(job);
             }
             if (!validJobs.isEmpty()) {
-                Job.runAll(validJobs, js -> predictor.batchPredict(js));
+                Job.runAll(validJobs, predictor::batchPredict);
             }
         }
 
