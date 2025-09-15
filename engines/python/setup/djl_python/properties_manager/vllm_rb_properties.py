@@ -69,7 +69,6 @@ class VllmRbProperties(Properties):
     task: str = 'auto'
     # The following configs have broken processing in vllm via the FlexibleArgumentParser
     long_lora_scaling_factors: Optional[Tuple[float, ...]] = None
-    use_v2_block_manager: bool = True
     # Tool calling properties
     enable_auto_tool_choice: bool = False
     tool_call_parser: Optional[str] = None
@@ -209,9 +208,7 @@ class VllmRbProperties(Properties):
             'enable_lora': self.enable_lora,
             'trust_remote_code': self.trust_remote_code,
             'cpu_offload_gb': self.cpu_offload_gb_per_gpu,
-            'use_v2_block_manager': self.use_v2_block_manager,
             'quantization': self.quantize,
-            'device': self.device,
         }
         if self.max_rolling_batch_prefill_tokens is not None:
             vllm_engine_args[
