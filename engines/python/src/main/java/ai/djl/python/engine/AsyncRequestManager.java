@@ -115,9 +115,7 @@ class AsyncRequestManager {
         BytesSupplier error = BytesSupplier.wrap(JsonUtils.GSON.toJson(out));
         Request request = activeRequests.get(requestTrackingId);
         if (request == null) {
-            logger.warn(
-                    "Received error response for unknown request tracking ID: {}",
-                    requestTrackingId);
+            logger.warn("Received error response for unknown request tracking ID: {}", requestTrackingId);
             return;
         }
         request.last = true;
