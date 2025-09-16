@@ -118,7 +118,8 @@ rm -rf logs
 mkdir -p logs
 touch logs/serving.log
 
-set -ex
+set -euo pipefail
+set -x
 
 subnet="192.168.10.0/24"
 network_name="docker-net"
@@ -138,9 +139,10 @@ get_aws_credentials() {
   export AWS_SESSION_TOKEN=$(echo "$CREDENTIALS" | grep Token | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
 }
 
+get_aws_credentials
+
 # start the docker container
 if $is_multi_node; then
-  get_aws_credentials
   start_docker_network $subnet $network_name
 
   LWS_NAME=lmi
@@ -293,6 +295,11 @@ else
 fi
 
 set +x
+
+if [[ -z "$container_id" ]]; then
+  echo "Error: Failed to start container"
+  exit 1
+fi
 
 echo "Launching ${container_id}..."
 
