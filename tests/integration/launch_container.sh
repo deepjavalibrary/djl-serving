@@ -115,9 +115,10 @@ if [[ -f ${PWD}/docker_env ]]; then
 fi
 
 rm -rf logs
-mkdir logs
+mkdir -p logs
+touch logs/serving.log
 
-set -x
+set -ex
 
 subnet="192.168.10.0/24"
 network_name="docker-net"
