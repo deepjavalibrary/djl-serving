@@ -114,6 +114,10 @@ class AsyncRequestManager {
         Output out = new Output(code, errorMessage);
         BytesSupplier error = BytesSupplier.wrap(JsonUtils.GSON.toJson(out));
         Request request = activeRequests.get(requestTrackingId);
+        if (request == null) {
+            logger.warn("Received error response for unknown request tracking ID: {}", requestTrackingId);
+            return;
+        }
         request.last = true;
         request.output.setCode(code);
         request.data.appendContent(error, true);
@@ -126,6 +130,10 @@ class AsyncRequestManager {
         String requestTrackingId = prop.get(REQUEST_TRACKING_ID);
         byte[] responseContent = content.get(0).getValue().getAsBytes();
         Request request = activeRequests.get(requestTrackingId);
+        if (request == null) {
+            logger.warn("Received response for unknown request tracking ID: {}", requestTrackingId);
+            return;
+        }
         request.addResponse(responseContent, prop);
         if (request.last) {
             logger.info("Request [{}] completed", request.getRequestId());
