@@ -74,7 +74,7 @@ COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 COPY scripts/telemetry.sh /opt/djl/bin
 
-RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-8 cmake \
+RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-8 \
     && scripts/install_openssh.sh \
     && scripts/install_python.sh ${python_version} \
     && scripts/install_s5cmd.sh x64 \
