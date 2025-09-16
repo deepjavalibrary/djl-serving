@@ -65,10 +65,17 @@ class Runner:
                 f"cp client_logs/{esc_test_name}_client.log all_logs/{esc_test_name}/ || true"
             )
             os.system(f"cp -r logs all_logs/{esc_test_name}")
-        subprocess.run(["./remove_container.sh"],
-                       check=True,
-                       capture_output=True)
-        os.system("cat logs/serving.log")
+        try:
+            subprocess.run(["./remove_container.sh"],
+                           check=True,
+                           capture_output=True)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to remove container: {e}")
+        
+        if os.path.exists("logs/serving.log"):
+            os.system("cat logs/serving.log")
+        else:
+            logging.warning("logs/serving.log not found")
 
     def launch(self, env_vars=None, container=None, cmd=None):
         if env_vars is not None:
