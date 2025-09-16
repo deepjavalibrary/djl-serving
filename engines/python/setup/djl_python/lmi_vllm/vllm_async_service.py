@@ -105,7 +105,6 @@ class VLLMHandler:
             chat_template_content_format,
             enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
             tool_parser=self.vllm_properties.tool_call_parser,
-            enable_reasoning=self.vllm_properties.enable_reasoning,
             reasoning_parser=self.vllm_properties.reasoning_parser,
         )
         self.initialized = True
