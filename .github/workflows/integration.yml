@@ -127,7 +127,7 @@ jobs:
       - ${{ format('SHA-{0}', github.sha) }}
       - ${{ format('JOB-{0}', 'create-runners') }}
       - ${{ matrix.test.instance }}
-    timeout-minutes: 120
+    timeout-minutes: 180
     needs: create-runners
     strategy:
       fail-fast: false
