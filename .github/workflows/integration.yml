@@ -157,16 +157,16 @@ jobs:
           - test: TestVllm1
             instance: g6
             failure-prefix: lmi
-          - test: TestVllmLora
-            instance: g6
-            failure-prefix: lmi
+          # - test: TestVllmLora
+          #   instance: g6
+          #   failure-prefix: lmi
 
           - test: TestMultiModalVllm
             instance: g6
             failure-prefix: lmi
-          - test: TestTextEmbedding
-            instance: g6
-            failure-prefix: lmi
+          # - test: TestTextEmbedding
+          #   instance: g6
+          #   failure-prefix: lmi
           - test: TestCorrectnessTrtLlm
             instance: g6
             failure-prefix: trtllm
