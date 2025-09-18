@@ -9,6 +9,7 @@ from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
     TnXMemoryLayout, TnXDtypeName, TnXModelLoaders)
+from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
@@ -301,6 +302,25 @@ class TestConfigManager(unittest.TestCase):
         properties = {**common_properties, **params}
         with self.assertRaises(ValueError):
             TransformerNeuronXProperties(**properties)
+
+    @parameters([{
+        "rolling_batch": "auto",
+    }, {
+        "rolling_batch": "lmi-dist",
+        "is_error_case": True
+    }])
+    def test_trt_llm_configs(self, params):
+        is_error_case = params.pop("is_error_case", False)
+        properties = {**model_min_properties, **params}
+        if is_error_case:
+            with self.assertRaises(ValueError):
+                TensorRtLlmProperties(**properties)
+        else:
+            trt_configs = TensorRtLlmProperties(**properties)
+            self.assertEqual(trt_configs.model_id_or_path,
+                             properties['model_id'])
+            self.assertEqual(trt_configs.rolling_batch.value,
+                             properties['rolling_batch'])
 
     def test_hf_configs(self):
         properties = {
