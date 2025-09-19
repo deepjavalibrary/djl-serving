@@ -15,7 +15,7 @@ ARG cuda_version=cu128
 ARG djl_version
 ARG djl_serving_version
 ARG python_version=3.12
-ARG djl_torch_version=2.5.1
+ARG djl_torch_version=2.7.1
 ARG djl_onnx_version=1.20.0
 
 # djl converter wheel for text-embedding use case
@@ -97,7 +97,8 @@ RUN pip3 install torch==2.6.0 torchvision \
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version ${djl_torch_version} \
+RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version \
+    && scripts/install_djl_serving.sh $djl_version $djl_serving_version $djl_torch_version \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$djl_onnx_version
 
