@@ -90,7 +90,7 @@ jobs:
       - RUN_ID-${{ github.run_id }}
       - RUN_NUMBER-${{ github.run_number }}
       - SHA-${{ github.sha }}
-    timeout-minutes: 60
+    timeout-minutes: 120
     needs: [create-runners]
     strategy:
       fail-fast: false
