@@ -47,7 +47,7 @@ class Runner:
                 container_tag = f"{container_tag}-{override_image_tag_suffix}"
             self.image = f"{image_repo}:{container_tag}"
 
-        os.system('rm -rf models')
+        # os.system('rm -rf models')
 
         if download:
             os.system(f"./download_models.sh {self.container}")
@@ -432,7 +432,7 @@ class TestLmiDist1:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3",
                      cmd="serve -m test=file:/opt/ml/model/test/aot")
             client.run("lmi_dist llama-2-tiny".split())
-        os.system('sudo rm -rf models')
+        # os.system('sudo rm -rf models')
 
     def test_llama3_8b_chunked_prefill(self):
         with Runner('lmi', 'llama3-8b-chunked-prefill') as r:
@@ -558,6 +558,12 @@ class TestVllm1:
             prepare.build_vllm_model("gpt-neox-20b")
             r.launch()
             client.run("vllm gpt-neox-20b".split())
+
+    def test_gpt_neox_20b_custom(self):
+        with Runner('lmi', 'gpt-neox-20b') as r:
+            prepare.build_vllm_model("gpt-neox-20b-custom")
+            r.launch()
+            client.run("custom gpt-neox-20b".split())
 
     def test_mistral_7b(self):
         with Runner('lmi', 'mistral-7b') as r:
@@ -826,7 +832,8 @@ class TestNeuronx1:
                 client.run(
                     "transformers_neuronx_rolling_batch tiny-llama-rb".split())
             finally:
-                os.system('sudo rm -rf models')
+                pass
+            #     os.system('sudo rm -rf models')
 
 
 @pytest.mark.inf
