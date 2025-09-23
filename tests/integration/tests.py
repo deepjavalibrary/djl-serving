@@ -71,7 +71,7 @@ class Runner:
                            capture_output=True)
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to remove container: {e}")
-        
+
         if os.path.exists("logs/serving.log"):
             os.system("cat logs/serving.log")
         else:
@@ -108,7 +108,8 @@ class Runner:
                 text=True)
             return result
         except subprocess.CalledProcessError as e:
-            logging.error(f"launch_container.sh failed with return code {e.returncode}")
+            logging.error(
+                f"launch_container.sh failed with return code {e.returncode}")
             logging.error(f"Command: {e.cmd}")
             logging.error(f"STDOUT: {e.stdout}")
             logging.error(f"STDERR: {e.stderr}")
