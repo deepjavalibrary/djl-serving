@@ -298,7 +298,7 @@ echo "Launching ${container_id}..."
 
 total_retries=24
 if $is_llm; then
-  total_retries=60
+  total_retries=150
   if [[ "$platform" == *"inf2"* ]]; then
     total_retries=160
   fi
@@ -310,8 +310,8 @@ if $is_llm; then
     echo "extra sleep of 15 min for smoothquant calibration"
     total_retries=140
   fi
-  echo "extra sleep for 2 min on LLM models"
-  sleep 120
+  echo "extra sleep for 3 min on LLM models"
+  sleep 180
 fi
 
 # retrying to connect, till djl serving started.
@@ -325,10 +325,14 @@ while true; do
   fi
   if [[ "$(docker ps | wc -l)" == "1" ]]; then
     echo "Docker container shut down"
+    echo "Container logs:"
+    docker logs "$container_id" 2>&1 | tail -50
     exit 1
   fi
   if [[ "$retry" -ge "$total_retries" ]]; then
     echo "Max retry exceeded."
+    echo "Container logs:"
+    docker logs "$container_id" 2>&1 | tail -50
     exit 1
   fi
 

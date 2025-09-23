@@ -670,7 +670,7 @@ lmi_dist_model_list = {
     },
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
-        "option.limit_mm_per_prompt": "image=4",
+        "option.limit_mm_per_prompt": '{"image": 4}',
     },
     "paligemma-3b-mix-448": {
         "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
@@ -678,7 +678,7 @@ lmi_dist_model_list = {
     },
     "phi-3-vision-128k-instruct": {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
-        "option.limit_mm_per_prompt": "image=4",
+        "option.limit_mm_per_prompt": '{"image": 4}',
         "option.trust_remote_code": True,
         "option.max_model_len": 8192,
     },
@@ -687,7 +687,7 @@ lmi_dist_model_list = {
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
         "option.tokenizer_mode": "mistral",
-        "option.limit_mm_per_prompt": "image=4",
+        "option.limit_mm_per_prompt": '{"image": 4}',
     },
     "llama32-11b-multimodal": {
         "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
@@ -1058,7 +1058,7 @@ vllm_model_list = {
     },
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
-        "option.limit_mm_per_prompt": "image=4",
+        "option.limit_mm_per_prompt": '{"image": 4}',
     },
     "paligemma-3b-mix-448": {
         "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
@@ -1066,7 +1066,7 @@ vllm_model_list = {
     },
     "phi-3-vision-128k-instruct": {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
-        "option.limit_mm_per_prompt": "image=4",
+        "option.limit_mm_per_prompt": '{"image": 4}',
         "option.trust_remote_code": True,
         "option.max_model_len": 8192,
     },
@@ -1075,7 +1075,7 @@ vllm_model_list = {
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
         "option.tokenizer_mode": "mistral",
-        "option.limit_mm_per_prompt": "image=4",
+        "option.limit_mm_per_prompt": '{"image": 4}',
     },
     "llama32-11b-multimodal": {
         "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
