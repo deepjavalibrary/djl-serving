@@ -561,7 +561,7 @@ class TestVllm1:
 
     def test_gpt_neox_20b_custom(self):
         with Runner('lmi', 'gpt-neox-20b') as r:
-            prepare.build_vllm_model("gpt-neox-20b-custom")
+            prepare.build_vllm_async_model_custom_formatters("gpt-neox-20b-custom")
             r.launch()
             client.run("custom gpt-neox-20b".split())
 

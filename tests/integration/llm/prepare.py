@@ -1699,6 +1699,16 @@ def build_vllm_async_model_custom_formatters(model):
     options["option.async_mode"] = "true"
     options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
     write_model_artifacts(options)
+    
+    # Copy custom formatter files
+    source_dir = "examples/custom_formatters/"
+    target_dir = "models/test/"
+    if os.path.exists(source_dir):
+        for filename in os.listdir(source_dir):
+            source_file = os.path.join(source_dir, filename)
+            target_file = os.path.join(target_dir, filename)
+            if os.path.isfile(source_file):
+                shutil.copy2(source_file, target_file)
 
 
 def build_vllm_model(model):
@@ -1825,7 +1835,7 @@ supported_handler = {
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
     'vllm_async': build_vllm_async_model,
-    'vllm_async_custom_formatters': build_vllm_async_custom_model
+    'vllm_async_custom_formatters': build_vllm_async_model_custom_formatters
 }
 
 if __name__ == '__main__':
