@@ -31,6 +31,9 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output, ProcessedRequest
+from djl_python.service_loader import get_annotated_function
+
+
 
 from .request_response_utils import (
     vllm_stream_output_formatter,
@@ -60,10 +63,44 @@ class VLLMHandler:
         self.vllm_properties = None
         self.model_name = None
         self.initialized = False
+        self.output_formatter = None
+        self.input_formatter = None
+    
+    def load_formatters(self, model_dir: str):
+        """Load custom formatters from model.py"""
+        self.input_formatter = get_annotated_function(model_dir, "is_input_formatter")
+        self.output_formatter = get_annotated_function(model_dir, "is_output_formatter")
+        logger.info(f"Loaded formatters - input: {self.input_formatter}, output: {self.output_formatter}")
+    
+    def apply_input_formatter(self, decoded_payload, **kwargs):
+        """Apply input formatter if available"""
+        if self.input_formatter:
+            return self.input_formatter(decoded_payload, **kwargs)
+        return decoded_payload
+    
+    def apply_output_formatter(self, output):
+        """Apply output formatter if available"""
+        if self.output_formatter:
+            return self.output_formatter(output)
+        return output
+    
+    async def apply_output_formatter_streaming(self, stream_generator):
+        """Apply output formatter to streaming responses"""
+        if not self.output_formatter:
+            async for output in stream_generator:
+                yield output
+        else:
+            async for output in stream_generator:
+                yield self.apply_output_formatter(output)
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
         self.vllm_properties = VllmRbProperties(**properties)
+
+        # Load formatters
+        model_dir = properties.get("model_dir", ".")
+        self.load_formatters(model_dir)
+
         self.vllm_engine_args = self.vllm_properties.get_engine_args(
             async_engine=True)
         self.vllm_engine = AsyncLLMEngine.from_engine_args(
@@ -115,6 +152,10 @@ class VLLMHandler:
         raw_request = batch[0]
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
+
+        # Apply input formatter
+        decoded_payload = self.apply_input_formatter(decoded_payload, tokenizer=self.tokenizer)
+
         # For TGI streaming responses, the last chunk requires the full generated text to be provided.
         # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
         # The full generation at the end... TODO is there a better way?
@@ -179,7 +220,7 @@ class VLLMHandler:
             processed_request.request)
 
         if isinstance(response, types.AsyncGeneratorType):
-            return handle_streaming_response(
+            stream_generator = handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
                 request=processed_request.request,
@@ -187,13 +228,18 @@ class VLLMHandler:
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
             )
+            return self.apply_output_formatter_streaming(stream_generator)
 
-        return processed_request.non_stream_output_formatter(
+        output = processed_request.non_stream_output_formatter(
             response,
             request=processed_request.request,
             tokenizer=self.tokenizer,
         )
+        
+        # Apply output formatter
+        output = self.apply_output_formatter(output)
 
+        return output
 
 service = VLLMHandler()
 

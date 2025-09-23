@@ -90,6 +90,7 @@ def find_decorated_function(module,
     for function_name in dir(module):
         obj = getattr(module, function_name)
         if callable(obj) and getattr(obj, decorator_attribute, False):
+            logging.info(f"Found decorated function: {function_name} for decorator attribute: {decorator_attribute}")
             return obj
     return None
 
@@ -109,6 +110,7 @@ def get_annotated_function(model_dir: str,
         annotated_function = find_decorated_function(service.module,
                                                      decorator_attribute)
         if annotated_function:
+            logging.info(f"Found decorated function: {annotated_function.__name__} for decorator attribute: {decorator_attribute}")
             return annotated_function
     except ValueError:
         # No model.py is found, we default to our default input formatter
