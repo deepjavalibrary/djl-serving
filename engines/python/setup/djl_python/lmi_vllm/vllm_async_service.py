@@ -221,6 +221,10 @@ class VLLMHandler:
             processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
+            # Apply custom formatter to streaming response
+            if self.output_formatter:
+                response = self.apply_output_formatter_streaming_raw(response)
+            
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
@@ -229,7 +233,10 @@ class VLLMHandler:
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
             )
-            return self.apply_output_formatter_streaming(stream_generator)
+
+        # Apply custom output formatter to non-streaming response
+        if self.output_formatter:
+            response = self.apply_output_formatter(response)
 
         return processed_request.non_stream_output_formatter(
             response,
