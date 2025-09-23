@@ -27,48 +27,8 @@ parameters_options = [
     {"key": "echo", "target": "echo"},
     {"key": "adapters", "target": "adapters"}
 ]
-additional_properties_options = []
 
-
-class ProcessingClass:
-    def __init__(self):
-        pass
-
-    def pre_process(self, input_payload, tokenizer):
-        """
-        Pre-process the input payload.
-
-        Args:
-            input_payload (dict): The input payload received from client
-            tokenizer: The tokenizer
-
-        Returns:
-            (dict): The input payload after preprocessing
-        """
-        input_dict = {}
-
-        for input_payload_option in input_payload_options:
-            if input_payload_option["key"] in input_payload:
-                input_dict[input_payload_option["target"]] = input_payload[input_payload_option["key"]]
-
-        if "parameters" in input_payload:
-            input_dict["parameters"] = {}
-            for parameters_option in parameters_options:
-                if parameters_option["key"] in input_payload["parameters"]:
-                    input_dict["parameters"][parameters_option["target"]] = input_payload["parameters"][parameters_option["key"]]
-        if "additionalProperties" in input_payload:
-            for additional_properties_option in additional_properties_options:
-                if additional_properties_option["key"] in input_payload["additionalProperties"]:
-                    input_dict[additional_properties_option["target"]] = input_payload["additionalProperties"][
-                        additional_properties_option["key"]
-                    ]
-
-        return input_dict
-
-processing = ProcessingClass()
-
-
-def pre_process(input_payload, tokenizer, *args, **kwargs):
+def pre_process(input_payload, tokenizer):
     """
     Pre-process the input payload.
 
@@ -79,4 +39,44 @@ def pre_process(input_payload, tokenizer, *args, **kwargs):
     Returns:
         (dict): The input payload after preprocessing
     """
-    return processing.pre_process(input_payload, tokenizer)
+    input_dict = {}
+
+    for input_payload_option in input_payload_options:
+        if input_payload_option["key"] in input_payload:
+            input_dict[input_payload_option["target"]] = input_payload[input_payload_option["key"]]
+
+    if "parameters" in input_payload:
+        input_dict["parameters"] = {}
+        for parameters_option in parameters_options:
+            if parameters_option["key"] in input_payload["parameters"]:
+                input_dict["parameters"][parameters_option["target"]] = input_payload["parameters"][parameters_option["key"]]
+
+    return input_dict
+
+
+def post_process(result):
+    """
+    Processes the output from the model and returns the response
+
+    Args:
+        result (dict): The output from the model
+
+    Returns:
+        (str): json dumps of output after postprocessing, consistent with
+               chat completion format
+    """
+    output_dict = {
+        "error_message": "",
+        "completions": [
+            {
+                "completionText": result["decoded_text"],
+                "token_logprobs": result.get("token_logprobs", []),
+                "top_logprobs": [],
+                "tokens": result.get("tokens", ""),
+                "text_offsets": -1,
+                "model_version": os.getenv("model_endpoint_version"),
+            }
+        ],
+    }
+
+    return json.dumps(output_dict)
