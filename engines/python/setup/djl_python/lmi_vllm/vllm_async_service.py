@@ -34,11 +34,6 @@ from djl_python.async_utils import handle_streaming_response, create_non_stream_
 from djl_python.service_loader import get_annotated_function
 
 
-from djl_python.async_utils import handle_streaming_response, create_non_stream_output, ProcessedRequest
-from djl_python.service_loader import get_annotated_function
-
-
-
 from .request_response_utils import (
     ProcessedRequest,
     vllm_stream_output_formatter,
@@ -222,8 +217,7 @@ class VLLMHandler:
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response
-            if self.output_formatter:
-                response = self.apply_output_formatter_streaming_raw(response)
+            self.apply_output_formatter_streaming_raw(response)
             
             return handle_streaming_response(
                 response,
@@ -235,12 +229,7 @@ class VLLMHandler:
             )
 
         # Apply custom output formatter to non-streaming response
-        if self.output_formatter:
-            response = self.apply_output_formatter(response)
-
-        # Apply custom output formatter to non-streaming response
-        if self.output_formatter:
-            response = self.apply_output_formatter(response)
+        response = self.apply_output_formatter(response)
 
         return processed_request.non_stream_output_formatter(
             response,
