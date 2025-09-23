@@ -6,15 +6,29 @@ This document provides the schema of the output formatter, with which you can wr
 ## Signature of your own output formatter
 
 To write your own custom output formatter, follow the signature below:
+
+### For vLLM and TensorRT-LLM backends:
+```python
+from djl_python.output_formatter import output_formatter
+
+@output_formatter
+def custom_output_formatter(response_data: dict) -> dict:
+    # your implementation here
+    return response_data
 ```
+
+### For other backends:
+```python
 from djl_python.output_formatter import RequestOutput, output_formatter
 
 @output_formatter
 def custom_output_formatter(request_output: RequestOutput) -> str:
-    #your implementation here
+    # your implementation here
 ```
 
 You can write this function in your model.py. You don't need to write the handle function in your entry point Python file. DJLServing will search for the `@output_formatter` annotation and apply the annotated function as the output formatter.
+
+**Note**: For vLLM and TensorRT-LLM backends, the output formatter receives the final response data dictionary (containing fields like `generated_text`, `details`, etc.) and should return the modified dictionary. This allows you to add custom fields at the top level of the response.
 
 ## RequestOutput schema
 The RequestOutput class is designed to encapsulate the output of a request in a structured format. Here is an in-depth look at its structure and the related classes:
@@ -82,8 +96,40 @@ It's crucial to understand how your custom output formatter will be called befor
 - Inference may involve multiple token generations based on the max_new_tokens parameter. At each generation step, your custom formatter will be called for each request individually.
 
 
-## Example
-Here is an example of a custom output formatter:
+## Examples
+
+### Example for vLLM and TensorRT-LLM backends:
+```python
+from djl_python.output_formatter import output_formatter
+import json
+import time
+
+@output_formatter
+def custom_output_formatter(response_data: dict) -> dict:
+    """
+    Custom output formatter for vLLM/TensorRT-LLM backends.
+    Adds custom fields to the final response.
+
+    Args:
+        response_data (dict): The final response data containing 'generated_text', 'details', etc.
+
+    Returns:
+        (dict): Modified response data with custom fields
+    """
+    if 'generated_text' in response_data:
+        # Add custom processing timestamp
+        response_data['custom_formatter_applied'] = True
+        response_data['formatter_timestamp'] = int(time.time())
+        
+        # Example: Transform the generated text
+        generated_text = response_data['generated_text']
+        response_data['original_length'] = len(generated_text)
+        response_data['generated_text'] = f"[CUSTOM] {generated_text}"
+    
+    return response_data
+```
+
+### Example for other backends:
 ```python
 from djl_python.request_io import TextGenerationOutput
 from djl_python.output_formatter import output_formatter
