@@ -1170,6 +1170,7 @@ trtllm_handler_list = {
     "llama2-13b": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
     },
     "llama2-7b-smoothquant": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
@@ -1177,6 +1178,7 @@ trtllm_handler_list = {
         "option.quantize": "smoothquant",
         "option.smoothquant_per_token": "True",
         "option.smoothquant_per_channel": "True",
+        "option.rolling_batch": "trtllm",
     },
     "internlm-7b": {
         "option.model_id": "internlm/internlm-7b",
@@ -1198,6 +1200,7 @@ trtllm_handler_list = {
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
     },
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
@@ -1762,9 +1765,6 @@ def build_trtllm_handler_model(model):
             f"{model} is not one of the supporting handler {list(trtllm_handler_list.keys())}"
         )
     options = trtllm_handler_list[model]
-    options["option.rolling_batch"] = "disable"
-    options["option.async_mode"] = True
-    options["option.entryPoint"] = "djl_python.lmi_trtllm.trtllm_async_service"
     # 30 minute waiting for conversion timeout
     options["model_loading_timeout"] = "1800"
     write_model_artifacts(options)

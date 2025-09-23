@@ -36,6 +36,7 @@ from djl_python.service_loader import get_annotated_function
 
 
 from .request_response_utils import (
+    ProcessedRequest,
     vllm_stream_output_formatter,
     vllm_non_stream_output_formatter,
     convert_lmi_schema_to_completion_request,
@@ -213,7 +214,7 @@ class VLLMHandler:
             return output
 
         response = await processed_request.inference_invoker(
-            processed_request.request)
+            processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response
@@ -223,7 +224,7 @@ class VLLMHandler:
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
-                request=processed_request.request,
+                request=processed_request.vllm_request,
                 accumulate_chunks=processed_request.accumulate_chunks,
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
@@ -235,7 +236,7 @@ class VLLMHandler:
 
         output = processed_request.non_stream_output_formatter(
             response,
-            request=processed_request.request,
+            request=processed_request.vllm_request,
             tokenizer=self.tokenizer,
         )
 

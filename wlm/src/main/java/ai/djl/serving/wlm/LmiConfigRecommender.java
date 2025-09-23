@@ -76,6 +76,8 @@ public final class LmiConfigRecommender {
             }
         } else if (isVllmEnabled(features)) {
             rollingBatch = "vllm";
+        } else if (isTrtLlmEnabled(features)) {
+            rollingBatch = "trtllm";
         } else {
             rollingBatch = "disable";
         }
