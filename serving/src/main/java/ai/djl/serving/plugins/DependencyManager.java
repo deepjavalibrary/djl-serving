@@ -81,6 +81,14 @@ public final class DependencyManager {
                     installDependency("com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
                 }
                 break;
+            case "XGBoost":
+                installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
+                // TODO: Avoid hard code version
+                installDependency("commons-logging:commons-logging:1.2");
+                break;
+            case "Llama":
+                installDependency("ai.djl.llama:llama:" + djlVersion);
+                break;
             default:
                 break;
         }
