@@ -23,7 +23,7 @@ from vllm.entrypoints.openai.protocol import (
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
-from vllm.utils import kill_process_tree
+from vllm.utils import kill_process_tree, AtomicCounter
 
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
@@ -31,6 +31,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
+from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
 
 from .request_response_utils import (
     ProcessedRequest,
@@ -61,6 +62,9 @@ class VLLMHandler:
         self.vllm_properties = None
         self.model_name = None
         self.initialized = False
+        self.adapter_registry = {}
+        self.lora_id_counter = AtomicCounter(0)
+        self.lora_requests = {}
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -195,6 +199,22 @@ class VLLMHandler:
             tokenizer=self.tokenizer,
         )
 
+    async def add_lora(self, lora_name: str, lora_alias: str, lora_path: str):
+        lora_id = self.lora_id_counter.inc(1)
+        lora_request = create_lora_request(lora_name, lora_id, lora_path)
+        self.lora_requests[lora_request.lora_name] = lora_request
+        return await self.vllm_engine.add_lora(lora_request)
+
+    async def remove_lora(self, lora_name: str, lora_alias: str):
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+        return await self.vllm_engine.remove_lora(lora_request.lora_int_id)
+
+    async def pin_lora(self, lora_name: str, lora_alias: str):
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+        loaded = await self.vllm_engine.add_lora(lora_request)
+        return loaded and await self.vllm_engine.pin_lora(
+            lora_request.lora_int_id)
+
 
 service = VLLMHandler()
 
@@ -210,3 +230,125 @@ async def handle(
 
     outputs = await service.inference(inputs)
     return outputs
+
+
+async def register_adapter(inputs: Input):
+    """
+    Registers lora adapter with the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+    adapter_path = inputs.get_property("src")
+    adapter_preload = inputs.get_as_string("preload").lower(
+    ) == "true" if inputs.contains_key("preload") else True
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
+
+    loaded = False
+    try:
+        if not os.path.exists(adapter_path):
+            raise ValueError(
+                f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+            )
+
+        if not adapter_preload and adapter_pin:
+            raise ValueError("Can not set preload to false and pin to true")
+
+        if adapter_preload:
+            loaded = await service.add_lora(adapter_name, adapter_alias,
+                                            adapter_path)
+
+        if adapter_pin:
+            await service.pin_lora(adapter_name, adapter_alias)
+        service.adapter_registry[adapter_name] = inputs
+    except Exception as e:
+        logging.debug(f"Failed to register adapter: {e}", exc_info=True)
+        if loaded:
+            logging.info(
+                f"LoRA adapter {adapter_alias} was successfully loaded, but failed to pin, unloading ..."
+            )
+            await service.remove_lora(adapter_name, adapter_alias)
+        if any(msg in str(e)
+               for msg in ("No free lora slots",
+                           "greater than the number of GPU LoRA slots")):
+            raise MemoryError(str(e))
+        return Output().error(f"register_adapter_error", message=str(e))
+
+    logging.info(
+        f"Registered adapter {adapter_alias} from {adapter_path} successfully")
+    return Output(message=f"Adapter {adapter_alias} registered")
+
+
+async def update_adapter(inputs: Input):
+    """
+    Updates lora adapter with the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+    adapter_path = inputs.get_property("src")
+    adapter_preload = inputs.get_as_string("preload").lower(
+    ) == "true" if inputs.contains_key("preload") else True
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
+
+    if adapter_name not in service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
+
+    try:
+        if not adapter_preload and adapter_pin:
+            raise ValueError("Can not set load to false and pin to true")
+
+        old_adapter = service.adapter_registry[adapter_name]
+        old_adapter_path = old_adapter.get_property("src")
+        if adapter_path != old_adapter_path:
+            raise NotImplementedError(
+                f"Updating adapter path is not supported.")
+
+        old_adapter_preload = old_adapter.get_as_string("preload").lower(
+        ) == "true" if old_adapter.contains_key("preload") else True
+        if adapter_preload != old_adapter_preload:
+            if adapter_preload:
+                await service.add_lora(adapter_name, adapter_alias,
+                                       adapter_path)
+            else:
+                await service.remove_lora(adapter_name, adapter_alias)
+
+        old_adapter_pin = old_adapter.get_as_string("pin").lower(
+        ) == "true" if old_adapter.contains_key("pin") else False
+        if adapter_pin != old_adapter_pin:
+            if adapter_pin:
+                await service.pin_lora(adapter_name, adapter_alias)
+            else:
+                raise NotImplementedError(f"Unpin adapter is not supported.")
+        service.adapter_registry[adapter_name] = inputs
+    except Exception as e:
+        logging.debug(f"Failed to update adapter: {e}", exc_info=True)
+        if any(msg in str(e)
+               for msg in ("No free lora slots",
+                           "greater than the number of GPU LoRA slots")):
+            raise MemoryError(str(e))
+        return Output().error("update_adapter_error", message=str(e))
+
+    logging.info(f"Updated adapter {adapter_alias} successfully")
+    return Output(message=f"Adapter {adapter_alias} updated")
+
+
+async def unregister_adapter(inputs: Input):
+    """
+    Unregisters lora adapter from the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+
+    if adapter_name not in service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
+
+    try:
+        await service.remove_lora(adapter_name, adapter_alias)
+        del service.adapter_registry[adapter_name]
+    except Exception as e:
+        logging.debug(f"Failed to unregister adapter: {e}", exc_info=True)
+        return Output().error("remove_adapter_error", message=str(e))
+
+    logging.info(f"Unregistered adapter {adapter_alias} successfully")
+    return Output(message=f"Adapter {adapter_alias} unregistered")
