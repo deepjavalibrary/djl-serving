@@ -233,6 +233,7 @@ class VLLMHandler:
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
             )
+            return self.apply_output_formatter_streaming(stream_generator)
 
         # Apply custom output formatter to non-streaming response
         if self.output_formatter:
