@@ -108,7 +108,8 @@ class Runner:
                 text=True)
             return result
         except subprocess.CalledProcessError as e:
-            logging.error(f"launch_container.sh failed with return code {e.returncode}")
+            logging.error(
+                f"launch_container.sh failed with return code {e.returncode}")
             logging.error(f"Command: {e.cmd}")
             logging.error(f"STDOUT: {e.stdout}")
             logging.error(f"STDERR: {e.stderr}")
