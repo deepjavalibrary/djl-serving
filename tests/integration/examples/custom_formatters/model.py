@@ -45,10 +45,10 @@ def custom_input_formatter(decoded_payload, tokenizer=None):
 
 
 @output_formatter
-def custom_output_formatter(output):
+def custom_output_formatter(response):
     """
-    Custom output formatter that modifies the output content structure.
-    Works with the PairList content structure properly.
+    Custom output formatter that works on raw vLLM response.
+    Handles both streaming and non-streaming responses.
     """
     import json
     import time
@@ -56,50 +56,55 @@ def custom_output_formatter(output):
     timestamp = int(time.time())
     logger.info(f"CUSTOM_OUTPUT_FORMATTER_CALLED at {timestamp}")
     
-    # Work with the PairList content structure
-    if hasattr(output, 'content') and output.content.size() > 0:
+    # Work with vLLM response objects
+    if hasattr(response, 'choices') and response.choices:
         try:
-            # Get the first content item
-            first_key = output.content.key_at(0)
-            first_value = output.content.value_at(0)
+            # Get the first choice
+            first_choice = response.choices[0]
             
-            # Convert bytes to string for processing
-            if isinstance(first_value, (bytes, bytearray)):
-                content_str = first_value.decode('utf-8')
-            else:
-                content_str = str(first_value)
-            
-            # Try to parse and modify JSON content
-            try:
-                parsed = json.loads(content_str)
+            # Extract text from different response types
+            if hasattr(first_choice, 'delta') and hasattr(first_choice.delta, 'content'):
+                # Streaming response chunk
+                if first_choice.delta.content:
+                    # Only process non-empty content chunks
+                    first_choice.delta.content = f"[CUSTOM_FORMATTED:{timestamp}] {first_choice.delta.content}"
+            elif hasattr(first_choice, 'message') and hasattr(first_choice.message, 'content'):
+                # Chat completion response
+                generated_text = first_choice.message.content
+                result = integration_script.post_process({'decoded_text': generated_text})
                 
-                # Add custom metadata
-                if isinstance(parsed, dict):
-                    parsed['custom_formatter_applied'] = True
-                    parsed['formatter_timestamp'] = timestamp
+                try:
+                    result_dict = json.loads(result)
+                    result_dict['custom_formatter_applied'] = True
+                    result_dict['formatter_timestamp'] = timestamp
+                    first_choice.message.content = json.dumps(result_dict)
+                except json.JSONDecodeError:
+                    custom_result = {
+                        'custom_formatter_applied': True,
+                        'formatter_timestamp': timestamp,
+                        'processed_result': result
+                    }
+                    first_choice.message.content = json.dumps(custom_result)
                     
-                    # If it has generated_text, call integration script
-                    if 'generated_text' in parsed:
-                        result = integration_script.post_process({'decoded_text': parsed['generated_text']})
-                        parsed['custom_processed'] = True
-                        parsed['original_generated_text'] = parsed['generated_text']
-                        if isinstance(result, str):
-                            try:
-                                result_json = json.loads(result)
-                                parsed.update(result_json)
-                            except json.JSONDecodeError:
-                                parsed['processed_result'] = result
+            elif hasattr(first_choice, 'text'):
+                # Text completion response
+                generated_text = first_choice.text
+                result = integration_script.post_process({'decoded_text': generated_text})
                 
-                # Update the content with modified JSON
-                modified_content = json.dumps(parsed, ensure_ascii=False)
-                output.content.set_value_at(0, modified_content.encode('utf-8'))
-                
-            except json.JSONDecodeError:
-                # If not JSON, just add a header
-                modified_content = f"<!-- CUSTOM_FORMATTER_APPLIED at {timestamp} -->\n{content_str}"
-                output.content.set_value_at(0, modified_content.encode('utf-8'))
+                try:
+                    result_dict = json.loads(result)
+                    result_dict['custom_formatter_applied'] = True
+                    result_dict['formatter_timestamp'] = timestamp
+                    first_choice.text = json.dumps(result_dict)
+                except json.JSONDecodeError:
+                    custom_result = {
+                        'custom_formatter_applied': True,
+                        'formatter_timestamp': timestamp,
+                        'processed_result': result
+                    }
+                    first_choice.text = json.dumps(custom_result)
                 
         except Exception as e:
             logger.error(f"Error in custom_output_formatter: {e}")
     
-    return output
+    return response

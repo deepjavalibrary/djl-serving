@@ -70,33 +70,29 @@ class VLLMHandler:
         self.initialized = False
         self.output_formatter = None
         self.input_formatter = None
-    
+
     def load_formatters(self, model_dir: str):
         """Load custom formatters from model.py"""
         self.input_formatter = get_annotated_function(model_dir, "is_input_formatter")
         self.output_formatter = get_annotated_function(model_dir, "is_output_formatter")
         logger.info(f"Loaded formatters - input: {self.input_formatter}, output: {self.output_formatter}")
-    
+
     def apply_input_formatter(self, decoded_payload, **kwargs):
         """Apply input formatter if available"""
         if self.input_formatter:
             return self.input_formatter(decoded_payload, **kwargs)
         return decoded_payload
-    
+
     def apply_output_formatter(self, output):
         """Apply output formatter if available"""
         if self.output_formatter:
             return self.output_formatter(output)
         return output
-    
-    async def apply_output_formatter_streaming(self, stream_generator):
-        """Apply output formatter to streaming responses"""
-        if not self.output_formatter:
-            async for output in stream_generator:
-                yield output
-        else:
-            async for output in stream_generator:
-                yield self.apply_output_formatter(output)
+
+    async def apply_output_formatter_streaming_raw(self, stream_generator):
+        """Apply output formatter to raw streaming responses"""
+        async for response in stream_generator:
+            yield self.apply_output_formatter(response)
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -225,7 +221,11 @@ class VLLMHandler:
             processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
-            stream_generator = handle_streaming_response(
+            # Apply custom formatter to streaming response
+            if self.output_formatter:
+                response = self.apply_output_formatter_streaming_raw(response)
+            
+            return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
                 request=processed_request.vllm_request,
@@ -233,16 +233,16 @@ class VLLMHandler:
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
             )
-            return self.apply_output_formatter_streaming(stream_generator)
+
+        # Apply custom output formatter to non-streaming response
+        if self.output_formatter:
+            response = self.apply_output_formatter(response)
 
         output = processed_request.non_stream_output_formatter(
             response,
             request=processed_request.vllm_request,
             tokenizer=self.tokenizer,
         )
-        
-        # Apply output formatter
-        output = self.apply_output_formatter(output)
 
         return output
 
