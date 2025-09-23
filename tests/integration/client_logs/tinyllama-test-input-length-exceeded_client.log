@@ -1,0 +1,39 @@
+req {'inputs': 'Rossillon. A room in the Countess’s palace.\n\nScene II. Paris. A room in the King’s palace.\n\nScene III. Rossillon. A Room in the Palace.\n\n\n\n\n\nACT II\n\nScene I. Paris. A room in the King’s palace.\n\nScene II. Rossillon. A room in the Countess’s palace.\n\nScene III. Paris. The King’s palace.\n\nScene IV. Paris. The King’s palace.\n\nScene V. Another room in the same.\n\n\n\n\n\nACT III\n\nScene I. Florence. A room', 'parameters': {'do_sample': True, 'max_new_tokens': 25, 'details': True}, 'stream': False}
+HTTP error: b'{"code":424,"message":"Async Inference Failure service.invoke_handler_async() failure","properties":{},"content":{"keys":[],"values":[]},"cancelled":false}'
+NoneType: None
+req {'inputs': 'Which of them both\n\nIs dearest to me I have', 'parameters': {'do_sample': True, 'max_new_tokens': 25, 'details': True}, 'stream': False}
+res: {"generated_text": " tried\n\nAll three until the light fades away\n\nAnd my heart catches a glimpse behind\n\n", "details": {"finish_reason": null, "generated_tokens": 25, "seed": null, "prefill": [], "tokens": [{"id": 1898, "text": "tried", "logprob": -3.7104132175445557}, {"id": 13, "text": "\n", "logprob": -1.6772371530532837}, {"id": 13, "text": "\n", "logprob": -0.7333625555038452}, {"id": 3596, "text": "All", "logprob": -1.7184853553771973}, {"id": 2211, "text": "three", "logprob": -1.6415245532989502}, {"id": 2745, "text": "until", "logprob": -6.527688980102539}, {"id": 278, "text": "the", "logprob": -2.2748684883117676}, {"id": 3578, "text": "light", "logprob": -4.866688251495361}, {"id": 285, "text": "f", "logprob": -2.2056198120117188}, {"id": 3076, "text": "ades", "logprob": -0.1579698622226715}, {"id": 3448, "text": "away", "logprob": -1.5714530944824219}, {"id": 13, "text": "\n", "logprob": -0.07935299724340439}, {"id": 13, "text": "\n", "logprob": -0.023155992850661278}, {"id": 2855, "text": "And", "logprob": -1.746948003768921}, {"id": 590, "text": "my", "logprob": -3.4413845539093018}, {"id": 5192, "text": "heart", "logprob": -0.7646614909172058}, {"id": 4380, "text": "catch", "logprob": -6.503334045410156}, {"id": 267, "text": "es", "logprob": -0.005098436959087849}, {"id": 263, "text": "a", "logprob": -2.0763635635375977}, {"id": 330, "text": "g", "logprob": -1.0913770198822021}, {"id": 12552, "text": "limp", "logprob": -0.066949762403965}, {"id": 344, "text": "se", "logprob": -0.0016214807983487844}, {"id": 5742, "text": "behind", "logprob": -7.831428527832031}, {"id": 13, "text": "\n", "logprob": -0.4234936535358429}, {"id": 13, "text": "\n", "logprob": -0.04092036932706833}]}}
+
+req {'inputs': 'Which of them both\n\nIs dearest to me I have', 'parameters': {'do_sample': True, 'max_new_tokens': 25, 'details': True}, 'stream': True}
+res: {"index": 0, "token": {"id": 304, "text": " to", "logprob": -2.6479132175445557}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5839, "text": " pick", "logprob": -4.019588470458984}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 29973, "text": "?", "logprob": -1.9239922761917114}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13, "text": "\n", "logprob": -0.2780193090438843}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13, "text": "\n", "logprob": -0.10650499910116196}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8809, "text": "Wh", "logprob": -3.2798309326171875}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 436, "text": "ich", "logprob": -0.05110645294189453}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 310, "text": " of", "logprob": -1.3250802755355835}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 963, "text": " them", "logprob": -0.1387544572353363}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1716, "text": " both", "logprob": -0.22554640471935272}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13, "text": "\n", "logprob": -1.828519344329834}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13, "text": "\n", "logprob": -0.2974845767021179}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3624, "text": "Is", "logprob": -0.41703560948371887}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 9425, "text": " dear", "logprob": -0.10477384179830551}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 342, "text": "est", "logprob": -0.010007917881011963}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 304, "text": " to", "logprob": -0.007651663385331631}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 592, "text": " me", "logprob": -0.014586360193789005}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 306, "text": " I", "logprob": -0.37138238549232483}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 505, "text": " have", "logprob": -0.055492598563432693}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 304, "text": " to", "logprob": -0.0012719882652163506}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5839, "text": " pick", "logprob": -0.03331248462200165}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 29973, "text": "?", "logprob": -0.08173426985740662}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13, "text": "\n", "logprob": -0.13500359654426575}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13, "text": "\n", "logprob": -0.0063016521744430065}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2887, "text": "As", "logprob": -5.621238708496094}, "generated_text": " to pick?\n\nWhich of them both\n\nIs dearest to me I have to pick?\n\nAs", "details": {"finish_reason": "length", "seed": null, "generated_tokens": 26, "input_length": 14}}
+
+
+
+Little benchmark: concurrency 1 seq_len 25
+Running command TOKENIZER=TinyLlama/TinyLlama-1.1B-Chat-v1.0 ./awscurl -c 1 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "Which of them both\n\nIs dearest to me I have", "parameters": {"do_sample": true, "max_new_tokens": 25, "details": true}, "stream": false}'    -P -t
+Little benchmark: concurrency 1 seq_len 25
+Running command TOKENIZER=TinyLlama/TinyLlama-1.1B-Chat-v1.0 ./awscurl -c 1 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "Which of them both\n\nIs dearest to me I have", "parameters": {"do_sample": true, "max_new_tokens": 25, "details": true}, "stream": true}'    -P -t

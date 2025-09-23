@@ -1,0 +1,271 @@
+req {'inputs': 'DeepSpeed is a machine learning framework', 'parameters': {'do_sample': True, 'max_new_tokens': 256, 'details': True}, 'stream': False}
+res: {"generated_text": " with a goal of optimizing the execution of pretraining and fine-tuning in pipeline parallelism and transformer parallelism environments.\n#\n# [Learn more](https://huggingface.co/microsoft/DeepSpeed-InstructSeq Typography/classificatio\n#                                 ImageClassifierTester(\n                                                                args.num_train_examples,\n                                                                args.num_eval_examples,\n                                                                args.overfit,\n                                                                num_output_classes,\n                                                                eval_odc\n                                                         )\nprint('ModelTester initialized')\n\n#       print('epoch = ', epoch)\n                        # print('t.ocr_evaluator = ', t.ocr_evaluator)\n                        # print('t.ocr_evaluator.eval_odc = ', t.ocr_evaluator.eval_odc)\n# -\n\nif args.do_predict:\n#     for epoch in range(t.best_epoch, args.max_epochs):\n        for epoch in range(0, args.max_epochs):\n\n            t.train(epoch, training_dataloader, writer)\n\n            t.test(epoch, testing_dataloader, writer)\n\n            checkpoint = {\n                'model': t.ocr_evaluator.bbox_predictor.state_dict(),", "details": {"finish_reason": null, "generated_tokens": 256, "seed": null, "prefill": [], "tokens": [{"id": 642, "text": " with", "logprob": -3.784555435180664}, {"id": 331, "text": " a", "logprob": -1.860379695892334}, {"id": 12327, "text": " goal", "logprob": -2.2317163944244385}, {"id": 451, "text": " of", "logprob": -1.1978600025177002}, {"id": 6630, "text": " optim", "logprob": -2.4150447845458984}, {"id": 6206, "text": "izing", "logprob": -0.00462581031024456}, {"id": 341, "text": " the", "logprob": -1.4364145994186401}, {"id": 6111, "text": " execution", "logprob": -4.884342670440674}, {"id": 451, "text": " of", "logprob": -0.6219295263290405}, {"id": 1426, "text": " pre", "logprob": -5.553226470947266}, {"id": 10950, "text": "training", "logprob": -4.090290069580078}, {"id": 480, "text": " and", "logprob": -1.464296579360962}, {"id": 8407, "text": " fine", "logprob": -0.8089432120323181}, {"id": 50, "text": "-", "logprob": -0.04354993626475334}, {"id": 47708, "text": "tuning", "logprob": -0.0034571662545204163}, {"id": 347, "text": " in", "logprob": -4.019891262054443}, {"id": 8613, "text": " pipeline", "logprob": -7.0791215896606445}, {"id": 11994, "text": " parallel", "logprob": -0.5072110891342163}, {"id": 5750, "text": "ism", "logprob": -0.7215830087661743}, {"id": 480, "text": " and", "logprob": -2.8421406745910645}, {"id": 26723, "text": " transformer", "logprob": -5.870626449584961}, {"id": 11994, "text": " parallel", "logprob": -2.904900074005127}, {"id": 5750, "text": "ism", "logprob": -0.0037225254345685244}, {"id": 20319, "text": " environments", "logprob": -4.332940101623535}, {"id": 51, "text": ".", "logprob": -0.4172259271144867}, {"id": 222, "text": "\n", "logprob": -1.550560474395752}, {"id": 40, "text": "#", "logprob": -3.269632339477539}, {"id": 222, "text": "\n", "logprob": -0.5017355680465698}, {"id": 40, "text": "#", "logprob": -0.048465702682733536}, {"id": 447, "text": " [", "logprob": -3.7396302223205566}, {"id": 21071, "text": "Learn", "logprob": -5.393860340118408}, {"id": 1851, "text": " more", "logprob": -0.3163526654243469}, {"id": 748, "text": "](", "logprob": -1.1255548000335693}, {"id": 662, "text": "https", "logprob": -0.02966686710715294}, {"id": 574, "text": "://", "logprob": -0.0001387499796692282}, {"id": 109, "text": "h", "logprob": -1.2782344818115234}, {"id": 905, "text": "ug", "logprob": -0.0016709902556613088}, {"id": 2582, "text": "ging", "logprob": -0.0003812778159044683}, {"id": 1179, "text": "face", "logprob": -0.00016723664884921163}, {"id": 51, "text": ".", "logprob": -0.0003305127320345491}, {"id": 352, "text": "co", "logprob": -0.0009604846709407866}, {"id": 52, "text": "/", "logprob": -0.001921713468618691}, {"id": 3800, "text": "microsoft", "logprob": -6.025485515594482}, {"id": 52, "text": "/", "logprob": -0.048163674771785736}, {"id": 11585, "text": "Deep", "logprob": -0.3804568946361542}, {"id": 8186, "text": "Speed", "logprob": -0.0004128557338844985}, {"id": 50, "text": "-", "logprob": -2.7472610473632812}, {"id": 402, "text": "In", "logprob": -5.485353469848633}, {"id": 1185, "text": "struct", "logprob": -0.16138944029808044}, {"id": 8718, "text": "Seq", "logprob": -5.3114399909973145}, {"id": 43401, "text": " Typography", "logprob": -16.136043548583984}, {"id": 52, "text": "/", "logprob": -5.05987548828125}, {"id": 842, "text": "class", "logprob": -5.948461532592773}, {"id": 1057, "text": "ific", "logprob": -3.889185905456543}, {"id": 5287, "text": "atio", "logprob": -2.1398792266845703}, {"id": 222, "text": "\n", "logprob": -2.1082472801208496}, {"id": 40, "text": "#", "logprob": -0.6716960072517395}, {"id": 1229, "text": "                                ", "logprob": -8.517077445983887}, {"id": 4393, "text": " Image", "logprob": -8.126336097717285}, {"id": 16077, "text": "Classifier", "logprob": -2.9282822608947754}, {"id": 18574, "text": "Tester", "logprob": -6.651157855987549}, {"id": 45, "text": "(", "logprob": -1.5588651895523071}, {"id": 13793, "text": "\n                                                               ", "logprob": -8.509648323059082}, {"id": 2194, "text": " args", "logprob": -4.647642612457275}, {"id": 51, "text": ".", "logprob": -1.093819260597229}, {"id": 1538, "text": "num", "logprob": -3.4655818939208984}, {"id": 100, "text": "_", "logprob": -0.0035916364286094904}, {"id": 3441, "text": "train", "logprob": -3.0014023780822754}, {"id": 100, "text": "_", "logprob": -0.276082843542099}, {"id": 7944, "text": "examples", "logprob": -3.8211588859558105}, {"id": 49, "text": ",", "logprob": -0.16601817309856415}, {"id": 13793, "text": "\n                                                               ", "logprob": -0.33794745802879333}, {"id": 2194, "text": " args", "logprob": -0.32060351967811584}, {"id": 51, "text": ".", "logprob": -0.006143613718450069}, {"id": 1538, "text": "num", "logprob": -0.7296671271324158}, {"id": 100, "text": "_", "logprob": -9.989239333663136e-05}, {"id": 6635, "text": "eval", "logprob": -1.7238614559173584}, {"id": 100, "text": "_", "logprob": -0.015053716488182545}, {"id": 7944, "text": "examples", "logprob": -0.05337618291378021}, {"id": 49, "text": ",", "logprob": -0.1549006700515747}, {"id": 13793, "text": "\n                                                               ", "logprob": -0.054371561855077744}, {"id": 2194, "text": " args", "logprob": -0.42932286858558655}, {"id": 51, "text": ".", "logprob": -0.011689264327287674}, {"id": 1515, "text": "over", "logprob": -6.900674819946289}, {"id": 4803, "text": "fit", "logprob": -0.5074801445007324}, {"id": 49, "text": ",", "logprob": -1.5919370651245117}, {"id": 13793, "text": "\n                                                               ", "logprob": -0.058072250336408615}, {"id": 1952, "text": " num", "logprob": -4.339504241943359}, {"id": 100, "text": "_", "logprob": -0.0022347019985318184}, {"id": 2051, "text": "output", "logprob": -5.487088203430176}, {"id": 100, "text": "_", "logprob": -0.08161451667547226}, {"id": 4844, "text": "classes", "logprob": -0.3603343069553375}, {"id": 49, "text": ",", "logprob": -1.0292426347732544}, {"id": 13793, "text": "\n                                                               ", "logprob": -0.07883873581886292}, {"id": 10018, "text": " eval", "logprob": -4.939940929412842}, {"id": 100, "text": "_", "logprob": -0.01570194400846958}, {"id": 450, "text": "od", "logprob": -9.262144088745117}, {"id": 104, "text": "c", "logprob": -5.877041816711426}, {"id": 23842, "text": "\n                                                        ", "logprob": -6.51364803314209}, {"id": 848, "text": " )", "logprob": -0.5296265482902527}, {"id": 222, "text": "\n", "logprob": -1.736213207244873}, {"id": 1243, "text": "print", "logprob": -4.370516300201416}, {"id": 482, "text": "('", "logprob": -1.4637080430984497}, {"id": 1262, "text": "Model", "logprob": -4.779263019561768}, {"id": 18574, "text": "Tester", "logprob": -2.31292462348938}, {"id": 8777, "text": " initialized", "logprob": -1.765679955482483}, {"id": 704, "text": "')", "logprob": -0.6443608403205872}, {"id": 222, "text": "\n", "logprob": -0.18852445483207703}, {"id": 222, "text": "\n", "logprob": -0.42949235439300537}, {"id": 40, "text": "#", "logprob": -0.4727414846420288}, {"id": 981, "text": "      ", "logprob": -10.585121154785156}, {"id": 1489, "text": " print", "logprob": -4.015137672424316}, {"id": 482, "text": "('", "logprob": -0.7477932572364807}, {"id": 8981, "text": "epoch", "logprob": -7.570854663848877}, {"id": 299, "text": " =", "logprob": -3.177821636199951}, {"id": 5799, "text": " ',", "logprob": -1.3392410278320312}, {"id": 11084, "text": " epoch", "logprob": -0.3962832987308502}, {"id": 46, "text": ")", "logprob": -0.467373788356781}, {"id": 733, "text": "\n                       ", "logprob": -9.648787498474121}, {"id": 607, "text": " #", "logprob": -1.9251526594161987}, {"id": 1489, "text": " print", "logprob": -2.469714641571045}, {"id": 482, "text": "('", "logprob": -0.20325212180614471}, {"id": 121, "text": "t", "logprob": -5.981720924377441}, {"id": 51, "text": ".", "logprob": -3.6666476726531982}, {"id": 13892, "text": "ocr", "logprob": -10.98684024810791}, {"id": 100, "text": "_", "logprob": -0.2750600576400757}, {"id": 44327, "text": "evaluator", "logprob": -6.508203506469727}, {"id": 299, "text": " =", "logprob": -1.4292922019958496}, {"id": 5799, "text": " ',", "logprob": -0.08346054702997208}, {"id": 292, "text": " t", "logprob": -0.2353508174419403}, {"id": 51, "text": ".", "logprob": -0.02808956988155842}, {"id": 13892, "text": "ocr", "logprob": -0.03444354981184006}, {"id": 100, "text": "_", "logprob": -0.0009416675311513245}, {"id": 44327, "text": "evaluator", "logprob": -0.006171100307255983}, {"id": 46, "text": ")", "logprob": -0.061288271099328995}, {"id": 733, "text": "\n                       ", "logprob": -0.4849352240562439}, {"id": 607, "text": " #", "logprob": -0.3805544972419739}, {"id": 1489, "text": " print", "logprob": -0.22500720620155334}, {"id": 482, "text": "('", "logprob": -0.054412879049777985}, {"id": 121, "text": "t", "logprob": -0.36776307225227356}, {"id": 51, "text": ".", "logprob": -0.02642804943025112}, {"id": 13892, "text": "ocr", "logprob": -1.1531858444213867}, {"id": 100, "text": "_", "logprob": -0.004186437930911779}, {"id": 44327, "text": "evaluator", "logprob": -0.062234923243522644}, {"id": 51, "text": ".", "logprob": -0.13589663803577423}, {"id": 6635, "text": "eval", "logprob": -2.521040439605713}, {"id": 100, "text": "_", "logprob": -0.15665927529335022}, {"id": 450, "text": "od", "logprob": -1.340021014213562}, {"id": 104, "text": "c", "logprob": -0.02242317795753479}, {"id": 299, "text": " =", "logprob": -0.1343163549900055}, {"id": 5799, "text": " ',", "logprob": -0.02204589918255806}, {"id": 292, "text": " t", "logprob": -0.04148126021027565}, {"id": 51, "text": ".", "logprob": -0.0002308817347511649}, {"id": 13892, "text": "ocr", "logprob": -0.003869309788569808}, {"id": 100, "text": "_", "logprob": -6.532455881824717e-05}, {"id": 44327, "text": "evaluator", "logprob": -0.0007010624394752085}, {"id": 51, "text": ".", "logprob": -0.001911837956868112}, {"id": 6635, "text": "eval", "logprob": -0.005482162814587355}, {"id": 100, "text": "_", "logprob": -0.000341476290486753}, {"id": 450, "text": "od", "logprob": -0.008004610426723957}, {"id": 104, "text": "c", "logprob": -0.00021062063751742244}, {"id": 46, "text": ")", "logprob": -0.02023739367723465}, {"id": 222, "text": "\n", "logprob": -2.429837226867676}, {"id": 40, "text": "#", "logprob": -0.7918679714202881}, {"id": 449, "text": " -", "logprob": -2.3228554725646973}, {"id": 222, "text": "\n", "logprob": -0.17834213376045227}, {"id": 222, "text": "\n", "logprob": -0.0037472285330295563}, {"id": 344, "text": "if", "logprob": -3.8317623138427734}, {"id": 2194, "text": " args", "logprob": -0.7319116592407227}, {"id": 51, "text": ".", "logprob": -0.0028748870827257633}, {"id": 1428, "text": "do", "logprob": -2.547758102416992}, {"id": 100, "text": "_", "logprob": -0.004102386999875307}, {"id": 9971, "text": "predict", "logprob": -3.4118406772613525}, {"id": 63, "text": ":", "logprob": -0.17988677322864532}, {"id": 222, "text": "\n", "logprob": -2.6609857082366943}, {"id": 40, "text": "#", "logprob": -0.05941788852214813}, {"id": 281, "text": "    ", "logprob": -0.44040143489837646}, {"id": 456, "text": " for", "logprob": -3.72845196723938}, {"id": 11084, "text": " epoch", "logprob": -1.185675859451294}, {"id": 347, "text": " in", "logprob": -0.08320862054824829}, {"id": 2189, "text": " range", "logprob": -0.12921735644340515}, {"id": 45, "text": "(", "logprob": -0.0072304243221879005}, {"id": 121, "text": "t", "logprob": -3.448969841003418}, {"id": 51, "text": ".", "logprob": -0.017090780660510063}, {"id": 8888, "text": "best", "logprob": -4.389758110046387}, {"id": 100, "text": "_", "logprob": -0.016093706712126732}, {"id": 8981, "text": "epoch", "logprob": -0.47779667377471924}, {"id": 49, "text": ",", "logprob": -0.8345512747764587}, {"id": 2194, "text": " args", "logprob": -0.4629591703414917}, {"id": 51, "text": ".", "logprob": -0.0004805363714694977}, {"id": 1472, "text": "max", "logprob": -2.1161816120147705}, {"id": 100, "text": "_", "logprob": -0.0002936885575763881}, {"id": 18246, "text": "epochs", "logprob": -0.6977899670600891}, {"id": 731, "text": "):", "logprob": -0.27545952796936035}, {"id": 310, "text": "\n       ", "logprob": -2.517254590988159}, {"id": 456, "text": " for", "logprob": -1.3404260873794556}, {"id": 11084, "text": " epoch", "logprob": -0.15540839731693268}, {"id": 347, "text": " in", "logprob": -0.008458620868623257}, {"id": 2189, "text": " range", "logprob": -0.06135318800806999}, {"id": 45, "text": "(", "logprob": -0.0028456454165279865}, {"id": 53, "text": "0", "logprob": -1.6038271188735962}, {"id": 49, "text": ",", "logprob": -0.004539897665381432}, {"id": 2194, "text": " args", "logprob": -0.27050691843032837}, {"id": 51, "text": ".", "logprob": -0.00013100242358632386}, {"id": 1472, "text": "max", "logprob": -0.006941370666027069}, {"id": 100, "text": "_", "logprob": -1.2397689715726301e-05}, {"id": 18246, "text": "epochs", "logprob": -0.0013406822690740228}, {"id": 731, "text": "):", "logprob": -0.016075406223535538}, {"id": 1083, "text": "\n\n           ", "logprob": -3.004148244857788}, {"id": 292, "text": " t", "logprob": -1.9550267457962036}, {"id": 51, "text": ".", "logprob": -0.0490858256816864}, {"id": 3441, "text": "train", "logprob": -0.8521527051925659}, {"id": 45, "text": "(", "logprob": -0.875967264175415}, {"id": 8981, "text": "epoch", "logprob": -0.5897890329360962}, {"id": 49, "text": ",", "logprob": -1.3049826622009277}, {"id": 7924, "text": " training", "logprob": -4.402066230773926}, {"id": 100, "text": "_", "logprob": -0.02545849233865738}, {"id": 41634, "text": "dataloader", "logprob": -1.6814650297164917}, {"id": 49, "text": ",", "logprob": -0.44172993302345276}, {"id": 7294, "text": " writer", "logprob": -5.5012006759643555}, {"id": 46, "text": ")", "logprob": -0.717507541179657}, {"id": 1083, "text": "\n\n           ", "logprob": -1.3940832614898682}, {"id": 292, "text": " t", "logprob": -1.6643264293670654}, {"id": 51, "text": ".", "logprob": -0.0021686863619834185}, {"id": 881, "text": "test", "logprob": -3.255152463912964}, {"id": 45, "text": "(", "logprob": -0.09452398121356964}, {"id": 8981, "text": "epoch", "logprob": -0.08048577606678009}, {"id": 49, "text": ",", "logprob": -0.04130077734589577}, {"id": 6351, "text": " testing", "logprob": -1.444238305091858}, {"id": 100, "text": "_", "logprob": -0.0005771639989688993}, {"id": 41634, "text": "dataloader", "logprob": -0.01979232393205166}, {"id": 49, "text": ",", "logprob": -0.14748333394527435}, {"id": 7294, "text": " writer", "logprob": -0.11862540990114212}, {"id": 46, "text": ")", "logprob": -0.11853943765163422}, {"id": 1083, "text": "\n\n           ", "logprob": -0.8065281510353088}, {"id": 18673, "text": " checkpoint", "logprob": -4.466508865356445}, {"id": 299, "text": " =", "logprob": -1.357197880744934}, {"id": 320, "text": " {", "logprob": -0.5270462036132812}, {"id": 419, "text": "\n               ", "logprob": -0.47963017225265503}, {"id": 349, "text": " '", "logprob": -0.13844020664691925}, {"id": 1184, "text": "model", "logprob": -1.5607264041900635}, {"id": 972, "text": "':", "logprob": -0.4480874538421631}, {"id": 292, "text": " t", "logprob": -0.339179128408432}, {"id": 51, "text": ".", "logprob": -0.006913431454449892}, {"id": 13892, "text": "ocr", "logprob": -2.840925455093384}, {"id": 100, "text": "_", "logprob": -0.008139888755977154}, {"id": 44327, "text": "evaluator", "logprob": -0.39976099133491516}, {"id": 51, "text": ".", "logprob": -0.014816130511462688}, {"id": 18348, "text": "bbox", "logprob": -8.200180053710938}, {"id": 100, "text": "_", "logprob": -0.05869319289922714}, {"id": 43842, "text": "predictor", "logprob": -2.417621612548828}, {"id": 51, "text": ".", "logprob": -0.09179885685443878}, {"id": 1311, "text": "state", "logprob": -0.4879024624824524}, {"id": 100, "text": "_", "logprob": -0.00015722469834145159}, {"id": 2734, "text": "dict", "logprob": -0.00015841660206206143}, {"id": 1046, "text": "(),", "logprob": -0.025350408628582954}]}}
+
+req {'inputs': 'DeepSpeed is a machine learning framework', 'parameters': {'do_sample': True, 'max_new_tokens': 256, 'details': True}, 'stream': True}
+res: {"index": 0, "token": {"id": 642, "text": " with", "logprob": -3.784555435180664}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 331, "text": " a", "logprob": -1.860379695892334}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 12327, "text": " goal", "logprob": -2.2317163944244385}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 451, "text": " of", "logprob": -1.1978600025177002}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6630, "text": " optim", "logprob": -2.4150447845458984}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6206, "text": "izing", "logprob": -0.00462581031024456}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 341, "text": " the", "logprob": -1.4364145994186401}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6111, "text": " execution", "logprob": -4.884342670440674}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 451, "text": " of", "logprob": -0.6219295263290405}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1426, "text": " pre", "logprob": -5.553226470947266}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 10950, "text": "training", "logprob": -4.090290069580078}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 480, "text": " and", "logprob": -1.464296579360962}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8407, "text": " fine", "logprob": -0.8089432120323181}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 50, "text": "-", "logprob": -0.04354993626475334}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 47708, "text": "tuning", "logprob": -0.0034571662545204163}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 347, "text": " in", "logprob": -4.019891262054443}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8613, "text": " pipeline", "logprob": -7.0791215896606445}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11994, "text": " parallel", "logprob": -0.5072110891342163}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5750, "text": "ism", "logprob": -0.7215830087661743}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 480, "text": " and", "logprob": -2.8421406745910645}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 26723, "text": " transformer", "logprob": -5.870626449584961}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11994, "text": " parallel", "logprob": -2.904900074005127}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5750, "text": "ism", "logprob": -0.0037225254345685244}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20319, "text": " environments", "logprob": -4.332940101623535}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.4172259271144867}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -1.550560474395752}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 40, "text": "#", "logprob": -3.269632339477539}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -0.5017355680465698}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 40, "text": "#", "logprob": -0.048465702682733536}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 447, "text": " [", "logprob": -3.7396302223205566}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 21071, "text": "Learn", "logprob": -5.393860340118408}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1851, "text": " more", "logprob": -0.3163526654243469}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 748, "text": "](", "logprob": -1.1255548000335693}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 662, "text": "https", "logprob": -0.02966686710715294}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 574, "text": "://", "logprob": -0.0001387499796692282}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "h", "logprob": -1.2782344818115234}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 905, "text": "ug", "logprob": -0.0016709902556613088}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2582, "text": "ging", "logprob": -0.0003812778159044683}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1179, "text": "face", "logprob": -0.00016723664884921163}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.0003305127320345491}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 352, "text": "co", "logprob": -0.0009604846709407866}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 52, "text": "/", "logprob": -0.001921713468618691}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3800, "text": "microsoft", "logprob": -6.025485515594482}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 52, "text": "/", "logprob": -0.048163674771785736}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11585, "text": "Deep", "logprob": -0.3804568946361542}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8186, "text": "Speed", "logprob": -0.0004128557338844985}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 50, "text": "-", "logprob": -2.7472610473632812}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 402, "text": "In", "logprob": -5.485353469848633}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1185, "text": "struct", "logprob": -0.16138944029808044}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8718, "text": "Seq", "logprob": -5.3114399909973145}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 43401, "text": " Typography", "logprob": -16.136043548583984}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 52, "text": "/", "logprob": -5.05987548828125}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 842, "text": "class", "logprob": -5.948461532592773}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1057, "text": "ific", "logprob": -3.889185905456543}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5287, "text": "atio", "logprob": -2.1398792266845703}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -2.1082472801208496}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 40, "text": "#", "logprob": -0.6716960072517395}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1229, "text": "                                ", "logprob": -8.517077445983887}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4393, "text": " Image", "logprob": -8.126336097717285}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 16077, "text": "Classifier", "logprob": -2.9282822608947754}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18574, "text": "Tester", "logprob": -6.651157855987549}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 45, "text": "(", "logprob": -1.5588651895523071}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13793, "text": "\n                                                               ", "logprob": -8.509648323059082}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2194, "text": " args", "logprob": -4.647642612457275}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -1.093819260597229}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1538, "text": "num", "logprob": -3.4655818939208984}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.0035916364286094904}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3441, "text": "train", "logprob": -3.0014023780822754}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.276082843542099}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7944, "text": "examples", "logprob": -3.8211588859558105}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.16601817309856415}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13793, "text": "\n                                                               ", "logprob": -0.33794745802879333}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2194, "text": " args", "logprob": -0.32060351967811584}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.006143613718450069}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1538, "text": "num", "logprob": -0.7296671271324158}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -9.989239333663136e-05}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6635, "text": "eval", "logprob": -1.7238614559173584}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.015053716488182545}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7944, "text": "examples", "logprob": -0.05337618291378021}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.1549006700515747}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13793, "text": "\n                                                               ", "logprob": -0.054371561855077744}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2194, "text": " args", "logprob": -0.42932286858558655}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.011689264327287674}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1515, "text": "over", "logprob": -6.900674819946289}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4803, "text": "fit", "logprob": -0.5074801445007324}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -1.5919370651245117}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13793, "text": "\n                                                               ", "logprob": -0.058072250336408615}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1952, "text": " num", "logprob": -4.339504241943359}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.0022347019985318184}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2051, "text": "output", "logprob": -5.487088203430176}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.08161451667547226}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4844, "text": "classes", "logprob": -0.3603343069553375}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -1.0292426347732544}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13793, "text": "\n                                                               ", "logprob": -0.07883873581886292}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 10018, "text": " eval", "logprob": -4.939940929412842}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.01570194400846958}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 450, "text": "od", "logprob": -9.262144088745117}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 104, "text": "c", "logprob": -5.877041816711426}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 23842, "text": "\n                                                        ", "logprob": -6.51364803314209}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 848, "text": " )", "logprob": -0.5296265482902527}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -1.736213207244873}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1243, "text": "print", "logprob": -4.370516300201416}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 482, "text": "('", "logprob": -1.4637080430984497}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1262, "text": "Model", "logprob": -4.779263019561768}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18574, "text": "Tester", "logprob": -2.31292462348938}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8777, "text": " initialized", "logprob": -1.765679955482483}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 704, "text": "')", "logprob": -0.6443608403205872}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -0.18852445483207703}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -0.42949235439300537}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 40, "text": "#", "logprob": -0.4727414846420288}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 981, "text": "      ", "logprob": -10.585121154785156}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1489, "text": " print", "logprob": -4.015137672424316}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 482, "text": "('", "logprob": -0.7477932572364807}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8981, "text": "epoch", "logprob": -7.570854663848877}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 299, "text": " =", "logprob": -3.177821636199951}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5799, "text": " ',", "logprob": -1.3392410278320312}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11084, "text": " epoch", "logprob": -0.3962832987308502}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 46, "text": ")", "logprob": -0.467373788356781}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 733, "text": "\n                       ", "logprob": -9.648787498474121}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 607, "text": " #", "logprob": -1.9251526594161987}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1489, "text": " print", "logprob": -2.469714641571045}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 482, "text": "('", "logprob": -0.20325212180614471}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 121, "text": "t", "logprob": -5.981720924377441}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -3.6666476726531982}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13892, "text": "ocr", "logprob": -10.98684024810791}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.2750600576400757}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 44327, "text": "evaluator", "logprob": -6.508203506469727}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 299, "text": " =", "logprob": -1.4292922019958496}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5799, "text": " ',", "logprob": -0.08346054702997208}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 292, "text": " t", "logprob": -0.2353508174419403}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.02808956988155842}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13892, "text": "ocr", "logprob": -0.03444354981184006}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.0009416675311513245}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 44327, "text": "evaluator", "logprob": -0.006171100307255983}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 46, "text": ")", "logprob": -0.061288271099328995}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 733, "text": "\n                       ", "logprob": -0.4849352240562439}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 607, "text": " #", "logprob": -0.3805544972419739}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1489, "text": " print", "logprob": -0.22500720620155334}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 482, "text": "('", "logprob": -0.054412879049777985}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 121, "text": "t", "logprob": -0.36776307225227356}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.02642804943025112}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13892, "text": "ocr", "logprob": -1.1531858444213867}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.004186437930911779}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 44327, "text": "evaluator", "logprob": -0.062234923243522644}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.13589663803577423}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6635, "text": "eval", "logprob": -2.521040439605713}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.15665927529335022}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 450, "text": "od", "logprob": -1.340021014213562}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 104, "text": "c", "logprob": -0.02242317795753479}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 299, "text": " =", "logprob": -0.1343163549900055}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5799, "text": " ',", "logprob": -0.02204589918255806}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 292, "text": " t", "logprob": -0.04148126021027565}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.0002308817347511649}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13892, "text": "ocr", "logprob": -0.003869309788569808}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -6.532455881824717e-05}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 44327, "text": "evaluator", "logprob": -0.0007010624394752085}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.001911837956868112}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6635, "text": "eval", "logprob": -0.005482162814587355}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.000341476290486753}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 450, "text": "od", "logprob": -0.008004610426723957}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 104, "text": "c", "logprob": -0.00021062063751742244}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 46, "text": ")", "logprob": -0.02023739367723465}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -2.429837226867676}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 40, "text": "#", "logprob": -0.7918679714202881}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 449, "text": " -", "logprob": -2.3228554725646973}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -0.17834213376045227}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -0.0037472285330295563}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 344, "text": "if", "logprob": -3.8317623138427734}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2194, "text": " args", "logprob": -0.7319116592407227}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.0028748870827257633}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1428, "text": "do", "logprob": -2.547758102416992}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.004102386999875307}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 9971, "text": "predict", "logprob": -3.4118406772613525}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 63, "text": ":", "logprob": -0.17988677322864532}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 222, "text": "\n", "logprob": -2.6609857082366943}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 40, "text": "#", "logprob": -0.05941788852214813}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 281, "text": "    ", "logprob": -0.44040143489837646}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 456, "text": " for", "logprob": -3.72845196723938}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11084, "text": " epoch", "logprob": -1.185675859451294}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 347, "text": " in", "logprob": -0.08320862054824829}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2189, "text": " range", "logprob": -0.12921735644340515}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 45, "text": "(", "logprob": -0.0072304243221879005}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 121, "text": "t", "logprob": -3.448969841003418}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.017090780660510063}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8888, "text": "best", "logprob": -4.389758110046387}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.016093706712126732}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8981, "text": "epoch", "logprob": -0.47779667377471924}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.8345512747764587}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2194, "text": " args", "logprob": -0.4629591703414917}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.0004805363714694977}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1472, "text": "max", "logprob": -2.1161816120147705}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.0002936885575763881}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18246, "text": "epochs", "logprob": -0.6977899670600891}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 731, "text": "):", "logprob": -0.27545952796936035}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 310, "text": "\n       ", "logprob": -2.517254590988159}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 456, "text": " for", "logprob": -1.3404260873794556}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11084, "text": " epoch", "logprob": -0.15540839731693268}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 347, "text": " in", "logprob": -0.008458620868623257}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2189, "text": " range", "logprob": -0.06135318800806999}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 45, "text": "(", "logprob": -0.0028456454165279865}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 53, "text": "0", "logprob": -1.6038271188735962}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.004539897665381432}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2194, "text": " args", "logprob": -0.27050691843032837}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.00013100242358632386}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1472, "text": "max", "logprob": -0.006941370666027069}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -1.2397689715726301e-05}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18246, "text": "epochs", "logprob": -0.0013406822690740228}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 731, "text": "):", "logprob": -0.016075406223535538}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1083, "text": "\n\n           ", "logprob": -3.004148244857788}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 292, "text": " t", "logprob": -1.9550267457962036}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.0490858256816864}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3441, "text": "train", "logprob": -0.8521527051925659}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 45, "text": "(", "logprob": -0.875967264175415}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8981, "text": "epoch", "logprob": -0.5897890329360962}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -1.3049826622009277}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7924, "text": " training", "logprob": -4.402066230773926}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.02545849233865738}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 41634, "text": "dataloader", "logprob": -1.6814650297164917}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.44172993302345276}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7294, "text": " writer", "logprob": -5.5012006759643555}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 46, "text": ")", "logprob": -0.717507541179657}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1083, "text": "\n\n           ", "logprob": -1.3940832614898682}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 292, "text": " t", "logprob": -1.6643264293670654}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.0021686863619834185}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 881, "text": "test", "logprob": -3.255152463912964}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 45, "text": "(", "logprob": -0.09452398121356964}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8981, "text": "epoch", "logprob": -0.08048577606678009}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.04130077734589577}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6351, "text": " testing", "logprob": -1.444238305091858}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.0005771639989688993}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 41634, "text": "dataloader", "logprob": -0.01979232393205166}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 49, "text": ",", "logprob": -0.14748333394527435}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7294, "text": " writer", "logprob": -0.11862540990114212}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 46, "text": ")", "logprob": -0.11853943765163422}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1083, "text": "\n\n           ", "logprob": -0.8065281510353088}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18673, "text": " checkpoint", "logprob": -4.466508865356445}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 299, "text": " =", "logprob": -1.357197880744934}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 320, "text": " {", "logprob": -0.5270462036132812}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 419, "text": "\n               ", "logprob": -0.47963017225265503}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 349, "text": " '", "logprob": -0.13844020664691925}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1184, "text": "model", "logprob": -1.5607264041900635}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 972, "text": "':", "logprob": -0.4480874538421631}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 292, "text": " t", "logprob": -0.339179128408432}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.006913431454449892}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13892, "text": "ocr", "logprob": -2.840925455093384}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.008139888755977154}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 44327, "text": "evaluator", "logprob": -0.39976099133491516}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.014816130511462688}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18348, "text": "bbox", "logprob": -8.200180053710938}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.05869319289922714}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 43842, "text": "predictor", "logprob": -2.417621612548828}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 51, "text": ".", "logprob": -0.09179885685443878}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1311, "text": "state", "logprob": -0.4879024624824524}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 100, "text": "_", "logprob": -0.00015722469834145159}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2734, "text": "dict", "logprob": -0.00015841660206206143}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1046, "text": "(),", "logprob": -0.025350408628582954}, "generated_text": " with a goal of optimizing the execution of pretraining and fine-tuning in pipeline parallelism and transformer parallelism environments.\n#\n# [Learn more](https://huggingface.co/microsoft/DeepSpeed-InstructSeq Typography/classificatio\n#                                 ImageClassifierTester(\n                                                                args.num_train_examples,\n                                                                args.num_eval_examples,\n                                                                args.overfit,\n                                                                num_output_classes,\n                                                                eval_odc\n                                                         )\nprint('ModelTester initialized')\n\n#       print('epoch = ', epoch)\n                        # print('t.ocr_evaluator = ', t.ocr_evaluator)\n                        # print('t.ocr_evaluator.eval_odc = ', t.ocr_evaluator.eval_odc)\n# -\n\nif args.do_predict:\n#     for epoch in range(t.best_epoch, args.max_epochs):\n        for epoch in range(0, args.max_epochs):\n\n            t.train(epoch, training_dataloader, writer)\n\n            t.test(epoch, testing_dataloader, writer)\n\n            checkpoint = {\n                'model': t.ocr_evaluator.bbox_predictor.state_dict(),", "details": {"finish_reason": "length", "seed": null, "generated_tokens": 257, "input_length": 7}}
+
+
+
+Little benchmark: concurrency 1 seq_len 256
+Running command TOKENIZER=bigcode/starcoder2-7b ./awscurl -c 1 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": false}'    -P -t
+Little benchmark: concurrency 1 seq_len 256
+Running command TOKENIZER=bigcode/starcoder2-7b ./awscurl -c 1 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": true}'    -P -t
+Little benchmark: concurrency 4 seq_len 256
+Running command TOKENIZER=bigcode/starcoder2-7b ./awscurl -c 4 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": false}'    -P -t
+Little benchmark: concurrency 4 seq_len 256
+Running command TOKENIZER=bigcode/starcoder2-7b ./awscurl -c 4 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": true}'    -P -t

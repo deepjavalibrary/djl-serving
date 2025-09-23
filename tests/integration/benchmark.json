@@ -1,0 +1,21 @@
+{
+  "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "totalTimeMills": 43810.88,
+  "totalRequests": 5120,
+  "failedRequests": 0,
+  "errorRate": 0.0,
+  "concurrentClients": 512,
+  "tps": 121.25,
+  "tokenThroughput": 17565.71,
+  "totalTokens": 741715,
+  "tokenPerRequest": 144,
+  "averageLatency": 4222.52,
+  "averageTokenLatency": 14923.62,
+  "p50Latency": 3804.51,
+  "p90Latency": 6338.18,
+  "p99Latency": 7320.74,
+  "timeToFirstByte": 4221.45,
+  "p50TimeToFirstByte": 3803.952391,
+  "p90TimeToFirstByte": 6337.128306,
+  "p99TimeToFirstByte": 7319.608034
+}

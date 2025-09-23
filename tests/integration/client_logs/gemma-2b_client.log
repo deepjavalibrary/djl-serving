@@ -1,0 +1,271 @@
+req {'inputs': 'DeepSpeed is a machine learning framework', 'parameters': {'do_sample': True, 'max_new_tokens': 256, 'details': True}, 'stream': False}
+res: {"generated_text": " that makes it easy to split large neural networks into multiple smaller models for runtime weight-sharing and acceleration. What makes DeepSpeed stand out from other frameworks such as ONNX Runtime, TensorFlow, PyTorch or Keras4Tensor is speed and ease of use.\n\nDeepSpeed is a toolkit, not a library, that can assemble networks as deep as you like and accelerate them for computations across a wide range of hardware architectures. It includes a set of efficient accelerators that work across multiple product lines ranging from GPUs to CPUs.\n\nDeepSpeed has a UI and a command-line interface. Let's get acquainted with the interface.\n\n<h3>Getting started</h3>\n\nInstall DeepSpeed in your environment by running:\n\n<code>pip install deepspeed</code>\n\n<h3>Navigate DeepSpeed's UI</h3>\n\nThe DeepSpeed interface has three major parts:\n\n1. Organization\n2. Performance\n3. Manager\n\nLet's understand the organization part.\n\nIt contains nodes/hyperparameters and weights. Weights are those that correspond to the parameters in the specified neural network. Hyperparameters correspond to the user-defined variables. To create a node or hyperparameter, i.e., to instantiate a container to encapsulate variables in our code, we can use one of DeepSpeed's containers such", "details": {"finish_reason": null, "generated_tokens": 256, "seed": null, "prefill": [], "tokens": [{"id": 674, "text": " that", "logprob": -0.9755103588104248}, {"id": 3833, "text": " makes", "logprob": -3.908186674118042}, {"id": 665, "text": " it", "logprob": -0.7947087287902832}, {"id": 3980, "text": " easy", "logprob": -1.0742194652557373}, {"id": 577, "text": " to", "logprob": -0.13087953627109528}, {"id": 10544, "text": " split", "logprob": -7.974415302276611}, {"id": 2910, "text": " large", "logprob": -2.5723865032196045}, {"id": 35544, "text": " neural", "logprob": -2.726297616958618}, {"id": 16273, "text": " networks", "logprob": -0.34411582350730896}, {"id": 1280, "text": " into", "logprob": -0.36781075596809387}, {"id": 6733, "text": " multiple", "logprob": -1.6616768836975098}, {"id": 9595, "text": " smaller", "logprob": -1.0246554613113403}, {"id": 5377, "text": " models", "logprob": -2.300954580307007}, {"id": 604, "text": " for", "logprob": -2.282529592514038}, {"id": 37355, "text": " runtime", "logprob": -6.714460372924805}, {"id": 5171, "text": " weight", "logprob": -7.771144390106201}, {"id": 235290, "text": "-", "logprob": -3.4678874015808105}, {"id": 55129, "text": "sharing", "logprob": -0.22132858633995056}, {"id": 578, "text": " and", "logprob": -1.5445966720581055}, {"id": 30809, "text": " acceleration", "logprob": -3.5544705390930176}, {"id": 235265, "text": ".", "logprob": -0.3560488522052765}, {"id": 2439, "text": " What", "logprob": -7.134848594665527}, {"id": 3833, "text": " makes", "logprob": -1.884374976158142}, {"id": 20555, "text": " Deep", "logprob": -0.4632056951522827}, {"id": 13584, "text": "Speed", "logprob": -0.001637666835449636}, {"id": 2249, "text": " stand", "logprob": -3.6403696537017822}, {"id": 921, "text": " out", "logprob": -0.04340338334441185}, {"id": 774, "text": " from", "logprob": -1.123358964920044}, {"id": 1156, "text": " other", "logprob": -0.5240291357040405}, {"id": 70774, "text": " frameworks", "logprob": -0.5598366856575012}, {"id": 1582, "text": " such", "logprob": -4.131989479064941}, {"id": 685, "text": " as", "logprob": -0.0024563875049352646}, {"id": 6070, "text": " ON", "logprob": -2.854447364807129}, {"id": 45722, "text": "NX", "logprob": -0.0037751374766230583}, {"id": 29844, "text": " Runtime", "logprob": -0.476730078458786}, {"id": 235269, "text": ",", "logprob": -1.0329155921936035}, {"id": 176888, "text": " TensorFlow", "logprob": -2.353532552719116}, {"id": 235269, "text": ",", "logprob": -0.6315025091171265}, {"id": 8745, "text": " Py", "logprob": -1.4027894735336304}, {"id": 111226, "text": "Torch", "logprob": -0.06447162479162216}, {"id": 689, "text": " or", "logprob": -3.107076644897461}, {"id": 214064, "text": " Keras", "logprob": -3.1959638595581055}, {"id": 235310, "text": "4", "logprob": -11.333375930786133}, {"id": 32314, "text": "Tensor", "logprob": -3.6392767429351807}, {"id": 603, "text": " is", "logprob": -0.2446208894252777}, {"id": 4969, "text": " speed", "logprob": -7.043868541717529}, {"id": 578, "text": " and", "logprob": -1.6146104335784912}, {"id": 15668, "text": " ease", "logprob": -1.982534646987915}, {"id": 576, "text": " of", "logprob": -0.14814822375774384}, {"id": 1281, "text": " use", "logprob": -0.18206407129764557}, {"id": 235265, "text": ".", "logprob": -0.21415889263153076}, {"id": 109, "text": "\n\n", "logprob": -1.1683629751205444}, {"id": 26843, "text": "Deep", "logprob": -1.6494258642196655}, {"id": 13584, "text": "Speed", "logprob": -0.017594216391444206}, {"id": 603, "text": " is", "logprob": -1.1769235134124756}, {"id": 476, "text": " a", "logprob": -1.5967808961868286}, {"id": 117743, "text": " toolkit", "logprob": -4.846802234649658}, {"id": 235269, "text": ",", "logprob": -3.3113131523132324}, {"id": 780, "text": " not", "logprob": -1.4454152584075928}, {"id": 476, "text": " a", "logprob": -0.20914556086063385}, {"id": 9581, "text": " library", "logprob": -1.3861453533172607}, {"id": 235269, "text": ",", "logprob": -1.0010123252868652}, {"id": 674, "text": " that", "logprob": -2.60697078704834}, {"id": 798, "text": " can", "logprob": -2.0534791946411133}, {"id": 24265, "text": " assemble", "logprob": -9.88851547241211}, {"id": 16273, "text": " networks", "logprob": -6.801928520202637}, {"id": 685, "text": " as", "logprob": -4.4629621505737305}, {"id": 5271, "text": " deep", "logprob": -5.431061267852783}, {"id": 685, "text": " as", "logprob": -0.19005295634269714}, {"id": 692, "text": " you", "logprob": -0.9184563159942627}, {"id": 1154, "text": " like", "logprob": -1.8481841087341309}, {"id": 578, "text": " and", "logprob": -1.7351269721984863}, {"id": 52362, "text": " accelerate", "logprob": -3.368344783782959}, {"id": 1174, "text": " them", "logprob": -0.3100008964538574}, {"id": 604, "text": " for", "logprob": -3.3050074577331543}, {"id": 86298, "text": " computations", "logprob": -9.083704948425293}, {"id": 4492, "text": " across", "logprob": -2.870978832244873}, {"id": 476, "text": " a", "logprob": -1.9792289733886719}, {"id": 5396, "text": " wide", "logprob": -1.3376039266586304}, {"id": 3001, "text": " range", "logprob": -0.4336489140987396}, {"id": 576, "text": " of", "logprob": -0.0029872101731598377}, {"id": 16417, "text": " hardware", "logprob": -1.307358741760254}, {"id": 109959, "text": " architectures", "logprob": -1.6480815410614014}, {"id": 235265, "text": ".", "logprob": -0.6016249656677246}, {"id": 1165, "text": " It", "logprob": -1.9302972555160522}, {"id": 6566, "text": " includes", "logprob": -4.035621643066406}, {"id": 476, "text": " a", "logprob": -1.3642703294754028}, {"id": 1142, "text": " set", "logprob": -2.5085690021514893}, {"id": 576, "text": " of", "logprob": -0.001508289948105812}, {"id": 10878, "text": " efficient", "logprob": -4.861236095428467}, {"id": 228826, "text": " accelerators", "logprob": -5.260318756103516}, {"id": 674, "text": " that", "logprob": -1.829047441482544}, {"id": 1160, "text": " work", "logprob": -3.565673828125}, {"id": 4492, "text": " across", "logprob": -1.735077977180481}, {"id": 6733, "text": " multiple", "logprob": -1.8914403915405273}, {"id": 3225, "text": " product", "logprob": -9.663524627685547}, {"id": 5453, "text": " lines", "logprob": -0.5779480934143066}, {"id": 27127, "text": " ranging", "logprob": -5.996504783630371}, {"id": 774, "text": " from", "logprob": -0.006174417678266764}, {"id": 156816, "text": " GPUs", "logprob": -2.1749634742736816}, {"id": 577, "text": " to", "logprob": -0.5716498494148254}, {"id": 146778, "text": " CPUs", "logprob": -1.623084306716919}, {"id": 235265, "text": ".", "logprob": -1.7636243104934692}, {"id": 109, "text": "\n\n", "logprob": -0.9564071893692017}, {"id": 26843, "text": "Deep", "logprob": -1.208792805671692}, {"id": 13584, "text": "Speed", "logprob": -0.006894489284604788}, {"id": 919, "text": " has", "logprob": -2.9795467853546143}, {"id": 476, "text": " a", "logprob": -1.7178802490234375}, {"id": 13566, "text": " UI", "logprob": -7.906706809997559}, {"id": 578, "text": " and", "logprob": -2.8521461486816406}, {"id": 476, "text": " a", "logprob": -1.6016262769699097}, {"id": 5017, "text": " command", "logprob": -1.1967378854751587}, {"id": 235290, "text": "-", "logprob": -0.8234968781471252}, {"id": 703, "text": "line", "logprob": -0.0012762743281200528}, {"id": 7222, "text": " interface", "logprob": -0.32514628767967224}, {"id": 235265, "text": ".", "logprob": -1.7935256958007812}, {"id": 4371, "text": " Let", "logprob": -5.450887680053711}, {"id": 235303, "text": "'", "logprob": -1.5370171070098877}, {"id": 235256, "text": "s", "logprob": -0.0002644904307089746}, {"id": 947, "text": " get", "logprob": -3.675358533859253}, {"id": 48898, "text": " acquainted", "logprob": -4.535778522491455}, {"id": 675, "text": " with", "logprob": -0.06469904631376266}, {"id": 573, "text": " the", "logprob": -0.6352502107620239}, {"id": 7222, "text": " interface", "logprob": -3.481940269470215}, {"id": 235265, "text": ".", "logprob": -1.2937579154968262}, {"id": 109, "text": "\n\n", "logprob": -0.27098414301872253}, {"id": 187, "text": "<h3>", "logprob": -2.345212936401367}, {"id": 24503, "text": "Getting", "logprob": -3.169252872467041}, {"id": 4604, "text": " started", "logprob": -1.0467429161071777}, {"id": 194, "text": "</h3>", "logprob": -0.7050269246101379}, {"id": 109, "text": "\n\n", "logprob": -0.05123908072710037}, {"id": 18150, "text": "Install", "logprob": -3.9574291706085205}, {"id": 20555, "text": " Deep", "logprob": -0.5532490611076355}, {"id": 13584, "text": "Speed", "logprob": -0.002056509256362915}, {"id": 575, "text": " in", "logprob": -3.198716163635254}, {"id": 861, "text": " your", "logprob": -0.6391956210136414}, {"id": 4473, "text": " environment", "logprob": -1.6707667112350464}, {"id": 731, "text": " by", "logprob": -2.4529290199279785}, {"id": 5327, "text": " running", "logprob": -0.564939022064209}, {"id": 235292, "text": ":", "logprob": -1.7838255167007446}, {"id": 109, "text": "\n\n", "logprob": -0.07189145684242249}, {"id": 207, "text": "<code>", "logprob": -1.1118919849395752}, {"id": 39553, "text": "pip", "logprob": -0.5088001489639282}, {"id": 4877, "text": " install", "logprob": -0.025701463222503662}, {"id": 5271, "text": " deep", "logprob": -0.18591733276844025}, {"id": 12374, "text": "speed", "logprob": -0.021931033581495285}, {"id": 216, "text": "</code>", "logprob": -0.7082042098045349}, {"id": 109, "text": "\n\n", "logprob": -0.1000366061925888}, {"id": 187, "text": "<h3>", "logprob": -2.4260597229003906}, {"id": 62329, "text": "Navigate", "logprob": -6.3766374588012695}, {"id": 20555, "text": " Deep", "logprob": -2.7042226791381836}, {"id": 13584, "text": "Speed", "logprob": -0.003349529579281807}, {"id": 235303, "text": "'", "logprob": -2.065913677215576}, {"id": 235256, "text": "s", "logprob": -0.00026890001026913524}, {"id": 13566, "text": " UI", "logprob": -0.7847360372543335}, {"id": 194, "text": "</h3>", "logprob": -0.08574213832616806}, {"id": 109, "text": "\n\n", "logprob": -0.05227912962436676}, {"id": 651, "text": "The", "logprob": -2.278566360473633}, {"id": 20555, "text": " Deep", "logprob": -1.1495405435562134}, {"id": 13584, "text": "Speed", "logprob": -0.0014804366510361433}, {"id": 7222, "text": " interface", "logprob": -3.1144587993621826}, {"id": 919, "text": " has", "logprob": -2.328129768371582}, {"id": 2149, "text": " three", "logprob": -1.7006522417068481}, {"id": 3885, "text": " major", "logprob": -2.715487003326416}, {"id": 4942, "text": " parts", "logprob": -1.85787034034729}, {"id": 235292, "text": ":", "logprob": -0.28262606263160706}, {"id": 109, "text": "\n\n", "logprob": -0.562157392501831}, {"id": 235274, "text": "1", "logprob": -1.1687532663345337}, {"id": 235265, "text": ".", "logprob": -0.005351148080080748}, {"id": 19847, "text": " Organization", "logprob": -10.128658294677734}, {"id": 108, "text": "\n", "logprob": -1.7880141735076904}, {"id": 235284, "text": "2", "logprob": -0.017293965443968773}, {"id": 235265, "text": ".", "logprob": -5.125986263010418e-06}, {"id": 15574, "text": " Performance", "logprob": -4.5762763023376465}, {"id": 108, "text": "\n", "logprob": -0.4367263913154602}, {"id": 235304, "text": "3", "logprob": -0.0003983181086368859}, {"id": 235265, "text": ".", "logprob": -4.410734163684538e-06}, {"id": 10713, "text": " Manager", "logprob": -9.550065994262695}, {"id": 109, "text": "\n\n", "logprob": -0.08715236186981201}, {"id": 5331, "text": "Let", "logprob": -2.0828232765197754}, {"id": 235303, "text": "'", "logprob": -0.04987705871462822}, {"id": 235256, "text": "s", "logprob": -0.00015698630886618048}, {"id": 3508, "text": " understand", "logprob": -5.65545654296875}, {"id": 573, "text": " the", "logprob": -2.0018911361694336}, {"id": 8344, "text": " organization", "logprob": -1.9789855480194092}, {"id": 1702, "text": " part", "logprob": -1.4242401123046875}, {"id": 235265, "text": ".", "logprob": -1.073996663093567}, {"id": 109, "text": "\n\n", "logprob": -0.43503159284591675}, {"id": 1718, "text": "It", "logprob": -5.019887924194336}, {"id": 7744, "text": " contains", "logprob": -2.7023439407348633}, {"id": 15822, "text": " nodes", "logprob": -5.9791035652160645}, {"id": 235283, "text": "/", "logprob": -6.28878927230835}, {"id": 35398, "text": "hyper", "logprob": -5.632112503051758}, {"id": 17631, "text": "parameters", "logprob": -0.6619979739189148}, {"id": 578, "text": " and", "logprob": -1.9956378936767578}, {"id": 22718, "text": " weights", "logprob": -5.009057998657227}, {"id": 235265, "text": ".", "logprob": -1.0925720930099487}, {"id": 119924, "text": " Weights", "logprob": -3.5693955421447754}, {"id": 708, "text": " are", "logprob": -0.4473593831062317}, {"id": 1941, "text": " those", "logprob": -5.743277549743652}, {"id": 674, "text": " that", "logprob": -1.787322998046875}, {"id": 6852, "text": " correspond", "logprob": -5.717450141906738}, {"id": 577, "text": " to", "logprob": -0.01509822066873312}, {"id": 573, "text": " the", "logprob": -0.8949546813964844}, {"id": 7949, "text": " parameters", "logprob": -1.9402408599853516}, {"id": 575, "text": " in", "logprob": -1.28965163230896}, {"id": 573, "text": " the", "logprob": -0.8260369300842285}, {"id": 10626, "text": " specified", "logprob": -6.315183162689209}, {"id": 35544, "text": " neural", "logprob": -2.8114004135131836}, {"id": 6011, "text": " network", "logprob": -0.13065695762634277}, {"id": 235265, "text": ".", "logprob": -0.6275289058685303}, {"id": 27808, "text": " Hyper", "logprob": -2.778996229171753}, {"id": 17631, "text": "parameters", "logprob": -0.025426184758543968}, {"id": 6852, "text": " correspond", "logprob": -3.957637071609497}, {"id": 577, "text": " to", "logprob": -0.0070372577756643295}, {"id": 573, "text": " the", "logprob": -0.6662808060646057}, {"id": 2425, "text": " user", "logprob": -5.658651351928711}, {"id": 235290, "text": "-", "logprob": -0.25596314668655396}, {"id": 20880, "text": "defined", "logprob": -0.6155512928962708}, {"id": 9404, "text": " variables", "logprob": -4.141008377075195}, {"id": 235265, "text": ".", "logprob": -2.259026050567627}, {"id": 1887, "text": " To", "logprob": -5.011190414428711}, {"id": 3104, "text": " create", "logprob": -2.673377275466919}, {"id": 476, "text": " a", "logprob": -0.4761354923248291}, {"id": 5705, "text": " node", "logprob": -0.9671486020088196}, {"id": 689, "text": " or", "logprob": -2.7095746994018555}, {"id": 13099, "text": " hyper", "logprob": -1.1803390979766846}, {"id": 19421, "text": "parameter", "logprob": -0.10423318296670914}, {"id": 235269, "text": ",", "logprob": -0.19525563716888428}, {"id": 496, "text": " i", "logprob": -8.591680526733398}, {"id": 235265, "text": ".", "logprob": -0.012257955968379974}, {"id": 235249, "text": "e", "logprob": -0.011433318257331848}, {"id": 1173, "text": ".,", "logprob": -0.5991683602333069}, {"id": 577, "text": " to", "logprob": -1.9771846532821655}, {"id": 130728, "text": " instantiate", "logprob": -4.12625789642334}, {"id": 476, "text": " a", "logprob": -0.9328656196594238}, {"id": 11254, "text": " container", "logprob": -4.388514995574951}, {"id": 577, "text": " to", "logprob": -3.3049423694610596}, {"id": 73224, "text": " encaps", "logprob": -5.232786655426025}, {"id": 7459, "text": "ulate", "logprob": -0.003674423787742853}, {"id": 9404, "text": " variables", "logprob": -4.062716007232666}, {"id": 575, "text": " in", "logprob": -3.641528606414795}, {"id": 1167, "text": " our", "logprob": -5.049140930175781}, {"id": 3409, "text": " code", "logprob": -2.654543876647949}, {"id": 235269, "text": ",", "logprob": -0.10417109727859497}, {"id": 783, "text": " we", "logprob": -0.6587715744972229}, {"id": 798, "text": " can", "logprob": -1.9312551021575928}, {"id": 1281, "text": " use", "logprob": -0.5437108874320984}, {"id": 974, "text": " one", "logprob": -3.154679298400879}, {"id": 576, "text": " of", "logprob": -0.014852306805551052}, {"id": 20555, "text": " Deep", "logprob": -2.9096574783325195}, {"id": 13584, "text": "Speed", "logprob": -0.0028186615090817213}, {"id": 235303, "text": "'", "logprob": -0.060343414545059204}, {"id": 235256, "text": "s", "logprob": -0.0004555141495075077}, {"id": 27649, "text": " containers", "logprob": -3.5403802394866943}, {"id": 1582, "text": " such", "logprob": -2.650343179702759}]}}
+
+req {'inputs': 'DeepSpeed is a machine learning framework', 'parameters': {'do_sample': True, 'max_new_tokens': 256, 'details': True}, 'stream': True}
+res: {"index": 0, "token": {"id": 674, "text": " that", "logprob": -0.9755103588104248}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3833, "text": " makes", "logprob": -3.908186674118042}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 665, "text": " it", "logprob": -0.7947087287902832}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3980, "text": " easy", "logprob": -1.0742194652557373}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 577, "text": " to", "logprob": -0.13087953627109528}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 10544, "text": " split", "logprob": -7.974415302276611}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2910, "text": " large", "logprob": -2.5723865032196045}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 35544, "text": " neural", "logprob": -2.726297616958618}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 16273, "text": " networks", "logprob": -0.34411582350730896}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1280, "text": " into", "logprob": -0.36781075596809387}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6733, "text": " multiple", "logprob": -1.6616768836975098}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 9595, "text": " smaller", "logprob": -1.0246554613113403}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5377, "text": " models", "logprob": -2.300954580307007}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 604, "text": " for", "logprob": -2.282529592514038}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 37355, "text": " runtime", "logprob": -6.714460372924805}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5171, "text": " weight", "logprob": -7.771144390106201}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235290, "text": "-", "logprob": -3.4678874015808105}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 55129, "text": "sharing", "logprob": -0.22132858633995056}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 578, "text": " and", "logprob": -1.5445966720581055}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 30809, "text": " acceleration", "logprob": -3.5544705390930176}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -0.3560488522052765}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2439, "text": " What", "logprob": -7.134848594665527}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3833, "text": " makes", "logprob": -1.884374976158142}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20555, "text": " Deep", "logprob": -0.4632056951522827}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.001637666835449636}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2249, "text": " stand", "logprob": -3.6403696537017822}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 921, "text": " out", "logprob": -0.04340338334441185}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 774, "text": " from", "logprob": -1.123358964920044}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1156, "text": " other", "logprob": -0.5240291357040405}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 70774, "text": " frameworks", "logprob": -0.5598366856575012}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1582, "text": " such", "logprob": -4.131989479064941}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 685, "text": " as", "logprob": -0.0024563875049352646}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6070, "text": " ON", "logprob": -2.854447364807129}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 45722, "text": "NX", "logprob": -0.0037751374766230583}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 29844, "text": " Runtime", "logprob": -0.476730078458786}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235269, "text": ",", "logprob": -1.0329155921936035}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 176888, "text": " TensorFlow", "logprob": -2.353532552719116}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235269, "text": ",", "logprob": -0.6315025091171265}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8745, "text": " Py", "logprob": -1.4027894735336304}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 111226, "text": "Torch", "logprob": -0.06447162479162216}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 689, "text": " or", "logprob": -3.107076644897461}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 214064, "text": " Keras", "logprob": -3.1959638595581055}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235310, "text": "4", "logprob": -11.333375930786133}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 32314, "text": "Tensor", "logprob": -3.6392767429351807}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 603, "text": " is", "logprob": -0.2446208894252777}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4969, "text": " speed", "logprob": -7.043868541717529}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 578, "text": " and", "logprob": -1.6146104335784912}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 15668, "text": " ease", "logprob": -1.982534646987915}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 576, "text": " of", "logprob": -0.14814822375774384}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1281, "text": " use", "logprob": -0.18206407129764557}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -0.21415889263153076}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -1.1683629751205444}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 26843, "text": "Deep", "logprob": -1.6494258642196655}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.017594216391444206}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 603, "text": " is", "logprob": -1.1769235134124756}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -1.5967808961868286}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 117743, "text": " toolkit", "logprob": -4.846802234649658}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235269, "text": ",", "logprob": -3.3113131523132324}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 780, "text": " not", "logprob": -1.4454152584075928}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -0.20914556086063385}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 9581, "text": " library", "logprob": -1.3861453533172607}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235269, "text": ",", "logprob": -1.0010123252868652}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 674, "text": " that", "logprob": -2.60697078704834}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 798, "text": " can", "logprob": -2.0534791946411133}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 24265, "text": " assemble", "logprob": -9.88851547241211}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 16273, "text": " networks", "logprob": -6.801928520202637}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 685, "text": " as", "logprob": -4.4629621505737305}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5271, "text": " deep", "logprob": -5.431061267852783}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 685, "text": " as", "logprob": -0.19005295634269714}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 692, "text": " you", "logprob": -0.9184563159942627}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1154, "text": " like", "logprob": -1.8481841087341309}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 578, "text": " and", "logprob": -1.7351269721984863}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 52362, "text": " accelerate", "logprob": -3.368344783782959}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1174, "text": " them", "logprob": -0.3100008964538574}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 604, "text": " for", "logprob": -3.3050074577331543}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 86298, "text": " computations", "logprob": -9.083704948425293}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4492, "text": " across", "logprob": -2.870978832244873}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -1.9792289733886719}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5396, "text": " wide", "logprob": -1.3376039266586304}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3001, "text": " range", "logprob": -0.4336489140987396}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 576, "text": " of", "logprob": -0.0029872101731598377}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 16417, "text": " hardware", "logprob": -1.307358741760254}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109959, "text": " architectures", "logprob": -1.6480815410614014}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -0.6016249656677246}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1165, "text": " It", "logprob": -1.9302972555160522}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6566, "text": " includes", "logprob": -4.035621643066406}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -1.3642703294754028}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1142, "text": " set", "logprob": -2.5085690021514893}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 576, "text": " of", "logprob": -0.001508289948105812}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 10878, "text": " efficient", "logprob": -4.861236095428467}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 228826, "text": " accelerators", "logprob": -5.260318756103516}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 674, "text": " that", "logprob": -1.829047441482544}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1160, "text": " work", "logprob": -3.565673828125}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4492, "text": " across", "logprob": -1.735077977180481}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6733, "text": " multiple", "logprob": -1.8914403915405273}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3225, "text": " product", "logprob": -9.663524627685547}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5453, "text": " lines", "logprob": -0.5779480934143066}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 27127, "text": " ranging", "logprob": -5.996504783630371}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 774, "text": " from", "logprob": -0.006174417678266764}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 156816, "text": " GPUs", "logprob": -2.1749634742736816}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 577, "text": " to", "logprob": -0.5716498494148254}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 146778, "text": " CPUs", "logprob": -1.623084306716919}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -1.7636243104934692}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.9564071893692017}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 26843, "text": "Deep", "logprob": -1.208792805671692}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.006894489284604788}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 919, "text": " has", "logprob": -2.9795467853546143}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -1.7178802490234375}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13566, "text": " UI", "logprob": -7.906706809997559}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 578, "text": " and", "logprob": -2.8521461486816406}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -1.6016262769699097}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5017, "text": " command", "logprob": -1.1967378854751587}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235290, "text": "-", "logprob": -0.8234968781471252}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 703, "text": "line", "logprob": -0.0012762743281200528}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7222, "text": " interface", "logprob": -0.32514628767967224}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -1.7935256958007812}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4371, "text": " Let", "logprob": -5.450887680053711}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235303, "text": "'", "logprob": -1.5370171070098877}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235256, "text": "s", "logprob": -0.0002644904307089746}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 947, "text": " get", "logprob": -3.675358533859253}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 48898, "text": " acquainted", "logprob": -4.535778522491455}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 675, "text": " with", "logprob": -0.06469904631376266}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 573, "text": " the", "logprob": -0.6352502107620239}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7222, "text": " interface", "logprob": -3.481940269470215}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -1.2937579154968262}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.27098414301872253}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 187, "text": "<h3>", "logprob": -2.345212936401367}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 24503, "text": "Getting", "logprob": -3.169252872467041}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4604, "text": " started", "logprob": -1.0467429161071777}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 194, "text": "</h3>", "logprob": -0.7050269246101379}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.05123908072710037}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 18150, "text": "Install", "logprob": -3.9574291706085205}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20555, "text": " Deep", "logprob": -0.5532490611076355}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.002056509256362915}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 575, "text": " in", "logprob": -3.198716163635254}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 861, "text": " your", "logprob": -0.6391956210136414}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4473, "text": " environment", "logprob": -1.6707667112350464}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 731, "text": " by", "logprob": -2.4529290199279785}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5327, "text": " running", "logprob": -0.564939022064209}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235292, "text": ":", "logprob": -1.7838255167007446}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.07189145684242249}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 207, "text": "<code>", "logprob": -1.1118919849395752}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 39553, "text": "pip", "logprob": -0.5088001489639282}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4877, "text": " install", "logprob": -0.025701463222503662}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5271, "text": " deep", "logprob": -0.18591733276844025}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 12374, "text": "speed", "logprob": -0.021931033581495285}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 216, "text": "</code>", "logprob": -0.7082042098045349}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.1000366061925888}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 187, "text": "<h3>", "logprob": -2.4260597229003906}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 62329, "text": "Navigate", "logprob": -6.3766374588012695}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20555, "text": " Deep", "logprob": -2.7042226791381836}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.003349529579281807}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235303, "text": "'", "logprob": -2.065913677215576}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235256, "text": "s", "logprob": -0.00026890001026913524}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13566, "text": " UI", "logprob": -0.7847360372543335}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 194, "text": "</h3>", "logprob": -0.08574213832616806}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.05227912962436676}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 651, "text": "The", "logprob": -2.278566360473633}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20555, "text": " Deep", "logprob": -1.1495405435562134}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.0014804366510361433}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7222, "text": " interface", "logprob": -3.1144587993621826}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 919, "text": " has", "logprob": -2.328129768371582}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2149, "text": " three", "logprob": -1.7006522417068481}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3885, "text": " major", "logprob": -2.715487003326416}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 4942, "text": " parts", "logprob": -1.85787034034729}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235292, "text": ":", "logprob": -0.28262606263160706}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.562157392501831}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235274, "text": "1", "logprob": -1.1687532663345337}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -0.005351148080080748}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 19847, "text": " Organization", "logprob": -10.128658294677734}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 108, "text": "\n", "logprob": -1.7880141735076904}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235284, "text": "2", "logprob": -0.017293965443968773}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -5.125986263010418e-06}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 15574, "text": " Performance", "logprob": -4.5762763023376465}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 108, "text": "\n", "logprob": -0.4367263913154602}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235304, "text": "3", "logprob": -0.0003983181086368859}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -4.410734163684538e-06}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 10713, "text": " Manager", "logprob": -9.550065994262695}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.08715236186981201}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5331, "text": "Let", "logprob": -2.0828232765197754}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235303, "text": "'", "logprob": -0.04987705871462822}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235256, "text": "s", "logprob": -0.00015698630886618048}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3508, "text": " understand", "logprob": -5.65545654296875}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 573, "text": " the", "logprob": -2.0018911361694336}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 8344, "text": " organization", "logprob": -1.9789855480194092}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1702, "text": " part", "logprob": -1.4242401123046875}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -1.073996663093567}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 109, "text": "\n\n", "logprob": -0.43503159284591675}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1718, "text": "It", "logprob": -5.019887924194336}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7744, "text": " contains", "logprob": -2.7023439407348633}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 15822, "text": " nodes", "logprob": -5.9791035652160645}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235283, "text": "/", "logprob": -6.28878927230835}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 35398, "text": "hyper", "logprob": -5.632112503051758}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 17631, "text": "parameters", "logprob": -0.6619979739189148}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 578, "text": " and", "logprob": -1.9956378936767578}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 22718, "text": " weights", "logprob": -5.009057998657227}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -1.0925720930099487}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 119924, "text": " Weights", "logprob": -3.5693955421447754}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 708, "text": " are", "logprob": -0.4473593831062317}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1941, "text": " those", "logprob": -5.743277549743652}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 674, "text": " that", "logprob": -1.787322998046875}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6852, "text": " correspond", "logprob": -5.717450141906738}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 577, "text": " to", "logprob": -0.01509822066873312}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 573, "text": " the", "logprob": -0.8949546813964844}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7949, "text": " parameters", "logprob": -1.9402408599853516}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 575, "text": " in", "logprob": -1.28965163230896}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 573, "text": " the", "logprob": -0.8260369300842285}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 10626, "text": " specified", "logprob": -6.315183162689209}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 35544, "text": " neural", "logprob": -2.8114004135131836}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6011, "text": " network", "logprob": -0.13065695762634277}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -0.6275289058685303}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 27808, "text": " Hyper", "logprob": -2.778996229171753}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 17631, "text": "parameters", "logprob": -0.025426184758543968}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 6852, "text": " correspond", "logprob": -3.957637071609497}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 577, "text": " to", "logprob": -0.0070372577756643295}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 573, "text": " the", "logprob": -0.6662808060646057}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 2425, "text": " user", "logprob": -5.658651351928711}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235290, "text": "-", "logprob": -0.25596314668655396}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20880, "text": "defined", "logprob": -0.6155512928962708}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 9404, "text": " variables", "logprob": -4.141008377075195}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -2.259026050567627}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1887, "text": " To", "logprob": -5.011190414428711}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3104, "text": " create", "logprob": -2.673377275466919}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -0.4761354923248291}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 5705, "text": " node", "logprob": -0.9671486020088196}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 689, "text": " or", "logprob": -2.7095746994018555}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13099, "text": " hyper", "logprob": -1.1803390979766846}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 19421, "text": "parameter", "logprob": -0.10423318296670914}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235269, "text": ",", "logprob": -0.19525563716888428}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 496, "text": " i", "logprob": -8.591680526733398}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235265, "text": ".", "logprob": -0.012257955968379974}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235249, "text": "e", "logprob": -0.011433318257331848}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1173, "text": ".,", "logprob": -0.5991683602333069}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 577, "text": " to", "logprob": -1.9771846532821655}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 130728, "text": " instantiate", "logprob": -4.12625789642334}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 476, "text": " a", "logprob": -0.9328656196594238}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 11254, "text": " container", "logprob": -4.388514995574951}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 577, "text": " to", "logprob": -3.3049423694610596}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 73224, "text": " encaps", "logprob": -5.232786655426025}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 7459, "text": "ulate", "logprob": -0.003674423787742853}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 9404, "text": " variables", "logprob": -4.062716007232666}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 575, "text": " in", "logprob": -3.641528606414795}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1167, "text": " our", "logprob": -5.049140930175781}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 3409, "text": " code", "logprob": -2.654543876647949}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235269, "text": ",", "logprob": -0.10417109727859497}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 783, "text": " we", "logprob": -0.6587715744972229}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 798, "text": " can", "logprob": -1.9312551021575928}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1281, "text": " use", "logprob": -0.5437108874320984}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 974, "text": " one", "logprob": -3.154679298400879}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 576, "text": " of", "logprob": -0.014852306805551052}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 20555, "text": " Deep", "logprob": -2.9096574783325195}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 13584, "text": "Speed", "logprob": -0.0028186615090817213}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235303, "text": "'", "logprob": -0.060343414545059204}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 235256, "text": "s", "logprob": -0.0004555141495075077}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 27649, "text": " containers", "logprob": -3.5403802394866943}, "generated_text": null, "details": null}
+{"index": 0, "token": {"id": 1582, "text": " such", "logprob": -2.650343179702759}, "generated_text": " that makes it easy to split large neural networks into multiple smaller models for runtime weight-sharing and acceleration. What makes DeepSpeed stand out from other frameworks such as ONNX Runtime, TensorFlow, PyTorch or Keras4Tensor is speed and ease of use.\n\nDeepSpeed is a toolkit, not a library, that can assemble networks as deep as you like and accelerate them for computations across a wide range of hardware architectures. It includes a set of efficient accelerators that work across multiple product lines ranging from GPUs to CPUs.\n\nDeepSpeed has a UI and a command-line interface. Let's get acquainted with the interface.\n\n<h3>Getting started</h3>\n\nInstall DeepSpeed in your environment by running:\n\n<code>pip install deepspeed</code>\n\n<h3>Navigate DeepSpeed's UI</h3>\n\nThe DeepSpeed interface has three major parts:\n\n1. Organization\n2. Performance\n3. Manager\n\nLet's understand the organization part.\n\nIt contains nodes/hyperparameters and weights. Weights are those that correspond to the parameters in the specified neural network. Hyperparameters correspond to the user-defined variables. To create a node or hyperparameter, i.e., to instantiate a container to encapsulate variables in our code, we can use one of DeepSpeed's containers such", "details": {"finish_reason": "length", "seed": null, "generated_tokens": 257, "input_length": 8}}
+
+
+
+Little benchmark: concurrency 1 seq_len 256
+Running command ./awscurl -c 1 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": false}'    -P -t
+Little benchmark: concurrency 1 seq_len 256
+Running command ./awscurl -c 1 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": true}'    -P -t
+Little benchmark: concurrency 4 seq_len 256
+Running command ./awscurl -c 4 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": false}'    -P -t
+Little benchmark: concurrency 4 seq_len 256
+Running command ./awscurl -c 4 -N 5 -X POST http://127.0.0.1:8080/invocations --connect-timeout 300 -H 'Content-type: application/json' -d '{"inputs": "DeepSpeed is a machine learning framework", "parameters": {"do_sample": true, "max_new_tokens": 256, "details": true}, "stream": true}'    -P -t
