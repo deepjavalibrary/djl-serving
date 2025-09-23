@@ -767,6 +767,11 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4
     },
+    "gpt-neox-20b-custom": {
+        "option.model_id": "s3://djl-llm/gpt-neox-20b-custom",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4
+    },
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03",
         "option.task": "text-generation",
@@ -1686,6 +1691,19 @@ def build_vllm_async_model(model):
     write_model_artifacts(options)
 
 
+def build_vllm_async_model_custom_formatters(model):
+    if model not in vllm_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
+        )
+    options = vllm_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = "true"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
+    write_model_artifacts(options)
+
+
 def build_vllm_model(model):
     if model not in vllm_model_list.keys():
         raise ValueError(
@@ -1728,7 +1746,7 @@ def build_lmi_dist_aiccl_model(model):
     options["option.tensor_parallel_degree"] = 8
     options["option.rolling_batch"] = "lmi-dist"
     options["option.max_rolling_batch_size"] = 16
-    write_model_artifacts(options)
+    # write_model_artifacts(options)
 
 
 def build_trtllm_handler_model(model):
@@ -1807,6 +1825,7 @@ supported_handler = {
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
     'vllm_async': build_vllm_async_model,
+    'vllm_async_custom_formatters': build_vllm_async_custom_model
 }
 
 if __name__ == '__main__':
