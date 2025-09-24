@@ -90,7 +90,7 @@ def find_decorated_function(module,
     for function_name in dir(module):
         obj = getattr(module, function_name)
         if callable(obj) and getattr(obj, decorator_attribute, False):
-            logging.info(
+            logging.debug(
                 f"Found decorated function: {function_name} for decorator attribute: {decorator_attribute}"
             )
             return obj

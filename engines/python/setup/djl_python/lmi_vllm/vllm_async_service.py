@@ -31,7 +31,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
-from djl_python.service_loader import get_annotated_function
+from djl_python.custom_formatter_handling import CustomFormatterHandling, CustomFormatterError
 
 from .request_response_utils import (
     ProcessedRequest,
@@ -47,7 +47,7 @@ from .request_response_utils import (
 logger = logging.getLogger(__name__)
 
 
-class VLLMHandler:
+class VLLMHandler(CustomFormatterHandling):
 
     def __init__(self):
         super().__init__()
@@ -62,35 +62,6 @@ class VLLMHandler:
         self.vllm_properties = None
         self.model_name = None
         self.initialized = False
-        self.output_formatter = None
-        self.input_formatter = None
-
-    def load_formatters(self, model_dir: str):
-        """Load custom formatters from model.py"""
-        self.input_formatter = get_annotated_function(model_dir,
-                                                      "is_input_formatter")
-        self.output_formatter = get_annotated_function(model_dir,
-                                                       "is_output_formatter")
-        logger.info(
-            f"Loaded formatters - input: {self.input_formatter}, output: {self.output_formatter}"
-        )
-
-    def apply_input_formatter(self, decoded_payload, **kwargs):
-        """Apply input formatter if available"""
-        if self.input_formatter:
-            return self.input_formatter(decoded_payload, **kwargs)
-        return decoded_payload
-
-    def apply_output_formatter(self, output):
-        """Apply output formatter if available"""
-        if self.output_formatter:
-            return self.output_formatter(output)
-        return output
-
-    async def apply_output_formatter_streaming_raw(self, stream_generator):
-        """Apply output formatter to raw streaming responses"""
-        async for response in stream_generator:
-            yield self.apply_output_formatter(response)
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -98,7 +69,12 @@ class VLLMHandler:
 
         # Load formatters
         model_dir = properties.get("model_dir", ".")
-        self.load_formatters(model_dir)
+        try:
+            self.load_formatters(model_dir)
+        except CustomFormatterError as e:
+            logger.error(
+                f"Failed to initialize due to custom formatter error: {e}")
+            raise
 
         self.vllm_engine_args = self.vllm_properties.get_engine_args(
             async_engine=True)
@@ -210,6 +186,11 @@ class VLLMHandler:
         await self.check_health()
         try:
             processed_request = self.preprocess_request(inputs)
+        except CustomFormatterError as e:
+            logger.exception("Custom formatter failed")
+            output = create_non_stream_output(
+                "", error=f"Custom formatter failed: {str(e)}", code=424)
+            return output
         except Exception as e:
             logger.exception("Input parsing failed")
             output = create_non_stream_output(
