@@ -28,7 +28,19 @@ def custom_output_formatter(request_output: RequestOutput) -> str:
 
 You can write this function in your model.py. You don't need to write the handle function in your entry point Python file. DJLServing will search for the `@output_formatter` annotation and apply the annotated function as the output formatter.
 
-**Note**: For vLLM and TensorRT-LLM backends, the output formatter receives the final response data dictionary (containing fields like `generated_text`, `details`, etc.) and should return the modified dictionary. This allows you to add custom fields at the top level of the response.
+### Arguments and Return Types for vLLM and TensorRT-LLM backends:
+
+**Arguments:**
+* `response_data` (dict): The final response data dictionary containing fields like `generated_text`, `details`, etc.
+
+**Return Type:** dict - Modified response data dictionary with custom fields added at the top level of the response.
+
+### Arguments and Return Types for other backends:
+
+**Arguments:**
+* `request_output` (RequestOutput): The request output object containing sequences, tokens, and other generation details.
+
+**Return Type:** str - Formatted response string.
 
 ## RequestOutput schema
 The RequestOutput class is designed to encapsulate the output of a request in a structured format. Here is an in-depth look at its structure and the related classes:
