@@ -30,7 +30,7 @@ from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
-from djl_python.async_utils import handle_streaming_response, create_non_stream_output, ProcessedRequest
+from djl_python.async_utils import handle_streaming_response, create_non_stream_output
 from djl_python.service_loader import get_annotated_function
 
 
