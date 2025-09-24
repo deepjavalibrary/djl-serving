@@ -244,6 +244,7 @@ async def register_adapter(inputs: Input):
     adapter_pin = inputs.get_as_string(
         "pin").lower() == "true" if inputs.contains_key("pin") else False
 
+    outputs = Output()
     loaded = False
     try:
         if not os.path.exists(adapter_path):
@@ -272,11 +273,15 @@ async def register_adapter(inputs: Input):
                for msg in ("No free lora slots",
                            "greater than the number of GPU LoRA slots")):
             raise MemoryError(str(e))
-        return Output().error(f"register_adapter_error", message=str(e))
+        message = {"error": str(e)}
+        outputs.add(Output.binary_encode(message), key="result")
+        return outputs
 
     logging.info(
         f"Registered adapter {adapter_alias} from {adapter_path} successfully")
-    return Output(message=f"Adapter {adapter_alias} registered")
+    message = {"result": f"Adapter {adapter_alias} registered"}
+    outputs.add(Output.binary_encode(message), key="result")
+    return outputs
 
 
 async def update_adapter(inputs: Input):
@@ -294,6 +299,7 @@ async def update_adapter(inputs: Input):
     if adapter_name not in service.adapter_registry:
         raise ValueError(f"Adapter {adapter_alias} not registered.")
 
+    outputs = Output()
     try:
         if not adapter_preload and adapter_pin:
             raise ValueError("Can not set load to false and pin to true")
@@ -327,10 +333,14 @@ async def update_adapter(inputs: Input):
                for msg in ("No free lora slots",
                            "greater than the number of GPU LoRA slots")):
             raise MemoryError(str(e))
-        return Output().error("update_adapter_error", message=str(e))
+        message = {"error": str(e)}
+        outputs.add(Output.binary_encode(message), key="result")
+        return outputs
 
     logging.info(f"Updated adapter {adapter_alias} successfully")
-    return Output(message=f"Adapter {adapter_alias} updated")
+    message = {"result": f"Adapter {adapter_alias} updated"}
+    outputs.add(Output.binary_encode(message), key="result")
+    return outputs
 
 
 async def unregister_adapter(inputs: Input):
@@ -343,12 +353,17 @@ async def unregister_adapter(inputs: Input):
     if adapter_name not in service.adapter_registry:
         raise ValueError(f"Adapter {adapter_alias} not registered.")
 
+    outputs = Output()
     try:
         await service.remove_lora(adapter_name, adapter_alias)
         del service.adapter_registry[adapter_name]
     except Exception as e:
         logging.debug(f"Failed to unregister adapter: {e}", exc_info=True)
-        return Output().error("remove_adapter_error", message=str(e))
+        message = {"error": str(e)}
+        outputs.add(Output.binary_encode(message), key="result")
+        return outputs
 
     logging.info(f"Unregistered adapter {adapter_alias} successfully")
-    return Output(message=f"Adapter {adapter_alias} unregistered")
+    message = {"result": f"Adapter {adapter_alias} unregistered"}
+    outputs.add(Output.binary_encode(message), key="result")
+    return outputs
