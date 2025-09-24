@@ -2134,6 +2134,8 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, vllm_model_spec)
     elif args.handler == "vllm_adapters":
         test_handler_adapters(args.model, vllm_model_spec)
+    elif args.handler == "vllm_async_adapters":
+        test_handler_adapters(args.model, vllm_model_spec)
     elif args.handler == "lmi_dist_chat":
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":

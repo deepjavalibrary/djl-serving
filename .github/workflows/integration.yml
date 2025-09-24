@@ -160,6 +160,9 @@ jobs:
           # - test: TestVllmLora
           #   instance: g6
           #   failure-prefix: lmi
+          # - test: TestVllmAsyncLora
+          #   instance: g6
+          #   failure-prefix: lmi
 
           - test: TestMultiModalVllm
             instance: g6

@@ -732,6 +732,24 @@ class TestVllmLora:
             client.run("vllm_adapters phi2-unmerged-lora".split())
 
 
+@pytest.mark.vllm
+@pytest.mark.lora
+@pytest.mark.gpu_4
+class TestVllmAsyncLora:
+
+    def test_lora_llama2_7b_async(self):
+        with Runner('lmi', 'llama-7b-unmerged-lora-async') as r:
+            prepare.build_vllm_async_model("llama-7b-unmerged-lora")
+            r.launch()
+            client.run("vllm_async_adapters llama-7b-unmerged-lora".split())
+
+    def test_lora_mistral_7b_async(self):
+        with Runner('lmi', 'mistral-7b-unmerged-lora-async') as r:
+            prepare.build_vllm_async_model("mistral-7b-unmerged-lora")
+            r.launch()
+            client.run("vllm_async_adapters mistral-7b-unmerged-lora".split())
+
+
 @pytest.mark.lmi_dist
 @pytest.mark.lora
 @pytest.mark.gpu_4
