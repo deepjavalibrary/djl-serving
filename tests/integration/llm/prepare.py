@@ -1756,7 +1756,7 @@ def build_lmi_dist_aiccl_model(model):
     options["option.tensor_parallel_degree"] = 8
     options["option.rolling_batch"] = "lmi-dist"
     options["option.max_rolling_batch_size"] = 16
-    # write_model_artifacts(options)
+    write_model_artifacts(options)
 
 
 def build_trtllm_handler_model(model):
