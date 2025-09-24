@@ -1691,7 +1691,7 @@ def build_vllm_async_model(model):
     write_model_artifacts(options)
 
 
-def build_vllm_async_model_custom_formatters(model):
+def build_vllm_async_model_custom_formatters(model, error_type=None):
     if model not in vllm_model_list.keys():
         raise ValueError(
             f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
@@ -1703,15 +1703,33 @@ def build_vllm_async_model_custom_formatters(model):
     options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
     write_model_artifacts(options)
 
-    # Copy custom formatter files
+    # Create custom formatter files based on error_type
     source_dir = "examples/custom_formatters/"
     target_dir = "models/test/"
+
+    if not error_type:
+        source_dir = "examples/custom_formatters/"
+        target_dir = "models/test/"
+        if os.path.exists(source_dir):
+            for filename in os.listdir(source_dir):
+                source_file = os.path.join(source_dir, filename)
+                target_file = os.path.join(target_dir, filename)
+                if os.path.isfile(source_file):
+                    shutil.copy2(source_file, target_file)
+        return
+    elif error_type == "input":
+        filename = "input_formatter_failed.py"
+    elif error_type == "output":
+        # Create model.py with failing output formatter
+        filename = "output_formatter_failed.py"
+    elif error_type == "load":
+        # Create model.py with syntax error to cause load failure
+        filename = "load_formatter_failed.py"
     if os.path.exists(source_dir):
-        for filename in os.listdir(source_dir):
-            source_file = os.path.join(source_dir, filename)
-            target_file = os.path.join(target_dir, filename)
-            if os.path.isfile(source_file):
-                shutil.copy2(source_file, target_file)
+        source_file = os.path.join(source_dir, filename)
+        target_file = os.path.join(target_dir, "model.py")
+        if os.path.isfile(source_file):
+            shutil.copy2(source_file, target_file)
 
 
 def build_vllm_model(model):

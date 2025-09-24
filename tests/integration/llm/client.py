@@ -1668,20 +1668,7 @@ def test_custom_handler_async(model, model_spec):
         message = res.content.decode("utf-8")
         LOGGER.info(f"res: {message}")
         response_checker(res, message)
-
-    # awscurl little benchmark phase
-    for i, batch_size in enumerate(spec["batch_size"]):
-        for seq_length in spec["seq_length"]:
-            for stream in stream_values:
-                req["stream"] = stream
-                LOGGER.info(
-                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-                )
-                req["parameters"]["maxOutputToken"] = seq_length
-                awscurl_run(req,
-                            spec.get("tokenizer", None),
-                            batch_size,
-                            output=True)
+        assert "custom_formatter_applied" in message, "Output does not contain custom_formatted field from custom output formatter"
 
 
 def test_handler_adapters(model, model_spec):
