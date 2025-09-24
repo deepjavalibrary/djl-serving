@@ -33,8 +33,6 @@ from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
 from djl_python.service_loader import get_annotated_function
 
-
-
 from .request_response_utils import (
     ProcessedRequest,
     vllm_stream_output_formatter,
@@ -69,9 +67,13 @@ class VLLMHandler:
 
     def load_formatters(self, model_dir: str):
         """Load custom formatters from model.py"""
-        self.input_formatter = get_annotated_function(model_dir, "is_input_formatter")
-        self.output_formatter = get_annotated_function(model_dir, "is_output_formatter")
-        logger.info(f"Loaded formatters - input: {self.input_formatter}, output: {self.output_formatter}")
+        self.input_formatter = get_annotated_function(model_dir,
+                                                      "is_input_formatter")
+        self.output_formatter = get_annotated_function(model_dir,
+                                                       "is_output_formatter")
+        logger.info(
+            f"Loaded formatters - input: {self.input_formatter}, output: {self.output_formatter}"
+        )
 
     def apply_input_formatter(self, decoded_payload, **kwargs):
         """Apply input formatter if available"""
@@ -151,7 +153,8 @@ class VLLMHandler:
         decoded_payload = decode(raw_request, content_type)
 
         # Apply input formatter
-        decoded_payload = self.apply_input_formatter(decoded_payload, tokenizer=self.tokenizer)
+        decoded_payload = self.apply_input_formatter(decoded_payload,
+                                                     tokenizer=self.tokenizer)
 
         # For TGI streaming responses, the last chunk requires the full generated text to be provided.
         # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
@@ -219,7 +222,7 @@ class VLLMHandler:
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response
             response = self.apply_output_formatter_streaming_raw(response)
-            
+
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
@@ -237,6 +240,7 @@ class VLLMHandler:
             request=processed_request.vllm_request,
             tokenizer=self.tokenizer,
         )
+
 
 service = VLLMHandler()
 

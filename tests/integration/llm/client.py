@@ -1644,6 +1644,7 @@ def test_handler_rolling_batch(model, model_spec):
                 req["parameters"]["max_new_tokens"] = seq_length
                 awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
+
 def test_custom_handler_async(model, model_spec):
     modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
@@ -1677,7 +1678,11 @@ def test_custom_handler_async(model, model_spec):
                     f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
                 )
                 req["parameters"]["maxOutputToken"] = seq_length
-                awscurl_run(req, spec.get("tokenizer", None), batch_size, output=True)
+                awscurl_run(req,
+                            spec.get("tokenizer", None),
+                            batch_size,
+                            output=True)
+
 
 def test_handler_adapters(model, model_spec):
     modelspec_checker(model, model_spec)

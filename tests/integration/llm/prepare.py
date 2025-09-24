@@ -1702,7 +1702,7 @@ def build_vllm_async_model_custom_formatters(model):
     options["option.async_mode"] = "true"
     options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
     write_model_artifacts(options)
-    
+
     # Copy custom formatter files
     source_dir = "examples/custom_formatters/"
     target_dir = "models/test/"
