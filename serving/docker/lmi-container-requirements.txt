@@ -31,6 +31,6 @@ uvloop
 ninja
 peft
 llmcompressor
-vllm==0.10.2
+https://publish.djl.ai/sm-vllm/vllm-0.10.2-cp38-abi3-linux_x86_64.whl
 xgrammar==0.1.23
 flashinfer-python==0.2.5
