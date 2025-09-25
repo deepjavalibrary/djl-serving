@@ -767,6 +767,11 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4
     },
+    "gpt-neox-20b-custom": {
+        "option.model_id": "s3://djl-llm/gpt-neox-20b-custom",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4
+    },
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03",
         "option.task": "text-generation",
@@ -1686,6 +1691,47 @@ def build_vllm_async_model(model):
     write_model_artifacts(options)
 
 
+def build_vllm_async_model_custom_formatters(model, error_type=None):
+    if model not in vllm_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
+        )
+    options = vllm_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = "true"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
+    write_model_artifacts(options)
+
+    # Create custom formatter files based on error_type
+    source_dir = "examples/custom_formatters/"
+    target_dir = "models/test/"
+
+    if not error_type:
+        source_dir = "examples/custom_formatters/"
+        target_dir = "models/test/"
+        if os.path.exists(source_dir):
+            for filename in os.listdir(source_dir):
+                source_file = os.path.join(source_dir, filename)
+                target_file = os.path.join(target_dir, filename)
+                if os.path.isfile(source_file):
+                    shutil.copy2(source_file, target_file)
+        return
+    elif error_type == "input":
+        filename = "input_formatter_failed.py"
+    elif error_type == "output":
+        # Create model.py with failing output formatter
+        filename = "output_formatter_failed.py"
+    elif error_type == "load":
+        # Create model.py with syntax error to cause load failure
+        filename = "load_formatter_failed.py"
+    if os.path.exists(source_dir):
+        source_file = os.path.join(source_dir, filename)
+        target_file = os.path.join(target_dir, "model.py")
+        if os.path.isfile(source_file):
+            shutil.copy2(source_file, target_file)
+
+
 def build_vllm_model(model):
     if model not in vllm_model_list.keys():
         raise ValueError(
@@ -1807,6 +1853,7 @@ supported_handler = {
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
     'vllm_async': build_vllm_async_model,
+    'vllm_async_custom_formatters': build_vllm_async_model_custom_formatters
 }
 
 if __name__ == '__main__':

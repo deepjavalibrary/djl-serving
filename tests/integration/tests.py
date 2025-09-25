@@ -1130,6 +1130,41 @@ class TestLmiDistPipelineParallel:
             client.run("lmi_dist llama31-8b-tp2-pp2-spec-dec".split())
 
 
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVLLMCustomHandlers:
+
+    def test_gpt_neox_20b_custom(self):
+        with Runner('lmi', 'gpt-neox-20b') as r:
+            prepare.build_vllm_async_model_custom_formatters(
+                "gpt-neox-20b-custom")
+            r.launch()
+            client.run("custom gpt-neox-20b".split())
+
+    def test_custom_input_formatter_error(self):
+        with Runner('lmi', 'gpt-neox-20b-custom') as r:
+            prepare.build_vllm_async_model_custom_formatters(
+                "gpt-neox-20b-custom", error_type="input")
+            r.launch()
+            with pytest.raises(ValueError, match=r".*424.*"):
+                client.run("vllm gpt-neox-20b".split())
+
+    def test_custom_output_formatter_error(self):
+        with Runner('lmi', 'gpt-neox-20b-custom') as r:
+            prepare.build_vllm_async_model_custom_formatters(
+                "gpt-neox-20b-custom", error_type="output")
+            r.launch()
+            with pytest.raises(ValueError, match=r".*424.*"):
+                client.run("vllm gpt-neox-20b".split())
+
+    def test_custom_formatter_load_error(self):
+        with Runner('lmi', 'gpt-neox-20b-custom') as r:
+            prepare.build_vllm_async_model_custom_formatters(
+                "gpt-neox-20b-custom", error_type="load")
+            with pytest.raises(Exception):
+                r.launch()
+
+
 @pytest.mark.gpu
 class TestTextEmbedding:
 
