@@ -31,6 +31,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
+from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 
 from .request_response_utils import (
     ProcessedRequest,
@@ -46,7 +47,7 @@ from .request_response_utils import (
 logger = logging.getLogger(__name__)
 
 
-class VLLMHandler:
+class VLLMHandler(CustomFormatterHandler):
 
     def __init__(self):
         super().__init__()
@@ -65,6 +66,16 @@ class VLLMHandler:
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
         self.vllm_properties = VllmRbProperties(**properties)
+
+        # Load formatters
+        model_dir = properties.get("model_dir", ".")
+        try:
+            self.load_formatters(model_dir)
+        except CustomFormatterError as e:
+            logger.error(
+                f"Failed to initialize due to custom formatter error: {e}")
+            raise
+
         self.vllm_engine_args = self.vllm_properties.get_engine_args(
             async_engine=True)
         self.vllm_engine = AsyncLLMEngine.from_engine_args(
@@ -116,6 +127,11 @@ class VLLMHandler:
         raw_request = batch[0]
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
+
+        # Apply input formatter
+        decoded_payload = self.apply_input_formatter(decoded_payload,
+                                                     tokenizer=self.tokenizer)
+
         # For TGI streaming responses, the last chunk requires the full generated text to be provided.
         # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
         # The full generation at the end... TODO is there a better way?
@@ -170,6 +186,11 @@ class VLLMHandler:
         await self.check_health()
         try:
             processed_request = self.preprocess_request(inputs)
+        except CustomFormatterError as e:
+            logger.exception("Custom formatter failed")
+            output = create_non_stream_output(
+                "", error=f"Custom formatter failed: {str(e)}", code=424)
+            return output
         except Exception as e:
             logger.exception("Input parsing failed")
             output = create_non_stream_output(
@@ -180,6 +201,9 @@ class VLLMHandler:
             processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
+            # Apply custom formatter to streaming response
+            response = self.apply_output_formatter_streaming_raw(response)
+
             return handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
@@ -188,6 +212,9 @@ class VLLMHandler:
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
             )
+
+        # Apply custom output formatter to non-streaming response
+        response = self.apply_output_formatter(response)
 
         return processed_request.non_stream_output_formatter(
             response,
