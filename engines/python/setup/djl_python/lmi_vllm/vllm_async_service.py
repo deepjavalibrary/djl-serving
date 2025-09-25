@@ -200,14 +200,20 @@ class VLLMHandler:
         )
 
     async def add_lora(self, lora_name: str, lora_alias: str, lora_path: str):
+        logging.info(f"Adding LoRA {lora_name} from {lora_path}")
         lora_id = self.lora_id_counter.inc(1)
-        lora_request = create_lora_request(lora_name, lora_id, lora_path)
+        lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
         self.lora_requests[lora_request.lora_name] = lora_request
         return await self.vllm_engine.add_lora(lora_request)
 
     async def remove_lora(self, lora_name: str, lora_alias: str):
+        logging.info(f"Removing LoRA {lora_name}")
+        if lora_name not in self.lora_requests:
+            raise ValueError(f"LoRA adapter {lora_name} not found in registry")
         lora_request = get_lora_request(lora_name, self.lora_requests)
-        return await self.vllm_engine.remove_lora(lora_request.lora_int_id)
+        result = await self.vllm_engine.remove_lora(lora_request.lora_int_id)
+        del self.lora_requests[lora_name]
+        return result
 
     async def pin_lora(self, lora_name: str, lora_alias: str):
         lora_request = get_lora_request(lora_name, self.lora_requests)
