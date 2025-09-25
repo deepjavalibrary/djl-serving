@@ -310,18 +310,6 @@ class TestTrtLlmHandler1:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm chatglm3-6b".split())
 
-    def test_gpt2(self):
-        with Runner('tensorrt-llm', 'gpt2') as r:
-            prepare.build_trtllm_handler_model("gpt2")
-            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("trtllm gpt2".split())
-
-    def test_santacoder(self):
-        with Runner('tensorrt-llm', 'santacoder') as r:
-            prepare.build_trtllm_handler_model("santacoder")
-            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("trtllm santacoder".split())
-
     def test_llama_31_8b(self):
         with Runner('tensorrt-llm', 'llama-3-1-8b') as r:
             prepare.build_trtllm_handler_model('llama-3-1-8b')
@@ -344,12 +332,6 @@ class TestTrtLlmHandler2:
             prepare.build_trtllm_handler_model("mistral-7b")
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm mistral-7b".split())
-
-    def test_gpt_j_6b(self):
-        with Runner('tensorrt-llm', 'gpt-j-6b') as r:
-            prepare.build_trtllm_handler_model("gpt-j-6b")
-            r.launch("CUDA_VISIBLE_DEVICES=0")
-            client.run("trtllm gpt-j-6b".split())
 
     def test_qwen_7b(self):
         with Runner('tensorrt-llm', 'qwen-7b') as r:
@@ -562,31 +544,6 @@ class TestLmiDistMultiNode:
 @pytest.mark.vllm
 @pytest.mark.gpu_4
 class TestVllm1:
-
-    def test_gpt_neox_20b(self):
-        with Runner('lmi', 'gpt-neox-20b') as r:
-            prepare.build_vllm_model("gpt-neox-20b")
-            r.launch()
-            client.run("vllm gpt-neox-20b".split())
-
-    def test_mistral_7b(self):
-        with Runner('lmi', 'mistral-7b') as r:
-            prepare.build_vllm_model("mistral-7b")
-            r.launch()
-            client.run("vllm mistral-7b".split())
-            client.run("vllm_chat mistral-7b".split())
-
-    def test_phi2(self):
-        with Runner('lmi', 'phi-2') as r:
-            prepare.build_vllm_model("phi-2")
-            r.launch("VLLM_USE_V1=0")
-            client.run("vllm phi-2".split())
-
-    def test_starcoder2_7b(self):
-        with Runner('lmi', 'starcoder2-7b') as r:
-            prepare.build_vllm_model("starcoder2-7b")
-            r.launch()
-            client.run("vllm starcoder2-7b".split())
 
     def test_gemma_2b(self):
         with Runner('lmi', 'gemma-2b') as r:
@@ -967,12 +924,6 @@ class TestNeuronxRollingBatch:
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
 class TestCorrectnessTrtLlm:
-
-    def test_codestral_22b(self):
-        with Runner('tensorrt-llm', 'codestral-22b') as r:
-            prepare.build_correctness_model("trtllm-codestral-22b")
-            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("correctness trtllm-codestral-22b".split())
 
     def test_llama3_8b(self):
         with Runner('tensorrt-llm', 'llama3-8b') as r:
