@@ -327,14 +327,14 @@ async def register_adapter(inputs: Input):
                for msg in ("No free lora slots",
                            "greater than the number of GPU LoRA slots")):
             raise MemoryError(str(e))
-        message = {"error": str(e)}
-        outputs.add(Output.binary_encode(message), key="result")
+        err = {"data": "", "last": True, "code": 424, "error": str(e)}
+        outputs.add(Output.binary_encode(err), key="data")
         return outputs
 
     logging.info(
         f"Registered adapter {adapter_alias} from {adapter_path} successfully")
-    message = {"result": f"Adapter {adapter_alias} registered"}
-    outputs.add(Output.binary_encode(message), key="result")
+    result = {"data": f"Adapter {adapter_alias} registered"}
+    outputs.add(Output.binary_encode(result), key="data")
     return outputs
 
 
@@ -387,13 +387,13 @@ async def update_adapter(inputs: Input):
                for msg in ("No free lora slots",
                            "greater than the number of GPU LoRA slots")):
             raise MemoryError(str(e))
-        message = {"error": str(e)}
-        outputs.add(Output.binary_encode(message), key="result")
+        err = {"data": "", "last": True, "code": 424, "error": str(e)}
+        outputs.add(Output.binary_encode(err), key="data")
         return outputs
 
     logging.info(f"Updated adapter {adapter_alias} successfully")
-    message = {"result": f"Adapter {adapter_alias} updated"}
-    outputs.add(Output.binary_encode(message), key="result")
+    result = {"data": f"Adapter {adapter_alias} updated"}
+    outputs.add(Output.binary_encode(result), key="data")
     return outputs
 
 
@@ -413,11 +413,11 @@ async def unregister_adapter(inputs: Input):
         del service.adapter_registry[adapter_name]
     except Exception as e:
         logging.debug(f"Failed to unregister adapter: {e}", exc_info=True)
-        message = {"error": str(e)}
-        outputs.add(Output.binary_encode(message), key="result")
+        err = {"data": "", "last": True, "code": 424, "error": str(e)}
+        outputs.add(Output.binary_encode(err), key="data")
         return outputs
 
     logging.info(f"Unregistered adapter {adapter_alias} successfully")
-    message = {"result": f"Adapter {adapter_alias} unregistered"}
-    outputs.add(Output.binary_encode(message), key="result")
+    result = {"data": f"Adapter {adapter_alias} unregistered"}
+    outputs.add(Output.binary_encode(result), key="data")
     return outputs
