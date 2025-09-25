@@ -120,6 +120,9 @@ class VLLMHandler:
         raw_request = batch[0]
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
+
+        adapter_name = self._extract_lora_adapter(raw_request, decoded_payload)
+
         # For TGI streaming responses, the last chunk requires the full generated text to be provided.
         # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
         # The full generation at the end... TODO is there a better way?
@@ -128,6 +131,18 @@ class VLLMHandler:
         # completions/chat completions require model in the payload
         if "model" not in decoded_payload:
             decoded_payload["model"] = self.model_name
+
+        lora_request = None
+        if adapter_name:
+            if adapter_name not in self.lora_requests:
+                raise ValueError(
+                    f"LoRA adapter {adapter_name} not found in registry. Available adapters: {list(self.lora_requests.keys())}"
+                )
+            lora_request = get_lora_request(adapter_name, self.lora_requests)
+            logging.info(
+                f"Using LoRA request: {lora_request.lora_name} (ID: {lora_request.lora_int_id})"
+            )
+
         # completions request
         if "prompt" in decoded_payload:
             vllm_request = CompletionRequest(**decoded_payload)
@@ -159,6 +174,7 @@ class VLLMHandler:
             accumulate_chunks,
             include_prompt,
         )
+        processed_request.lora_request = lora_request
         return processed_request
 
     async def check_health(self):
@@ -180,8 +196,21 @@ class VLLMHandler:
                 "", error=f"Input parsing failed: {str(e)}", code=424)
             return output
 
-        response = await processed_request.inference_invoker(
-            processed_request.vllm_request)
+        if processed_request.lora_request:
+            original_add_request = self.vllm_engine.add_request
+
+            async def add_request_with_lora(*args, **kwargs):
+                kwargs['lora_request'] = processed_request.lora_request
+                return await original_add_request(*args, **kwargs)
+
+            self.vllm_engine.add_request = add_request_with_lora
+
+        try:
+            response = await processed_request.inference_invoker(
+                processed_request.vllm_request)
+        finally:
+            if processed_request.lora_request:
+                self.vllm_engine.add_request = original_add_request
 
         if isinstance(response, types.AsyncGeneratorType):
             return handle_streaming_response(
@@ -204,7 +233,9 @@ class VLLMHandler:
         lora_id = self.lora_id_counter.inc(1)
         lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
         self.lora_requests[lora_request.lora_name] = lora_request
-        return await self.vllm_engine.add_lora(lora_request)
+        result = await self.vllm_engine.add_lora(lora_request)
+        logging.info(f"LoRA {lora_name} added to engine: {result}")
+        return result
 
     async def remove_lora(self, lora_name: str, lora_alias: str):
         logging.info(f"Removing LoRA {lora_name}")
@@ -220,6 +251,23 @@ class VLLMHandler:
         loaded = await self.vllm_engine.add_lora(lora_request)
         return loaded and await self.vllm_engine.pin_lora(
             lora_request.lora_int_id)
+
+    def _extract_lora_adapter(self, raw_request, decoded_payload):
+        """
+        Get lora adapter name from request headers or payload.
+        """
+        adapter_name = None
+
+        if "X-Amzn-SageMaker-Adapter-Identifier" in raw_request.get_properties(
+        ):
+            adapter_name = raw_request.get_property(
+                "X-Amzn-SageMaker-Adapter-Identifier")
+            logging.debug(f"Found adapter in headers: {adapter_name}")
+        elif "adapter" in decoded_payload:
+            adapter_name = decoded_payload.pop("adapter")
+            logging.debug(f"Found adapter in payload: {adapter_name}")
+
+        return adapter_name
 
 
 service = VLLMHandler()
