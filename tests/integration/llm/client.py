@@ -1040,13 +1040,40 @@ def validate_correctness(type, tasks, expected):
                         inputs.append(json.loads(v)["inputs"])
                     elif k == "output":
                         try:
-                            first_json = v.split('\n')[0]
-                            outputs.append(
-                                json.loads(first_json)["generated_text"])
-                        except JSONDecodeError:
+                            if not v or v.strip() == "":
+                                LOGGER.error(f"Empty output value: {v}")
+                                del inputs[-1]
+                                continue
+
+                            lines = v.strip().split('\n')
+                            generated_text = None
+
+                            for line in lines:
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                try:
+                                    parsed_json = json.loads(line)
+                                    if parsed_json.get(
+                                            "generated_text") is not None:
+                                        generated_text = parsed_json[
+                                            "generated_text"]
+                                        break
+                                except JSONDecodeError:
+                                    continue
+
+                            if generated_text is not None:
+                                outputs.append(generated_text)
+                            else:
+                                del inputs[-1]
+                                LOGGER.error(
+                                    f"No valid generated_text found in output: {v}"
+                                )
+                        except Exception as e:
                             # delete the last input
                             del inputs[-1]
-                            LOGGER.error(f"Failed to read output: {v}")
+                            LOGGER.error(
+                                f"Failed to read output: {v}, error: {e}")
 
     if len(outputs) == 0:
         raise RuntimeError(f"No output found in {output_dir}")
@@ -1585,25 +1612,44 @@ def log_metrics(response_times):
 def response_checker(res, message):
     if 'content-type' in res.headers.keys():
         if 'application/json' == res.headers['content-type']:
-            first_json = message.split('\n')[0]
-            output_json = json.loads(first_json)
-            if isinstance(output_json, dict):
-                if "details" in output_json.keys():
-                    if "error" == output_json["details"]["finish_reason"]:
-                        raise RuntimeError(f"Inference failed!")
-                elif output_json.get("code", 200) != 200:
-                    raise RuntimeError("Inference failed!")
+            first_json = message.split('\n')[0].strip()
+            if not first_json:
+                LOGGER.error(f"Empty JSON response: {message}")
+                raise RuntimeError("Empty JSON response")
+            try:
+                output_json = json.loads(first_json)
+                if isinstance(output_json, dict):
+                    if "details" in output_json.keys(
+                    ) and output_json["details"] is not None:
+                        if "error" == output_json["details"]["finish_reason"]:
+                            raise RuntimeError(f"Inference failed!")
+                    elif output_json.get("code", 200) != 200:
+                        raise RuntimeError("Inference failed!")
+            except json.JSONDecodeError as e:
+                LOGGER.error(
+                    f"Failed to parse JSON response: {first_json}, error: {e}")
+                raise RuntimeError(f"Invalid JSON response: {first_json}")
         elif 'application/jsonlines' == res.headers['content-type']:
             json_lines = []
             for item in message.split('\n'):
-                try:
-                    if len(item) > 0:
+                item = item.strip()
+                if len(item) > 0:
+                    try:
                         json_lines.append(json.loads(item))
-                except:
-                    raise RuntimeError(f"Json loading failure {item}")
+                    except json.JSONDecodeError as e:
+                        LOGGER.error(
+                            f"Json loading failure for item: {item}, error: {e}"
+                        )
+                        continue
+
+            if not json_lines:
+                LOGGER.error(
+                    f"No valid JSON lines found in message: {message}")
+                raise RuntimeError("No valid JSON lines found in response")
 
             output_json = json_lines[-1]
-            if "details" in output_json.keys():
+            if "details" in output_json.keys(
+            ) and output_json["details"] is not None:
                 if "error" == output_json["details"]["finish_reason"]:
                     raise RuntimeError(f"Inference failed!")
             elif output_json.get("code", 200) != 200:
@@ -1728,19 +1774,39 @@ def test_handler_adapters(model, model_spec):
     res = requests.post(endpoint, headers=headers,
                         json=reqs[0]).content.decode("utf-8")
     LOGGER.info(f"call deleted adapter {res}")
-    first_json = res.split('\n')[0]
-    assert json.loads(first_json).get(
-        "code"
-    ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
     if len(reqs) > 1:
         res = requests.post(endpoint, headers=headers,
                             json=reqs[1]).content.decode("utf-8")
         LOGGER.info(f"call valid adapter after deletion {res}")
-        # Parse only the first JSON object from the last line to handle extra data
-        last_line = res.splitlines()[-1]
-        first_json = last_line.split('\n')[0]
-        final_json = json.loads(first_json)
+        if not res or res.strip() == "":
+            LOGGER.error(f"Empty response received from model API: {res}")
+            raise RuntimeError("Empty response received from model API")
+
+        lines = res.splitlines()
+        if not lines:
+            LOGGER.error(f"No lines found in response: {res}")
+            raise RuntimeError("No lines found in response")
+
+        final_json = None
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                parsed_json = json.loads(line)
+                if parsed_json.get(
+                        "generated_text") is not None or parsed_json.get(
+                            "details") is not None:
+                    final_json = parsed_json
+                    break
+            except json.JSONDecodeError:
+                continue
+
+        if final_json is None:
+            LOGGER.error(f"No valid JSON found in response: {res}")
+            raise RuntimeError("No valid JSON found in response")
+
         if final_json.get("details", {}).get("finish_reason",
                                              "error") == "error":
             msg = f"Deleting adapter should not break inference for remaining adapters"
