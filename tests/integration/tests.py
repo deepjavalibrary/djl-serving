@@ -1120,7 +1120,7 @@ class TestLmiDistPipelineParallel:
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
-class TestVLLMCustomHandlers:
+class TestVllmCustomHandlers:
 
     def test_gpt_neox_20b_custom(self):
         with Runner('lmi', 'gpt-neox-20b') as r:
