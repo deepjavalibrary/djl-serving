@@ -26,7 +26,7 @@ class CustomFormatterError(Exception):
         self.__cause__ = original_exception
 
 
-class CustomFormatterHandling:
+class CustomFormatterHandler:
 
     def __init__(self):
         self.output_formatter = None
@@ -43,7 +43,6 @@ class CustomFormatterHandling:
                 f"Loaded formatters - input: {self.input_formatter}, output: {self.output_formatter}"
             )
         except Exception as e:
-            logger.exception("Failed to load custom formatters")
             raise CustomFormatterError(
                 f"Failed to load custom formatters from {model_dir}", e)
 

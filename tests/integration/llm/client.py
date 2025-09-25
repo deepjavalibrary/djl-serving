@@ -1668,7 +1668,7 @@ def test_custom_handler_async(model, model_spec):
         message = res.content.decode("utf-8")
         LOGGER.info(f"res: {message}")
         response_checker(res, message)
-        assert "custom_formatter_applied" in message, "Output does not contain custom_formatted field from custom output formatter"
+        assert "custom_formatter_applied" in message, "Output does not contain custom_formatter_applied_tag"
 
 
 def test_handler_adapters(model, model_spec):

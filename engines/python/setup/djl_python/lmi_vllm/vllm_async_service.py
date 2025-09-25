@@ -31,7 +31,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
-from djl_python.custom_formatter_handling import CustomFormatterHandling, CustomFormatterError
+from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 
 from .request_response_utils import (
     ProcessedRequest,
@@ -47,7 +47,7 @@ from .request_response_utils import (
 logger = logging.getLogger(__name__)
 
 
-class VLLMHandler(CustomFormatterHandling):
+class VLLMHandler(CustomFormatterHandler):
 
     def __init__(self):
         super().__init__()
