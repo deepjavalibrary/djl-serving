@@ -10,7 +10,7 @@ tasks {
                 commandLine(
                     "bash",
                     "-c",
-                    "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -not -path '*/venv/*' -print0 | xargs -0 yapf --in-place"
+                    "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -not -path '*/venv/*' -not -path '*/venv/*' -not -path '*/tests/integration/examples/*' -print0 | xargs -0 yapf --in-place"
                 )
             }
         }
@@ -24,7 +24,7 @@ tasks {
                     commandLine(
                         "bash",
                         "-c",
-                        "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -not -path '*/venv/*' -print0 | xargs -0 yapf -d"
+                        "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -not -path '*/venv/*' -not -path '*/tests/integration/examples/*' -print0 | xargs -0 yapf -d"
                     )
                 }
             } catch (e: Exception) {
