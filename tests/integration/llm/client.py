@@ -212,6 +212,14 @@ transformers_neuronx_neo_model_spec = {
     }
 }
 
+custom_formatter_spec = {
+    "gpt-neox-20b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-neox-20b"
+    },
+}
+
 lmi_dist_model_spec = {
     "gpt-neox-20b": {
         "batch_size": [1, 4],
@@ -1637,6 +1645,32 @@ def test_handler_rolling_batch(model, model_spec):
                 awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
+def test_custom_handler_async(model, model_spec):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
+    # dryrun phase
+    req = {"inputPrompt": batch_generation(1)[0]}
+    seq_length = spec["seq_length"][0]
+    params = {"do_sample": True, "maxOutputToken": seq_length, "details": True}
+    req["parameters"] = params
+    if "parameters" in spec:
+        req["parameters"].update(spec["parameters"])
+    if "adapters" in spec:
+        req["adapters"] = spec.get("adapters")[0]
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        message = res.content.decode("utf-8")
+        LOGGER.info(f"res: {message}")
+        response_checker(res, message)
+        assert "custom_formatter_applied" in message, "Output does not contain custom_formatter_applied_tag"
+
+
 def test_handler_adapters(model, model_spec):
     modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
@@ -2132,6 +2166,8 @@ def run(raw_args):
         test_handler_adapters(args.model, lmi_dist_model_spec)
     elif args.handler == "vllm":
         test_handler_rolling_batch(args.model, vllm_model_spec)
+    elif args.handler == "custom":
+        test_custom_handler_async(args.model, custom_formatter_spec)
     elif args.handler == "vllm_adapters":
         test_handler_adapters(args.model, vllm_model_spec)
     elif args.handler == "lmi_dist_chat":
