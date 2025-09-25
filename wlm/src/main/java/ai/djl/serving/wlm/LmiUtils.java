@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
@@ -20,7 +21,6 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
-import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 
@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 /** A utility class to detect optimal engine for LMI model. */
 public final class LmiUtils {
@@ -95,11 +97,22 @@ public final class LmiUtils {
                 modelConfig.getModelType());
     }
 
+    static boolean isTrtLlmRollingBatch(Properties properties) {
+        String rollingBatch = properties.getProperty("option.rolling_batch");
+        if ("trtllm".equals(rollingBatch)) {
+            return true;
+        }
+        if (rollingBatch == null || "auto".equals(rollingBatch)) {
+            // FIXME: find a better way to set default rolling batch for trtllm
+            String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
+            return features != null && features.contains("trtllm");
+        }
+        return false;
+    }
+
     static boolean needConvertTrtLLM(ModelInfo<?, ?> info) {
-        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
-        // Pytorch backend cannot be saved as engine currently in TRTLLM...
-        String backend = info.prop.getProperty("option.backend");
-        return features != null && features.contains("trtllm") && !"pytorch".equals(backend);
+        Properties properties = info.getProperties();
+        return isTrtLlmRollingBatch(properties);
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
@@ -131,6 +144,8 @@ public final class LmiUtils {
         if (ppDegree == null) {
             ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
         }
+
+        info.prop.put("option.rolling_batch", "trtllm");
         if (!isValidTrtLlmModelRepo(trtRepo)) {
             info.downloadDir = buildTrtLlmArtifacts(info.prop, modelId, tpDegree, ppDegree);
         }
@@ -378,7 +393,7 @@ public final class LmiUtils {
     private static Path buildTrtLlmArtifacts(
             Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
-        String hash = Utils.hash(modelId + tpDegree + ppDegree);
+        String hash = Utils.hash(modelId + tpDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
         Path trtLlmRepoDir = parent.resolve("trtllm").resolve(hash);
@@ -423,14 +438,52 @@ public final class LmiUtils {
         }
     }
 
-    static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
-        Path configFile = modelPath.resolve("config.json");
-        if (Files.exists(configFile) && Files.isRegularFile(configFile)) {
-            String config = Files.readString(configFile);
-            JsonObject json = JsonUtils.GSON.fromJson(config, JsonObject.class);
-            return json.has("build_config");
+    // TODO: migrate this to CUDAUtils in next version
+    static String getAWSGpuMachineType() {
+        String computeCapability = CudaUtils.getComputeCapability(0);
+        // Get gpu memory in GB sizes
+        double totalMemory =
+                CudaUtils.getGpuMemory(Device.gpu()).getMax() / 1024.0 / 1024.0 / 1024.0;
+        if ("7.5".equals(computeCapability)) {
+            return "g4";
+        } else if ("8.0".equals(computeCapability)) {
+            if (totalMemory > 45.0) {
+                return "p4de";
+            }
+            return "p4d";
+        } else if ("8.6".equals(computeCapability)) {
+            return "g5";
+        } else if ("8.9".equals(computeCapability)) {
+            if (totalMemory > 25.0) {
+                return "g6e";
+            }
+            return "g6";
+        } else if ("9.0".equals(computeCapability)) {
+            return "p5";
+        } else {
+            logger.warn("Could not identify GPU arch {}", computeCapability);
+            return null;
         }
-        return false;
+    }
+
+    static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
+        // TODO: match model name
+        AtomicBoolean isValid = new AtomicBoolean();
+        try (Stream<Path> walk = Files.list(modelPath)) {
+            walk.filter(Files::isDirectory)
+                    .forEach(
+                            p -> {
+                                Path confFile = p.resolve("config.pbtxt");
+                                // TODO: add stricter check for tokenizer
+                                Path tokenizer = p.resolve("tokenizer_config.json");
+                                if (Files.isRegularFile(confFile)
+                                        && Files.isRegularFile(tokenizer)) {
+                                    logger.info("Found triton model: {}", p);
+                                    isValid.set(true);
+                                }
+                            });
+        }
+        return isValid.get();
     }
 
     /**
