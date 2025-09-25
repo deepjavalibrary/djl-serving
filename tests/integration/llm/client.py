@@ -1032,7 +1032,9 @@ def validate_correctness(type, tasks, expected):
                         inputs.append(json.loads(v)["inputs"])
                     elif k == "output":
                         try:
-                            outputs.append(json.loads(v)["generated_text"])
+                            first_json = v.split('\n')[0]
+                            outputs.append(
+                                json.loads(first_json)["generated_text"])
                         except JSONDecodeError:
                             # delete the last input
                             del inputs[-1]
@@ -1491,7 +1493,9 @@ def load_dataset(dataset):
         raise ValueError(f"Unsupported dataset: {dataset}")
 
     for line in urllib.request.urlopen(url):
-        data = json.loads(line.decode('utf-8'))
+        line_str = line.decode('utf-8')
+        first_json = line_str.split('\n')[0]
+        data = json.loads(first_json)
         res[data[key]] = data
     return res
 
@@ -1573,7 +1577,8 @@ def log_metrics(response_times):
 def response_checker(res, message):
     if 'content-type' in res.headers.keys():
         if 'application/json' == res.headers['content-type']:
-            output_json = json.loads(message)
+            first_json = message.split('\n')[0]
+            output_json = json.loads(first_json)
             if isinstance(output_json, dict):
                 if "details" in output_json.keys():
                     if "error" == output_json["details"]["finish_reason"]:
@@ -1689,7 +1694,8 @@ def test_handler_adapters(model, model_spec):
     res = requests.post(endpoint, headers=headers,
                         json=reqs[0]).content.decode("utf-8")
     LOGGER.info(f"call deleted adapter {res}")
-    assert json.loads(res).get(
+    first_json = res.split('\n')[0]
+    assert json.loads(first_json).get(
         "code"
     ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
@@ -1697,7 +1703,10 @@ def test_handler_adapters(model, model_spec):
         res = requests.post(endpoint, headers=headers,
                             json=reqs[1]).content.decode("utf-8")
         LOGGER.info(f"call valid adapter after deletion {res}")
-        final_json = json.loads(res.splitlines()[-1])
+        # Parse only the first JSON object from the last line to handle extra data
+        last_line = res.splitlines()[-1]
+        first_json = last_line.split('\n')[0]
+        final_json = json.loads(first_json)
         if final_json.get("details", {}).get("finish_reason",
                                              "error") == "error":
             msg = f"Deleting adapter should not break inference for remaining adapters"
