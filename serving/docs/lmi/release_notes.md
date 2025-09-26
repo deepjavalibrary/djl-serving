@@ -1,20 +1,24 @@
-# LMI V15 DLC containers release
+# Release Notes
 
-This document will contain the latest releases of our LMI containers for use on SageMaker. 
-For details on any other previous releases, please refer our [github release page](https://github.com/deepjavalibrary/djl-serving/releases)
+This document will contain release notes for newly released Large Model Inference (LMI) images for use on SageMaker.
+For details on historical releases, please refer to our [Github Releases page](https://github.com/deepjavalibrary/djl-serving/releases).
 
-## Release Notes
+## LMI V16 (DJL-Serving 0.34.0) DLC
 
-### Key Features
+Meet your brand new image! 💿
 
-#### LMI Container (vllm) - Release 4-17-2025
+#### LMI (vLLM) Image - 9-30-2025
+* vLLM updated to version 0.10.2
+* Multi-LoRA (adapters) support in async mode
+* Session-based sticky routing in async mode
+* Updated custom input and output formatters support in async mode
+
+## LMI V15 (DJL-Serving 0.33.0) DLC
+
+#### LMI (vLLM) Image - 4-17-2025
 * vLLM updated to version 0.8.4
 * Llama4 Model Support
-* Updated Async Implementation, please see the [vLLM async user guide here](user_guides/vllm_user_guide.md#async-mode-configurations). 
+* Updated Async Implementation, please see the [vLLM async user guide here](user_guides/vllm_user_guide.md#async-mode-configurations) 
 
-#### TensorRT-LLM Container - Coming Soon 
-We plan to update our TensorRT-LLM integration in LMI v15.
-This update will include
-
-* Integration with TensorRT-LLM version 0.18.2
-* Deprecation of Rolling Batch support, and replacement with Async Engine support
+#### TensorRT-LLM Image - 6-24-2025
+* Integration with TensorRT-LLM version 0.21.0rc1
