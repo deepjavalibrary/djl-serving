@@ -39,7 +39,7 @@ class TorchServeService(ModelService):
         for k, v in inputs.get_properties().items():
             header = dict()
             header["name"] = k.encode("utf-8")
-            header["value"] = v.encode("utf-8")
+            header["value"] = str(v).encode("utf-8")
             request["headers"].append(header)
 
         content = inputs.get_content()
