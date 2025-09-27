@@ -173,7 +173,9 @@ jobs:
           - test: TestCorrectnessTrtLlm
             instance: g6
             failure-prefix: trtllm
-
+          - test: TestStatefulModel
+            instance: g6
+            failure-prefix: lmi
     outputs:
       failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
       failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}

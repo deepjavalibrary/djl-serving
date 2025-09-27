@@ -53,13 +53,11 @@ class Session:
             return pickle.load(f)
 
     def remove(self):
-        if os.path.exists(self.files_path):
-            logging.info(f"closing session: {self.session_id}")
-            shutil.rmtree(self.files_path)
-            return True
-        else:
-            logging.warning(f"session not found: {self.session_id}")
-            return False
+        if not os.path.exists(self.files_path):
+            raise ValueError(f"session not found: {self.session_id}")
+        logging.info(f"closing session: {self.session_id}")
+        shutil.rmtree(self.files_path)
+        return True
 
     def _path(self, key: str):
         return os.path.join(self.files_path, key.replace("/", "-"))
@@ -92,16 +90,22 @@ class SessionManager:
         session_id = str(uuid.uuid4())
         session = Session(session_id, self.sessions_path)
         os.makedirs(session.files_path)
-        session.put(".creation_time", time.time())
+        expiration_time = time.time() + self.expiration
+        session.put(".expiration_time", expiration_time)
 
         self.cloud_watch.post("create_session")
         return session
 
     def get_session(self, session_id: str) -> Optional[Session]:
         if not session_id or not UUID_PATTERN.match(session_id):
-            raise ValueError(f"invalid session_id: {session_id}")
+            logging.warning(f"invalid session_id: {session_id}")
+            return None
 
         session = Session(session_id, self.sessions_path)
+        if time.time() > session.get(".expiration_time"):
+            self.close_session(session_id)
+            return None
+
         if not os.path.exists(session.files_path):
             return self._recover_from_s3(session)
 
@@ -119,7 +123,7 @@ class SessionManager:
         sessions = os.listdir(self.sessions_path)
         for session_id in sessions:
             session = Session(session_id, self.sessions_path)
-            if time.time() - session.get(".creation_time") > self.expiration:
+            if time.time() > session.get(".expiration_time"):
                 self.close_session(session_id)
 
     def _recover_from_s3(self, session: Session) -> Optional[Session]:

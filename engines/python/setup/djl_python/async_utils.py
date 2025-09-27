@@ -18,12 +18,14 @@ from djl_python.outputs import Output
 
 
 def create_non_stream_output(data: Union[str, dict],
+                             properties: Optional[dict] = None,
                              error: Optional[str] = None,
                              code: Optional[int] = None) -> Output:
     return _create_output(
         data,
         True,
         "application/json",
+        properties=properties,
         error=error,
         code=code,
     )
@@ -46,6 +48,7 @@ def _create_output(
     data: Union[str, dict],
     last_chunk: bool,
     content_type: str,
+    properties: Optional[dict] = None,
     error: Optional[str] = None,
     code: Optional[int] = None,
 ) -> Output:
@@ -65,6 +68,9 @@ def _create_output(
         response_dict["code"] = code
     output = Output()
     output.add_property("Content-Type", content_type)
+    if properties:
+        for k, v in properties.items():
+            output.add_property(k, v)
     output.add(Output.binary_encode(response_dict))
     return output
 

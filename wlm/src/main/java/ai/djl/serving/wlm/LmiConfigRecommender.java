@@ -42,6 +42,7 @@ public final class LmiConfigRecommender {
         setRollingBatchSize(lmiProperties);
         setIsPeftModel(lmiProperties, modelConfig);
         setPropertiesForLora(lmiProperties);
+        setPropertiesForStickyRouting(lmiProperties);
     }
 
     private static void setRollingBatch(
@@ -162,6 +163,20 @@ public final class LmiConfigRecommender {
             logger.info(
                     "option.enable_lora is set to true, setting load_on_devices=0 and"
                             + " maxWorkers=1");
+            lmiProperties.setProperty("load_on_devices", "0");
+            lmiProperties.setProperty("maxWorkers", "1");
+        }
+    }
+
+    private static void setPropertiesForStickyRouting(Properties lmiProperties) {
+        // If option.enable_sticky_routing=true, set load_on_devices=0 and maxWorkers=1 because we
+        // only support one worker thread for sticky routing.
+        boolean enableStickyRouting =
+                Boolean.parseBoolean(lmiProperties.getProperty("option.enable_stateful_sessions"));
+        if (enableStickyRouting) {
+            logger.info(
+                    "option.enable_sticky_routing is set to true,"
+                            + " setting load_on_devices=0 and maxWorkers=1");
             lmiProperties.setProperty("load_on_devices", "0");
             lmiProperties.setProperty("maxWorkers", "1");
         }
