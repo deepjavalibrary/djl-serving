@@ -31,9 +31,8 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
-from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
-
-from .request_response_utils import (
+from djl_python.custom_formatter_handling import CustomFormatterError, CustomFormatterHandler
+from djl_python.lmi_vllm.request_response_utils import (
     ProcessedRequest,
     vllm_stream_output_formatter,
     vllm_non_stream_output_formatter,
@@ -43,8 +42,14 @@ from .request_response_utils import (
     lmi_with_details_non_stream_output_formatter,
     lmi_non_stream_output_formatter,
 )
+from djl_python.session_manager import SessionManager
+from djl_python.session_utils import (create_session, close_session,
+                                      get_session,
+                                      session_non_stream_output_formatter)
 
 logger = logging.getLogger(__name__)
+
+SESSION_REQUESTS = {"NEW_SESSION": create_session, "CLOSE": close_session}
 
 
 class VLLMHandler(CustomFormatterHandler):
@@ -119,12 +124,15 @@ class VLLMHandler(CustomFormatterHandler):
             tool_parser=self.vllm_properties.tool_call_parser,
             reasoning_parser=self.vllm_properties.reasoning_parser,
         )
+        if properties.get("enable_stateful_sessions", "true") == "true":
+            self.session_manager: SessionManager = SessionManager(properties)
         self.initialized = True
 
     def preprocess_request(self, inputs: Input) -> ProcessedRequest:
         batch = inputs.get_batches()
         assert len(batch) == 1, "only one request per batch allowed"
         raw_request = batch[0]
+        session = get_session(self.session_manager, raw_request)
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
 
@@ -159,6 +167,20 @@ class VLLMHandler(CustomFormatterHandler):
             vllm_request = ChatCompletionRequest(**decoded_payload)
             vllm_invoke_function = self.chat_completion_service.create_chat_completion
             non_stream_output_formatter = vllm_non_stream_output_formatter
+            stream_output_formatter = vllm_stream_output_formatter
+        elif "requestType" in decoded_payload:
+            request_type = decoded_payload["requestType"]
+            if request_type not in SESSION_REQUESTS.keys():
+                raise RuntimeError(
+                    f"invalid payload. request type must be one of {SESSION_REQUESTS.keys()}"
+                )
+            if self.session_manager is None:
+                raise RuntimeError(
+                    f"invalid payload. stateful sessions not enabled, {request_type} not supported"
+                )
+            vllm_request = self.session_manager, inputs
+            vllm_invoke_function = SESSION_REQUESTS[request_type]
+            non_stream_output_formatter = session_non_stream_output_formatter
             stream_output_formatter = vllm_stream_output_formatter
         else:
             raise RuntimeError(
