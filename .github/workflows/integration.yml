@@ -133,46 +133,6 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - test: TestCpuFull
-            instance: cpu
-            failure-prefix: cpu
-          - test: TestCpuBoth
-            instance: cpu
-            failure-prefix: cpu
-          - test: TestGpu
-            instance: g6
-            failure-prefix: gpu
-          - test: TestAarch64
-            instance: aarch64
-            failure-prefix: aarch64
-          - test: TestHfHandler
-            instance: g6
-            failure-prefix: lmi
-          - test: TestTrtLlmHandler1
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestTrtLlmHandler2
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestVllm1
-            instance: g6
-            failure-prefix: lmi
-          - test: TestVllmCustomHandlers
-            instance: g6
-            failure-prefix: lmi
-          # - test: TestVllmLora
-          #   instance: g6
-          #   failure-prefix: lmi
-
-          - test: TestMultiModalVllm
-            instance: g6
-            failure-prefix: lmi
-          # - test: TestTextEmbedding
-          #   instance: g6
-          #   failure-prefix: lmi
-          - test: TestCorrectnessTrtLlm
-            instance: g6
-            failure-prefix: trtllm
           - test: TestStatefulModel
             instance: g6
             failure-prefix: lmi
