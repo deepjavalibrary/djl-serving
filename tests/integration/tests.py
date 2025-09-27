@@ -1186,3 +1186,13 @@ class TestTextEmbedding:
             prepare.build_text_embedding_model("bge-base-onnx")
             r.launch()
             client.run("text_embedding bge-base-onnx".split())
+
+
+@pytest.mark.gpu
+class TestStatefulModel:
+
+    def test_llama3_8b(self):
+        with Runner('lmi', 'llama3-8b') as r:
+            prepare.build_stateful_model("llama3-8b")
+            r.launch()
+            client.run("stateful llama3-8b".split())
