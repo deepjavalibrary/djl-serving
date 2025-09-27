@@ -97,15 +97,21 @@ class SessionManager:
         return session
 
     def get_session(self, session_id: str) -> Optional[Session]:
+        if session_id == "NEW_SESSION":
+            return None
+
         if not session_id or not UUID_PATTERN.match(session_id):
             logging.warning(f"invalid session_id: {session_id}")
             return None
 
+        # Session expired
         session = Session(session_id, self.sessions_path)
-        if time.time() > session.get(".expiration_time"):
+        if session.get(".expiration_time") is not None \
+                and time.time() > session.get(".expiration_time"):
             self.close_session(session_id)
             return None
 
+        # Session not found, try to recover from s3 bucket
         if not os.path.exists(session.files_path):
             return self._recover_from_s3(session)
 
@@ -123,7 +129,8 @@ class SessionManager:
         sessions = os.listdir(self.sessions_path)
         for session_id in sessions:
             session = Session(session_id, self.sessions_path)
-            if time.time() > session.get(".expiration_time"):
+            if session.get(".expiration_time") is None \
+                    or time.time() > session.get(".expiration_time"):
                 self.close_session(session_id)
 
     def _recover_from_s3(self, session: Session) -> Optional[Session]:
