@@ -231,7 +231,7 @@ vllm_service = VLLMHandler()
 async def handle(
         inputs: Input
 ) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
-
+    global custom_service
     # Initialize custom service once
     if custom_service is None:
         custom_service = CustomHandlerService(inputs.get_properties())
