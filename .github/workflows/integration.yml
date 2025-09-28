@@ -160,6 +160,9 @@ jobs:
           - test: TestVllmCustomHandlers
             instance: g6
             failure-prefix: lmi
+          - test: TestVllmCustomFormatters
+            instance: g6
+            failure-prefix: lmi
           # - test: TestVllmLora
           #   instance: g6
           #   failure-prefix: lmi
