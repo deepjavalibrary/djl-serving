@@ -190,3 +190,62 @@ For example, if you want to enable the `speculative_config`, you can do:
 
 * `option.speculative_config={"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}`
 * `OPTION_SPECULATIVE_CONFIG={"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}`
+
+## Custom Handlers
+
+**Note: Custom handler support is only available in async mode.**
+
+vLLM async mode supports custom handlers that allow you to implement custom inference logic while still leveraging the vLLM engine.
+To use a custom handler, create a `model.py` file in your model directory with an async `handle` function.
+
+### Custom Handler Example
+
+```python
+from djl_python import Input, Output
+from djl_python.encode_decode import decode
+from djl_python.async_utils import create_non_stream_output
+from vllm import LLM, SamplingParams
+
+llm = None
+
+async def handle(inputs: Input) -> Output:
+    """Custom async handler with vLLM generate"""
+    global llm
+    
+    # Initialize vLLM LLM if not already done
+    if llm is None:
+        properties = inputs.get_properties()
+        model_id = properties.get("model_id", "gpt2")
+        llm = LLM(model=model_id, tensor_parallel_size=1)
+    
+    # Parse input
+    batch = inputs.get_batches()
+    raw_request = batch[0]
+    content_type = raw_request.get_property("Content-Type")
+    decoded_payload = decode(raw_request, content_type)
+    
+    prompt = decoded_payload.get("inputs", "Hello")
+    
+    # Create sampling parameters
+    sampling_params = SamplingParams(max_tokens=50, temperature=0.8)
+    
+    # Generate using vLLM
+    outputs = llm.generate([prompt], sampling_params)
+    generated_text = outputs[0].outputs[0].text if outputs else "No output"
+    
+    # Create response
+    response = {
+        "generated_text": generated_text
+    }
+    
+    # Return properly formatted output
+    return create_non_stream_output(response)
+```
+
+### Key Points for Custom Handlers
+
+- The `handle` function must be async and accept an `Input` parameter
+- Use `create_non_stream_output()` or `handle_streaming_response` from `djl_python.async_utils` to format the response
+- Access model properties via `inputs.get_properties()`
+- Parse request data using `decode()` from `djl_python.encode_decode`
+- If the custom handler fails or is not found, the system will automatically fall back to the default vLLM handler

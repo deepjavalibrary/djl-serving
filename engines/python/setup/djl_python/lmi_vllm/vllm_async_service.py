@@ -32,7 +32,6 @@ from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
 from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
-
 from .request_response_utils import (
     ProcessedRequest,
     vllm_stream_output_formatter,
@@ -43,6 +42,7 @@ from .request_response_utils import (
     lmi_with_details_non_stream_output_formatter,
     lmi_non_stream_output_formatter,
 )
+from djl_python.custom_handler_service import CustomHandlerService
 
 logger = logging.getLogger(__name__)
 
@@ -223,17 +223,34 @@ class VLLMHandler(CustomFormatterHandler):
         )
 
 
-service = VLLMHandler()
+# Try to use custom handler first, fall back to VLLMHandler
+custom_service = None
+vllm_service = VLLMHandler()
 
 
 async def handle(
         inputs: Input
 ) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
-    if not service.initialized:
-        await service.initialize(inputs.get_properties())
-        logger.info("vllm service initialized")
+
+    # Initialize custom service once
+    if custom_service is None:
+        custom_service = CustomHandlerService(inputs.get_properties())
+
+    # Try custom handler first
+    if custom_service.initialized:
+        logger.info("Using custom handler for request")
+        result = await custom_service.handle(inputs)
+        if result is not None:
+            logger.info("Custom handler completed successfully")
+            return result
+
+    # Fall back to vLLM handler
+    if not vllm_service.initialized:
+        await vllm_service.initialize(inputs.get_properties())
+        logger.info("Default vLLM service initialized")
+
     if inputs.is_empty():
         return None
 
-    outputs = await service.inference(inputs)
+    outputs = await vllm_service.inference(inputs)
     return outputs

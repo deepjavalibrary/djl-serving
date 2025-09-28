@@ -1691,6 +1691,25 @@ def build_vllm_async_model(model):
     write_model_artifacts(options)
 
 
+def build_vllm_async_model_with_custom_handler(model, handler_type="success"):
+    if model not in vllm_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
+        )
+    options = vllm_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = "true"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
+    write_model_artifacts(options)
+
+    # Copy custom handler from examples
+    source_file = f"examples/custom_handlers/{handler_type}.py"
+    target_file = "models/test/model.py"
+    if os.path.exists(source_file):
+        shutil.copy2(source_file, target_file)
+
+
 def build_vllm_async_model_custom_formatters(model, error_type=None):
     if model not in vllm_model_list.keys():
         raise ValueError(
@@ -1853,7 +1872,8 @@ supported_handler = {
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
     'vllm_async': build_vllm_async_model,
-    'vllm_async_custom_formatters': build_vllm_async_model_custom_formatters
+    'vllm_async_custom_formatters': build_vllm_async_model_custom_formatters,
+    'vllm_async_custom_handler': build_vllm_async_model_with_custom_handler
 }
 
 if __name__ == '__main__':
