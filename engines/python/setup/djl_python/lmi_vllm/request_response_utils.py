@@ -47,6 +47,7 @@ class ProcessedRequest:
         self.stream_output_formatter = stream_output_formatter
         self.accumulate_chunks = accumulate_chunks
         self.include_prompt = include_prompt
+        self.lora_request = None
 
 
 def convert_lmi_schema_to_completion_request(

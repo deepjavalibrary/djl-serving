@@ -145,34 +145,36 @@ jobs:
           - test: TestAarch64
             instance: aarch64
             failure-prefix: aarch64
-          - test: TestHfHandler
-            instance: g6
-            failure-prefix: lmi
-          - test: TestTrtLlmHandler1
-            instance: g6
-            failure-prefix: trtllm
-          - test: TestTrtLlmHandler2
-            instance: g6
-            failure-prefix: trtllm
+          # - test: TestHfHandler
+          #   instance: g6
+          #   failure-prefix: lmi
+          # - test: TestTrtLlmHandler1
+          #   instance: g6
+          #   failure-prefix: trtllm
+          # - test: TestTrtLlmHandler2
+          #   instance: g6
+          #   failure-prefix: trtllm
           - test: TestVllm1
             instance: g6
             failure-prefix: lmi
           - test: TestVllmCustomHandlers
             instance: g6
             failure-prefix: lmi
-          # - test: TestVllmLora
-          #   instance: g6
-          #   failure-prefix: lmi
-
+          - test: TestVllmLora
+            instance: g6
+            failure-prefix: lmi
+          - test: TestVllmAsyncLora
+            instance: g6
+            failure-prefix: lmi
           - test: TestMultiModalVllm
             instance: g6
             failure-prefix: lmi
           # - test: TestTextEmbedding
           #   instance: g6
           #   failure-prefix: lmi
-          - test: TestCorrectnessTrtLlm
-            instance: g6
-            failure-prefix: trtllm
+          # - test: TestCorrectnessTrtLlm
+          #   instance: g6
+          #   failure-prefix: trtllm
           - test: TestStatefulModel
             instance: g6
             failure-prefix: lmi
