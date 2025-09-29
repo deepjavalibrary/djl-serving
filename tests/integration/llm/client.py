@@ -16,6 +16,8 @@ import urllib
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from json.decoder import JSONDecodeError
+from djl_python.session_utils import (HEADER_SAGEMAKER_SESSION_ID,
+                                      HEADER_SAGEMAKER_CLOSED_SESSION_ID)
 
 FAILED_DEPENDENCY_CODE = 424
 TIMEOUT = 3.0
@@ -990,6 +992,18 @@ handler_performance_model_spec = {
     }
 }
 
+stateful_model_spec = {
+    "llama3-8b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
+    "gemma-2b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+}
+
 
 def add_file_handler_to_logger(file_path: str):
     handler = logging.FileHandler(file_path, mode='w')
@@ -1104,8 +1118,8 @@ def validate_correctness(type, tasks, expected):
     assert score >= expected
 
 
-def send_json(data):
-    headers = {'content-type': 'application/json'}
+def send_json(data, headers={}):
+    headers["content-type"] = "application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
     resp = requests.post(endpoint, headers=headers, json=data)
 
@@ -1131,13 +1145,14 @@ def awscurl_run(data,
                 tokenizer,
                 concurrency,
                 num_run=5,
+                headers=[],
                 dataset=False,
                 output=False,
                 json_results=False,
                 random_delay=False,
                 jsonquery=None):
     find_awscurl()
-    headers = "'Content-type: application/json'"
+    headers.append("'Content-type: application/json'")
     endpoint = f"http://127.0.0.1:8080/invocations"
     if dataset:
         dataset_dir = os.path.join(os.path.curdir, "dataset")
@@ -1163,8 +1178,10 @@ def awscurl_run(data,
         jq = f'-j "{jsonquery}"'
 
     command = (f"./awscurl -c {concurrency} "
-               f"-N {num_run} -X POST {endpoint} --connect-timeout 300 "
-               f"-H {headers} {command_data} {delay} {json_output} {jq} -P -t")
+               f"-N {num_run} -X POST {endpoint} --connect-timeout 300")
+    for header in headers:
+        command += f" -H {header}"
+    command = f" {command_data} {delay} {json_output} {jq} -P -t"
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
@@ -1219,6 +1236,24 @@ def fake_tokenizer(prompt, in_tokens):
         if token_count == in_tokens:
             break
     return prompt[:index_pointer]
+
+
+def create_session():
+    req = {"requestType": "NEW_SESSION"}
+    res = send_json(req)
+    if res.status_code >= 300:
+        return None
+    session_id = res.headers.get(HEADER_SAGEMAKER_SESSION_ID).split(';')[0]
+    return session_id
+
+
+def close_session(session_id):
+    req = {"requestType": "CLOSE"}
+    res = send_json(req, headers={HEADER_SAGEMAKER_SESSION_ID: session_id})
+    if res.status_code >= 300:
+        return None
+    session_id = res.headers.get(HEADER_SAGEMAKER_CLOSED_SESSION_ID)
+    return session_id
 
 
 def prompt_generation(in_tokens):
@@ -2179,6 +2214,59 @@ def test_text_embedding_model(model, model_spec):
         awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
+def test_handler_stateful(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+
+    # Create session
+    session_id = create_session()
+    if session_id is None:
+        raise RuntimeError("Create session failed!")
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
+    # dryrun phase
+    req = {"inputs": batch_generation(1)[0]}
+    seq_length = spec["seq_length"][0]
+    params = {"do_sample": True, "max_new_tokens": seq_length, "details": True}
+    req["parameters"] = params
+    if "parameters" in spec:
+        req["parameters"].update(spec["parameters"])
+    if "adapters" in spec:
+        req["adapters"] = spec.get("adapters")[0]
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req, headers={HEADER_SAGEMAKER_SESSION_ID: session_id})
+        message = res.content.decode("utf-8")
+        LOGGER.info(f"res: {message}")
+        response_checker(res, message)
+
+    # awscurl little benchmark phase
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            for stream in stream_values:
+                req["stream"] = stream
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["parameters"]["max_new_tokens"] = seq_length
+                awscurl_run(
+                    req,
+                    spec.get("tokenizer", None),
+                    batch_size,
+                    headers=[f"'{HEADER_SAGEMAKER_SESSION_ID}: {session_id}'"])
+
+    # Close session
+    closed_session_id = close_session(session_id)
+    if closed_session_id is None:
+        raise RuntimeError("Close session failed!")
+
+
 def run(raw_args):
     parser = argparse.ArgumentParser(description="Build the LLM configs")
     parser.add_argument("handler", help="the handler used in the model")
@@ -2275,7 +2363,8 @@ def run(raw_args):
         test_multimodal(args.model, multi_modal_spec)
     elif args.handler == "text_embedding":
         test_text_embedding_model(args.model, text_embedding_model_spec)
-
+    elif args.handler == "stateful":
+        test_handler_stateful(args.model, stateful_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

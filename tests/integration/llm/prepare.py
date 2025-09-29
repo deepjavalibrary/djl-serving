@@ -1521,6 +1521,22 @@ handler_performance_model_list = {
     },
 }
 
+stateful_model_list = {
+    "llama3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32,
+    },
+    "gemma-2b": {
+        "option.model_id": "s3://djl-llm/gemma-2b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 32,
+    },
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1738,6 +1754,47 @@ def build_vllm_async_model_custom_formatters(model, error_type=None):
             shutil.copy2(source_file, target_file)
 
 
+def build_vllm_async_model_custom_formatters(model, error_type=None):
+    if model not in vllm_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
+        )
+    options = vllm_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = "true"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
+    write_model_artifacts(options)
+
+    # Create custom formatter files based on error_type
+    source_dir = "examples/custom_formatters/"
+    target_dir = "models/test/"
+
+    if not error_type:
+        source_dir = "examples/custom_formatters/"
+        target_dir = "models/test/"
+        if os.path.exists(source_dir):
+            for filename in os.listdir(source_dir):
+                source_file = os.path.join(source_dir, filename)
+                target_file = os.path.join(target_dir, filename)
+                if os.path.isfile(source_file):
+                    shutil.copy2(source_file, target_file)
+        return
+    elif error_type == "input":
+        filename = "input_formatter_failed.py"
+    elif error_type == "output":
+        # Create model.py with failing output formatter
+        filename = "output_formatter_failed.py"
+    elif error_type == "load":
+        # Create model.py with syntax error to cause load failure
+        filename = "load_formatter_failed.py"
+    if os.path.exists(source_dir):
+        source_file = os.path.join(source_dir, filename)
+        target_file = os.path.join(target_dir, "model.py")
+        if os.path.isfile(source_file):
+            shutil.copy2(source_file, target_file)
+
+
 def build_vllm_model(model):
     if model not in vllm_model_list.keys():
         raise ValueError(
@@ -1841,6 +1898,21 @@ def build_text_embedding_model(model):
     options = text_embedding_model_list[model]
     options["option.task"] = "text_embedding"
     options["normalize"] = False
+    write_model_artifacts(options)
+
+
+def build_stateful_model(model):
+    if model not in stateful_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(text_embedding_model_list.keys())}"
+        )
+    options = stateful_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = "true"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
+    options["option.enable_stateful_sessions"] = "true"
+    options["option.sessions_path"] = "/tmp/djl_sessions"
     write_model_artifacts(options)
 
 

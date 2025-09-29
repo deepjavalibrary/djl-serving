@@ -84,10 +84,23 @@ public class PySessionsTests {
 
             // test session timeout
             Thread.sleep(1000);
+            regular = new Input();
+            regular.addProperty("Content-Type", "application/json");
+            regular.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
+            regular.add(BytesSupplier.wrapAsJson(Map.of("action", "regular")));
+            ret = predictor.predict(regular);
+            Assert.assertEquals(ret.getProperty("Content-Type", null), "application/json");
+            Assert.assertTrue(ret.getAsString(0).contains("session not found"));
+            long count;
+            try (Stream<Path> files = Files.list(path)) {
+                count = files.count();
+            }
+            Assert.assertEquals(count, 1);
+
+            // create a new session
             ret = predictor.predict(createSession);
             sessionId = ret.getProperty("X-Amzn-SageMaker-Session-Id", null);
             Assert.assertNotNull(sessionId);
-            long count;
             try (Stream<Path> files = Files.list(path)) {
                 count = files.count();
             }
