@@ -12,9 +12,12 @@
 # the specific language governing permissions and limitations under the License.
 import json
 import logging
+import os
 from typing import AsyncGenerator, Callable, Optional, Union
 
+from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.input_parser import SAGEMAKER_ADAPTER_IDENTIFIER_HEADER
 
 
 def create_non_stream_output(data: Union[str, dict],
@@ -112,3 +115,157 @@ async def handle_streaming_response(
         yield output
         if last:
             return
+
+
+def _extract_lora_adapter(raw_request, decoded_payload):
+    """
+    Get lora adapter name from request headers or payload.
+    """
+    adapter_name = None
+
+    if SAGEMAKER_ADAPTER_IDENTIFIER_HEADER in raw_request.get_properties():
+        adapter_name = raw_request.get_property(
+            SAGEMAKER_ADAPTER_IDENTIFIER_HEADER)
+        logging.debug(f"Found adapter in headers: {adapter_name}")
+    elif "adapter" in decoded_payload:
+        adapter_name = decoded_payload.pop("adapter")
+        logging.debug(f"Found adapter in payload: {adapter_name}")
+
+    return adapter_name
+
+
+async def register_adapter(inputs: Input, service):
+    """
+    Registers lora adapter with the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+    adapter_path = inputs.get_property("src")
+    adapter_preload = inputs.get_as_string("preload").lower(
+    ) == "true" if inputs.contains_key("preload") else True
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
+
+    outputs = Output()
+    loaded = False
+    try:
+        if not os.path.exists(adapter_path):
+            raise ValueError(
+                f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+            )
+
+        if not adapter_preload and adapter_pin:
+            raise ValueError("Can not set preload to false and pin to true")
+
+        if adapter_preload:
+            loaded = await service.add_lora(adapter_name, adapter_alias,
+                                            adapter_path)
+
+        if adapter_pin:
+            await service.pin_lora(adapter_name, adapter_alias)
+        service.adapter_registry[adapter_name] = inputs
+    except Exception as e:
+        logging.debug(f"Failed to register adapter: {e}", exc_info=True)
+        if loaded:
+            logging.info(
+                f"LoRA adapter {adapter_alias} was successfully loaded, but failed to pin, unloading ..."
+            )
+            await service.remove_lora(adapter_name, adapter_alias)
+        if any(msg in str(e)
+               for msg in ("No free lora slots",
+                           "greater than the number of GPU LoRA slots")):
+            raise MemoryError(str(e))
+        err = {"data": "", "last": True, "code": 424, "error": str(e)}
+        outputs.add(Output.binary_encode(err), key="data")
+        return outputs
+
+    logging.info(
+        f"Registered adapter {adapter_alias} from {adapter_path} successfully")
+    result = {"data": f"Adapter {adapter_alias} registered"}
+    outputs.add(Output.binary_encode(result), key="data")
+    return outputs
+
+
+async def update_adapter(inputs: Input, service):
+    """
+    Updates lora adapter with the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+    adapter_path = inputs.get_property("src")
+    adapter_preload = inputs.get_as_string("preload").lower(
+    ) == "true" if inputs.contains_key("preload") else True
+    adapter_pin = inputs.get_as_string(
+        "pin").lower() == "true" if inputs.contains_key("pin") else False
+
+    if adapter_name not in service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
+
+    outputs = Output()
+    try:
+        if not adapter_preload and adapter_pin:
+            raise ValueError("Can not set load to false and pin to true")
+
+        old_adapter = service.adapter_registry[adapter_name]
+        old_adapter_path = old_adapter.get_property("src")
+        if adapter_path != old_adapter_path:
+            raise NotImplementedError(
+                f"Updating adapter path is not supported.")
+
+        old_adapter_preload = old_adapter.get_as_string("preload").lower(
+        ) == "true" if old_adapter.contains_key("preload") else True
+        if adapter_preload != old_adapter_preload:
+            if adapter_preload:
+                await service.add_lora(adapter_name, adapter_alias,
+                                       adapter_path)
+            else:
+                await service.remove_lora(adapter_name, adapter_alias)
+
+        old_adapter_pin = old_adapter.get_as_string("pin").lower(
+        ) == "true" if old_adapter.contains_key("pin") else False
+        if adapter_pin != old_adapter_pin:
+            if adapter_pin:
+                await service.pin_lora(adapter_name, adapter_alias)
+            else:
+                raise NotImplementedError(f"Unpin adapter is not supported.")
+        service.adapter_registry[adapter_name] = inputs
+    except Exception as e:
+        logging.debug(f"Failed to update adapter: {e}", exc_info=True)
+        if any(msg in str(e)
+               for msg in ("No free lora slots",
+                           "greater than the number of GPU LoRA slots")):
+            raise MemoryError(str(e))
+        err = {"data": "", "last": True, "code": 424, "error": str(e)}
+        outputs.add(Output.binary_encode(err), key="data")
+        return outputs
+
+    logging.info(f"Updated adapter {adapter_alias} successfully")
+    result = {"data": f"Adapter {adapter_alias} updated"}
+    outputs.add(Output.binary_encode(result), key="data")
+    return outputs
+
+
+async def unregister_adapter(inputs: Input, service):
+    """
+    Unregisters lora adapter from the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+
+    if adapter_name not in service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
+
+    outputs = Output()
+    try:
+        await service.remove_lora(adapter_name, adapter_alias)
+        del service.adapter_registry[adapter_name]
+    except Exception as e:
+        logging.debug(f"Failed to unregister adapter: {e}", exc_info=True)
+        err = {"data": "", "last": True, "code": 424, "error": str(e)}
+        outputs.add(Output.binary_encode(err), key="data")
+        return outputs
+
+    logging.info(f"Unregistered adapter {adapter_alias} successfully")
+    result = {"data": f"Adapter {adapter_alias} unregistered"}
+    outputs.add(Output.binary_encode(result), key="data")
+    return outputs
