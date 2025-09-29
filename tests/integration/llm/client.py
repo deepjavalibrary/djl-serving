@@ -16,8 +16,6 @@ import urllib
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from json.decoder import JSONDecodeError
-from djl_python.session_utils import (HEADER_SAGEMAKER_SESSION_ID,
-                                      HEADER_SAGEMAKER_CLOSED_SESSION_ID)
 
 FAILED_DEPENDENCY_CODE = 424
 TIMEOUT = 3.0
@@ -1214,16 +1212,16 @@ def create_session():
     res = send_json(req)
     if res.status_code >= 300:
         return None
-    session_id = res.headers.get(HEADER_SAGEMAKER_SESSION_ID).split(';')[0]
+    session_id = res.headers.get("X-Amzn-SageMaker-Session-Id").split(';')[0]
     return session_id
 
 
 def close_session(session_id):
     req = {"requestType": "CLOSE"}
-    res = send_json(req, headers={HEADER_SAGEMAKER_SESSION_ID: session_id})
+    res = send_json(req, headers={"X-Amzn-SageMaker-Session-Id": session_id})
     if res.status_code >= 300:
         return None
-    session_id = res.headers.get(HEADER_SAGEMAKER_CLOSED_SESSION_ID)
+    session_id = res.headers.get("X-Amzn-SageMaker-Closed-Session-Id")
     return session_id
 
 
@@ -2166,7 +2164,8 @@ def test_handler_stateful(model, model_spec):
     for stream in stream_values:
         req["stream"] = stream
         LOGGER.info(f"req {req}")
-        res = send_json(req, headers={HEADER_SAGEMAKER_SESSION_ID: session_id})
+        res = send_json(req,
+                        headers={"X-Amzn-SageMaker-Session-Id": session_id})
         message = res.content.decode("utf-8")
         LOGGER.info(f"res: {message}")
         response_checker(res, message)
@@ -2184,11 +2183,11 @@ def test_handler_stateful(model, model_spec):
                     req,
                     spec.get("tokenizer", None),
                     batch_size,
-                    headers=[f"'{HEADER_SAGEMAKER_SESSION_ID}: {session_id}'"])
+                    headers=[f"'X-Amzn-SageMaker-Session-Id: {session_id}'"])
 
     # Close session
     closed_session_id = close_session(session_id)
-    if closed_session_id is None:
+    if closed_session_id != session_id:
         raise RuntimeError("Close session failed!")
 
 
