@@ -227,7 +227,9 @@ async def update_adapter(inputs: Input, service):
             if adapter_pin:
                 await service.pin_lora(adapter_name, adapter_alias)
             else:
-                raise NotImplementedError(f"Unpin adapter is not supported.")
+                raise ValueError(
+                    f"Unpinning adapter is not supported. To unpin adapter '{adapter_alias}', please delete the adapter and re-register it without pinning."
+                )
         service.adapter_registry[adapter_name] = inputs
     except Exception as e:
         logging.debug(f"Failed to update adapter: {e}", exc_info=True)
