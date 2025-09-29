@@ -1521,6 +1521,22 @@ handler_performance_model_list = {
     },
 }
 
+stateful_model_list = {
+    "llama3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32,
+    },
+    "gemma-2b": {
+        "option.model_id": "s3://djl-llm/gemma-2b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 32,
+    },
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1835,6 +1851,21 @@ def build_text_embedding_model(model):
     options = text_embedding_model_list[model]
     options["option.task"] = "text_embedding"
     options["normalize"] = False
+    write_model_artifacts(options)
+
+
+def build_stateful_model(model):
+    if model not in stateful_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(text_embedding_model_list.keys())}"
+        )
+    options = stateful_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "disable"
+    options["option.async_mode"] = "true"
+    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
+    options["option.enable_stateful_sessions"] = "true"
+    options["option.sessions_path"] = "/tmp/djl_sessions"
     write_model_artifacts(options)
 
 

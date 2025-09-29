@@ -42,6 +42,7 @@ public final class LmiConfigRecommender {
         setRollingBatchSize(lmiProperties);
         setIsPeftModel(lmiProperties, modelConfig);
         setPropertiesForLora(lmiProperties);
+        setPropertiesForStatefulSessions(lmiProperties);
     }
 
     private static void setRollingBatch(
@@ -162,6 +163,21 @@ public final class LmiConfigRecommender {
             logger.info(
                     "option.enable_lora is set to true, setting load_on_devices=0 and"
                             + " maxWorkers=1");
+            lmiProperties.setProperty("load_on_devices", "0");
+            lmiProperties.setProperty("maxWorkers", "1");
+        }
+    }
+
+    private static void setPropertiesForStatefulSessions(Properties lmiProperties) {
+        // If option.enable_stateful_sessions=true, set load_on_devices=0 and maxWorkers=1 because
+        // we
+        // only support one worker thread for stateful sessions.
+        boolean enableStatefulSessions =
+                Boolean.parseBoolean(lmiProperties.getProperty("option.enable_stateful_sessions"));
+        if (enableStatefulSessions) {
+            logger.info(
+                    "option.enable_stateful_sessions is set to true,"
+                            + " setting load_on_devices=0 and maxWorkers=1");
             lmiProperties.setProperty("load_on_devices", "0");
             lmiProperties.setProperty("maxWorkers", "1");
         }
