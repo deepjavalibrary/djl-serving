@@ -1704,7 +1704,13 @@ def build_vllm_async_model(model):
     options["option.rolling_batch"] = "disable"
     options["option.async_mode"] = "true"
     options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
-    write_model_artifacts(options)
+
+    adapter_ids = options.pop("adapter_ids", [])
+    adapter_names = options.pop("adapter_names", [])
+
+    write_model_artifacts(options,
+                          adapter_ids=adapter_ids,
+                          adapter_names=adapter_names)
 
 
 def build_vllm_async_model_custom_formatters(model, error_type=None):

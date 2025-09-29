@@ -23,15 +23,18 @@ from vllm.entrypoints.openai.protocol import (
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
-from vllm.utils import kill_process_tree
+from vllm.utils import kill_process_tree, AtomicCounter
 
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
-from djl_python.async_utils import handle_streaming_response, create_non_stream_output
-from djl_python.custom_formatter_handling import CustomFormatterError, CustomFormatterHandler
+from djl_python.async_utils import handle_streaming_response, create_non_stream_output, _extract_lora_adapter
+from djl_python.async_utils import register_adapter as _register_adapter, update_adapter as _update_adapter, unregister_adapter as _unregister_adapter
+from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
+from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
+
 from djl_python.lmi_vllm.request_response_utils import (
     ProcessedRequest,
     vllm_stream_output_formatter,
@@ -67,6 +70,9 @@ class VLLMHandler(CustomFormatterHandler):
         self.vllm_properties = None
         self.model_name = None
         self.initialized = False
+        self.adapter_registry = {}
+        self.lora_id_counter = AtomicCounter(0)
+        self.lora_requests = {}
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -136,6 +142,8 @@ class VLLMHandler(CustomFormatterHandler):
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
 
+        adapter_name = _extract_lora_adapter(raw_request, decoded_payload)
+
         # Apply input formatter
         decoded_payload = self.apply_input_formatter(decoded_payload,
                                                      tokenizer=self.tokenizer)
@@ -148,6 +156,18 @@ class VLLMHandler(CustomFormatterHandler):
         # completions/chat completions require model in the payload
         if "model" not in decoded_payload:
             decoded_payload["model"] = self.model_name
+
+        lora_request = None
+        if adapter_name:
+            if adapter_name not in self.lora_requests:
+                raise ValueError(
+                    f"LoRA adapter {adapter_name} not found in registry. Available adapters: {list(self.lora_requests.keys())}"
+                )
+            lora_request = get_lora_request(adapter_name, self.lora_requests)
+            logging.info(
+                f"Using LoRA request: {lora_request.lora_name} (ID: {lora_request.lora_int_id})"
+            )
+
         # completions request
         if "prompt" in decoded_payload:
             vllm_request = CompletionRequest(**decoded_payload)
@@ -193,6 +213,7 @@ class VLLMHandler(CustomFormatterHandler):
             accumulate_chunks,
             include_prompt,
         )
+        processed_request.lora_request = lora_request
         return processed_request
 
     async def check_health(self):
@@ -219,8 +240,21 @@ class VLLMHandler(CustomFormatterHandler):
                 "", error=f"Input parsing failed: {str(e)}", code=424)
             return output
 
-        response = await processed_request.inference_invoker(
-            processed_request.vllm_request)
+        if processed_request.lora_request:
+            original_add_request = self.vllm_engine.add_request
+
+            async def add_request_with_lora(*args, **kwargs):
+                kwargs['lora_request'] = processed_request.lora_request
+                return await original_add_request(*args, **kwargs)
+
+            self.vllm_engine.add_request = add_request_with_lora
+
+        try:
+            response = await processed_request.inference_invoker(
+                processed_request.vllm_request)
+        finally:
+            if processed_request.lora_request:
+                self.vllm_engine.add_request = original_add_request
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response
@@ -244,6 +278,30 @@ class VLLMHandler(CustomFormatterHandler):
             tokenizer=self.tokenizer,
         )
 
+    async def add_lora(self, lora_name: str, lora_alias: str, lora_path: str):
+        logging.info(f"Adding LoRA {lora_name} from {lora_path}")
+        lora_id = self.lora_id_counter.inc(1)
+        lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
+        self.lora_requests[lora_request.lora_name] = lora_request
+        result = await self.vllm_engine.add_lora(lora_request)
+        logging.info(f"LoRA {lora_name} added to engine: {result}")
+        return result
+
+    async def remove_lora(self, lora_name: str, lora_alias: str):
+        logging.info(f"Removing LoRA {lora_name}")
+        if lora_name not in self.lora_requests:
+            raise ValueError(f"LoRA adapter {lora_name} not found in registry")
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+        result = await self.vllm_engine.remove_lora(lora_request.lora_int_id)
+        del self.lora_requests[lora_name]
+        return result
+
+    async def pin_lora(self, lora_name: str, lora_alias: str):
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+        loaded = await self.vllm_engine.add_lora(lora_request)
+        return loaded and await self.vllm_engine.pin_lora(
+            lora_request.lora_int_id)
+
 
 service = VLLMHandler()
 
@@ -259,3 +317,16 @@ async def handle(
 
     outputs = await service.inference(inputs)
     return outputs
+
+
+# Wrapper functions to maintain compatibility
+async def register_adapter(inputs: Input):
+    return await _register_adapter(inputs, service)
+
+
+async def update_adapter(inputs: Input):
+    return await _update_adapter(inputs, service)
+
+
+async def unregister_adapter(inputs: Input):
+    return await _unregister_adapter(inputs, service)
