@@ -635,6 +635,16 @@ vllm_chat_model_spec = {
         "enable_reasoning": True,
         "tokenizer": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     },
+    "deepseek-v2-lite": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "deepseek-ai/DeepSeek-V2-Lite"
+    },
+    "qwen3-4b-instruct": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "Qwen/Qwen3-4B-Instruct-2507"
+    },
     "llama-3-1-8b-instruct": {
         "batch_size": [1, 4],
         "seq_length": [256],
