@@ -33,6 +33,7 @@ from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output
 from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
+from djl_python.input_parser import SAGEMAKER_ADAPTER_IDENTIFIER_HEADER
 
 from djl_python.lmi_vllm.request_response_utils import (
     ProcessedRequest,
@@ -307,10 +308,9 @@ class VLLMHandler(CustomFormatterHandler):
         """
         adapter_name = None
 
-        if "X-Amzn-SageMaker-Adapter-Identifier" in raw_request.get_properties(
-        ):
+        if SAGEMAKER_ADAPTER_IDENTIFIER_HEADER in raw_request.get_properties():
             adapter_name = raw_request.get_property(
-                "X-Amzn-SageMaker-Adapter-Identifier")
+                SAGEMAKER_ADAPTER_IDENTIFIER_HEADER)
             logging.debug(f"Found adapter in headers: {adapter_name}")
         elif "adapter" in decoded_payload:
             adapter_name = decoded_payload.pop("adapter")
