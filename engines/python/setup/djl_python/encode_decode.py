@@ -22,9 +22,10 @@ import numpy as np
 
 
 def decode_csv(inputs: Input):  # type: (str) -> np.array
-    stream = StringIO(inputs.get_as_string())
+    csv_string = inputs.get_as_string()
+    stream = StringIO(csv_string)
     # detects if the incoming csv has headers
-    if not any(header in string_like.splitlines()[0].lower()
+    if not any(header in csv_string.splitlines()[0].lower()
                for header in ["question", "context", "inputs"]):
         raise ValueError(
             "You need to provide the correct CSV with Header columns to use it with the inference toolkit default handler.",
@@ -35,6 +36,13 @@ def decode_csv(inputs: Input):  # type: (str) -> np.array
         return {"inputs": [entry["inputs"] for entry in request_list]}
     else:
         return {"inputs": request_list}
+
+
+def decode_csv_numeric(inputs: Input):  # type: (Input) -> np.array
+    csv_string = inputs.get_as_string()
+    reader = csv.reader(StringIO(csv_string))
+    data = [[float(cell) for cell in row] for row in reader if row]
+    return np.array(data)
 
 
 def encode_csv(content):  # type: (str) -> np.array
