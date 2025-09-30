@@ -1179,7 +1179,7 @@ def awscurl_run(data,
                f"-N {num_run} -X POST {endpoint} --connect-timeout 300")
     for header in headers:
         command += f" -H {header}"
-    command = f" {command_data} {delay} {json_output} {jq} -P -t"
+    command += f" {command_data} {delay} {json_output} {jq} -P -t"
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
