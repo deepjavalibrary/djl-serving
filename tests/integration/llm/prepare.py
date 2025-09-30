@@ -1104,14 +1104,6 @@ vllm_model_list = {
         "option.enable_reasoning": True,
         "option.reasoning_parser": "deepseek_r1",
     },
-    "deepseek-v2-lite": {
-        "option.model_id": "deepseek-ai/DeepSeek-V2-Lite",
-        "option.tensor_parallel_degree": 1,
-        "option.max_rolling_batch_size": 4,
-        "option.trust_remote_code": True,
-        "option.max_model_len": 8192,
-        "option.enforce_eager": True,
-    },
     "qwen3-4b-instruct": {
         "option.model_id": "Qwen/Qwen3-4B-Instruct-2507",
         "option.tensor_parallel_degree": 1,

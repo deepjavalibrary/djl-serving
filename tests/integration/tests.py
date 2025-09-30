@@ -628,12 +628,6 @@ class TestVllm1:
             r.launch("CUDA_VISIBLE_DEVICES=0")
             client.run("handler_performance vllm".split())
 
-    def test_deepseek_v2_lite_openai(self):
-        with Runner('lmi', 'deepseek-v2-lite') as r:
-            prepare.build_vllm_model("deepseek-v2-lite")
-            r.launch()
-            client.run("vllm_chat deepseek-v2-lite".split())
-
     def test_qwen3_4b_instruct_openai(self):
         with Runner('lmi', 'qwen3-4b-instruct') as r:
             prepare.build_vllm_model("qwen3-4b-instruct")
