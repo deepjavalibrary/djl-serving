@@ -33,6 +33,7 @@ from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output, _extract_lora_adapter
 from djl_python.async_utils import register_adapter as _register_adapter, update_adapter as _update_adapter, unregister_adapter as _unregister_adapter
 from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
+from djl_python.custom_handler_service import CustomHandlerService
 from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
 
 from djl_python.lmi_vllm.request_response_utils import (
@@ -303,12 +304,26 @@ class VLLMHandler(CustomFormatterHandler):
             lora_request.lora_int_id)
 
 
+custom_service = None
 service = VLLMHandler()
 
 
 async def handle(
         inputs: Input
 ) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
+    global custom_service
+    # Initialize custom service once
+    if custom_service is None:
+        custom_service = CustomHandlerService(inputs.get_properties())
+
+    # Try custom handler first
+    if custom_service.initialized:
+        logger.info("Using custom handler for request")
+        result = await custom_service.handle(inputs)
+        if result is not None:
+            logger.info("Custom handler completed successfully")
+            return result
+
     if not service.initialized:
         await service.initialize(inputs.get_properties())
         logger.info("vllm service initialized")
