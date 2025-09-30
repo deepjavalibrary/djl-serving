@@ -1073,6 +1073,47 @@ class TestLmiDistPipelineParallel:
 @pytest.mark.gpu_4
 class TestVllmCustomHandlers:
 
+    def test_custom_handler_success(self):
+        with Runner('lmi', 'gpt-neox-20b-custom-handler') as r:
+            prepare.build_vllm_async_model_with_custom_handler(
+                "gpt-neox-20b-custom")
+            r.launch()
+            client.run("custom_handler gpt-neox-20b".split())
+
+    def test_custom_handler_syntax_error(self):
+        with Runner('lmi', 'gpt-neox-20b-custom-handler-syntax-error') as r:
+            prepare.build_vllm_async_model_with_custom_handler(
+                "gpt-neox-20b-custom", "syntax_error")
+            with pytest.raises(Exception):
+                r.launch()
+
+    def test_custom_handler_runtime_error(self):
+        with Runner('lmi', 'gpt-neox-20b-custom-handler-runtime-error') as r:
+            prepare.build_vllm_async_model_with_custom_handler(
+                "gpt-neox-20b-custom", "runtime_error")
+            r.launch()
+            with pytest.raises(ValueError, match=r".*424.*"):
+                client.run("custom_handler gpt-neox-20b".split())
+
+    def test_custom_handler_missing_handle(self):
+        with Runner('lmi', 'gpt-neox-20b-custom-handler-missing') as r:
+            prepare.build_vllm_async_model_with_custom_handler(
+                "gpt-neox-20b-custom", "missing_handle")
+            r.launch()
+            client.run("vllm gpt-neox-20b".split())  # Should fall back to vLLM
+
+    def test_custom_handler_import_error(self):
+        with Runner('lmi', 'gpt-neox-20b-custom-handler-import-error') as r:
+            prepare.build_vllm_async_model_with_custom_handler(
+                "gpt-neox-20b-custom", "import_error")
+            with pytest.raises(Exception):
+                r.launch()
+
+
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmCustomFormatters:
+
     def test_gpt_neox_20b_custom(self):
         with Runner('lmi', 'gpt-neox-20b') as r:
             prepare.build_vllm_async_model_custom_formatters(
