@@ -10,9 +10,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import datetime
 import logging
 
+from datetime import datetime, timezone
 from djl_python.async_utils import create_non_stream_output
 from djl_python.outputs import Output
 
@@ -26,8 +26,9 @@ async def create_session(request):
     session_manager, inputs = request
     try:
         session = session_manager.create_session()
-        expiration_ts = datetime.datetime.fromtimestamp(
-            session.expiration_ts).strftime("%Y-%m-%dT%H:%M:%SZ")
+        expiration_ts = datetime.fromtimestamp(
+            session.expiration_ts,
+            tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         logger.info(f"Session {session.session_id} created")
         return {
             "data": {

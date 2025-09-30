@@ -73,7 +73,7 @@ create_session_response = smr_client.invoke_endpoint(
     SessionId="NEW_SESSION")
 ```
 
-The LMI container handles the request by starting a new session. The container provides the session ID and expiration timestamp by setting the following HTTP header in the response:
+The LMI container handles the request by starting a new session. The container provides the session ID and expiration timestamp (UTC timezone) by setting the following HTTP header in the response:
 
 ```
 X-Amzn-SageMaker-Session-Id: session_id; Expires=yyyy-mm-ddThh:mm:ssZ
