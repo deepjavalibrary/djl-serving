@@ -22,6 +22,8 @@ from djl_python.request import Request
 from djl_python.request_io import TextInput, RequestInput
 from djl_python.three_p.three_p_utils import parse_3p_request
 
+SAGEMAKER_ADAPTER_IDENTIFIER_HEADER = "X-Amzn-SageMaker-Adapter-Identifier"
+
 
 def input_formatter(function):
     """
@@ -237,9 +239,9 @@ def _fetch_adapters_from_input(input_map: dict, input_item: Input,
 
     # check properties, possible from header
     adapter_alias = None
-    if "X-Amzn-SageMaker-Adapter-Identifier" in input_item.get_properties():
+    if SAGEMAKER_ADAPTER_IDENTIFIER_HEADER in input_item.get_properties():
         adapters_per_item = input_item.get_property(
-            "X-Amzn-SageMaker-Adapter-Identifier")
+            SAGEMAKER_ADAPTER_IDENTIFIER_HEADER)
         adapter_alias = input_item.get_property(
             "X-Amzn-SageMaker-Adapter-Alias")
 
