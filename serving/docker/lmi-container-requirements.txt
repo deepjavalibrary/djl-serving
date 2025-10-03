@@ -1,7 +1,7 @@
 torch==2.8.0
 torchvision
 peft==0.15.1
-protobuf==3.20.3
+protobuf==4.25.1
 transformers==4.55.2
 hf-transfer
 zstandard
@@ -20,7 +20,7 @@ retrying
 opencv-contrib-python-headless
 safetensors
 scipy==1.16.0
-onnx==1.16.0
+onnx==1.19.0
 sentence_transformers
 onnxruntime-gpu==1.20.0
 autoawq
@@ -31,6 +31,6 @@ uvloop
 ninja
 peft
 llmcompressor
-https://publish.djl.ai/sm-vllm/vllm-0.10.2-cp38-abi3-linux_x86_64.whl
-xgrammar==0.1.23
+vllm==0.10.2
+xgrammar
 flashinfer-python==0.2.5
