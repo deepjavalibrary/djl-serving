@@ -40,6 +40,7 @@ import ai.djl.translate.NoopServingTranslatorFactory;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
+import ai.djl.util.ZipUtils;
 import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
@@ -65,6 +66,7 @@ import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** A class represent a loaded model and it's metadata. */
@@ -764,6 +766,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             String groupId = mrl.getGroupId();
             ModelZoo zoo = ModelZoo.getModelZoo(groupId);
             return zoo.getSupportedEngines().iterator().next();
+        } else if (isTorchServeModel()) {
+            return "Python";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
             return "PyTorch";
@@ -781,8 +785,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 || Files.isRegularFile(modelDir.resolve("model.bst"))
                 || Files.isRegularFile(modelDir.resolve("model.xgb"))) {
             return "XGBoost";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".gguf"))) {
-            return "Llama";
         } else if (isPythonModel(prefix)) {
             // TODO: How to differentiate Rust model from Python
             return "Python";
@@ -811,26 +813,60 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         return Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
                 || prop.getProperty("option.model_id") != null
-                || Files.isRegularFile(modelDir.resolve("config.json"))
-                || isTorchServeModel();
+                || Files.isRegularFile(modelDir.resolve("config.json"));
     }
 
     private void downloadModel() throws ModelException, IOException {
         if (resolvedModelUrl.startsWith("s3://")) {
             modelDir = downloadS3ToDownloadDir(resolvedModelUrl);
             resolvedModelUrl = modelDir.toUri().toURL().toString();
-            return;
-        }
-        Repository repository = Repository.newInstance("modelStore", resolvedModelUrl);
-        List<MRL> mrls = repository.getResources();
-        if (mrls.isEmpty()) {
-            throw new ModelNotFoundException("Invalid model url: " + resolvedModelUrl);
+        } else {
+            Repository repository = Repository.newInstance("modelStore", resolvedModelUrl);
+            List<MRL> mrls = repository.getResources();
+            if (mrls.isEmpty()) {
+                throw new ModelNotFoundException("Invalid model url: " + resolvedModelUrl);
+            }
+
+            Artifact artifact = mrls.get(0).getDefaultArtifact();
+            repository.prepare(artifact);
+            modelDir = Utils.getNestedModelDir(repository.getResourceDirectory(artifact));
+            artifactName = artifact.getName();
+            if (Files.isRegularFile(modelDir)) {
+                modelDir = modelDir.getParent();
+                return;
+            }
         }
 
-        Artifact artifact = mrls.get(0).getDefaultArtifact();
-        repository.prepare(artifact);
-        modelDir = Utils.getNestedModelDir(repository.getResourceDirectory(artifact));
-        artifactName = artifact.getName();
+        try (Stream<Path> stream = Files.list(modelDir)) {
+            List<Path> list = stream.collect(Collectors.toList());
+            if (list.size() == 1) {
+                Path match = list.get(0);
+                String name = Objects.requireNonNull(match.getFileName()).toString();
+                String type = FilenameUtils.getFileType(name);
+                if ("zip".equals(type)) {
+                    String hash = Utils.hash(match.toAbsolutePath().toString());
+                    String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+                    Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+                    parent = parent.resolve("download");
+                    Path extracted = parent.resolve(hash);
+                    if (Files.exists(extracted)) {
+                        logger.info("archive already extracted: {}", extracted);
+                    } else {
+                        Files.createDirectories(parent);
+                        Path tmp = Files.createTempDirectory(parent, "tmp");
+                        try (InputStream is = Files.newInputStream(match)) {
+                            ZipUtils.unzip(is, tmp);
+                            Utils.moveQuietly(tmp, extracted);
+                            logger.info("Archive file extracted to {}", extracted);
+                        } finally {
+                            Utils.deleteQuietly(tmp);
+                        }
+                    }
+                    modelDir = extracted;
+                    resolvedModelUrl = modelDir.toUri().toURL().toString();
+                }
+            }
+        }
     }
 
     private void loadServingProperties() {
