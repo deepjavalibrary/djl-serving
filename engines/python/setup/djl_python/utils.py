@@ -10,7 +10,10 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import glob
 import logging
+import os
+from typing import Optional, List
 
 from djl_python import Output
 from djl_python.inputs import Input
@@ -161,3 +164,21 @@ def get_input_details(requests, errors, batch):
         idx += 1
     adapters = adapters if adapters else None
     return input_data, input_size, parameters, adapters
+
+
+def find_model_file(model_dir: str, extensions: List[str]) -> Optional[str]:
+    """Find model file with given extensions in model directory
+    
+    Args:
+        model_dir: Directory to search for model files
+        extensions: List of file extensions to search for (without dots)
+        
+    Returns:
+        Path to first matching model file, or None if not found
+    """
+    for ext in extensions:
+        pattern = os.path.join(model_dir, f"*.{ext}")
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]  # Return first match
+    return None

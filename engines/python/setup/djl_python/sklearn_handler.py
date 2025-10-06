@@ -14,25 +14,12 @@
 import pickle
 import numpy as np
 import os
-import glob
+from io import StringIO
 from typing import Optional
 from djl_python import Input, Output
-from djl_python.encode_decode import decode, decode_csv_numeric, encode_csv
-
-try:
-    import joblib
-except ImportError:
-    joblib = None
-
-try:
-    import skops.io as sio
-except ImportError:
-    sio = None
-
-try:
-    import cloudpickle
-except ImportError:
-    cloudpickle = None
+from djl_python.encode_decode import decode
+from djl_python.utils import find_model_file
+from djl_python.import_utils import joblib, cloudpickle, skops_io as sio
 
 
 class SklearnHandler:
@@ -41,82 +28,56 @@ class SklearnHandler:
         self.model = None
         self.initialized = False
 
-    def _find_model_file(self, model_dir: str, extensions: list) -> str:
-        """Find model file with given extensions in model directory"""
-        for ext in extensions:
-            pattern = os.path.join(model_dir, f"*.{ext}")
-            matches = glob.glob(pattern)
-            if matches:
-                return matches[0]  # Return first match
-        return None
+    def _get_trusted_types(self):
+        trusted_types_str = os.environ.get("SKLEARN_SKOPS_TRUSTED_TYPES", "")
+        if not trusted_types_str:
+            raise ValueError(
+                "SKLEARN_SKOPS_TRUSTED_TYPES environment variable must be set to load skops models. "
+                "Example: SKLEARN_SKOPS_TRUSTED_TYPES='sklearn.ensemble._forest.RandomForestClassifier,numpy.ndarray'"
+            )
+        return [t.strip() for t in trusted_types_str.split(",") if t.strip()]
 
     def initialize(self, properties: dict):
         model_dir = properties.get("model_dir")
+        model_format = os.environ.get("SKLEARN_MODEL_FORMAT", "skops")
 
-        # Check for preferred model format from environment variable
-        preferred_format = os.environ.get("SKLEARN_MODEL_FORMAT", "auto")
+        format_extensions = {
+            "skops": ["skops"],
+            "joblib": ["joblib", "jl"],
+            "pickle": ["pkl", "pickle"],
+            "cloudpickle": ["pkl", "pickle", "cloudpkl"]
+        }
 
-        if preferred_format != "auto":
-            # Load specific format if requested
-            model_file = self._find_model_file(model_dir, [preferred_format])
-            if not model_file:
-                raise FileNotFoundError(
-                    f"No model file found with format '{preferred_format}' in {model_dir}"
+        extensions = format_extensions.get(model_format)
+        if not extensions:
+            raise ValueError(
+                f"Unsupported model format: {model_format}. Supported formats: skops, joblib, pickle, cloudpickle"
+            )
+
+        model_file = find_model_file(model_dir, extensions)
+        if not model_file:
+            raise FileNotFoundError(
+                f"No model file found with format '{model_format}' in {model_dir}"
+            )
+
+        if model_format == "skops":
+            trusted_types = self._get_trusted_types()
+            self.model = sio.load(model_file, trusted=trusted_types)
+        else:
+            if os.environ.get("TRUST_INSECURE_PICKLE_FILES",
+                              "").lower() != "true":
+                raise ValueError(
+                    f"TRUST_INSECURE_PICKLE_FILES must be set to 'true' to use {model_format} format (only skops is secure by default)"
                 )
 
-            if preferred_format == "skops" and sio:
-                self.model = sio.load(
-                    model_file,
-                    trusted=sio.get_untrusted_types(file=model_file))
-            elif preferred_format == "joblib" and joblib:
+            if model_format == "joblib":
                 self.model = joblib.load(model_file)
-            elif preferred_format == "pkl":
+            elif model_format == "pickle":
                 with open(model_file, 'rb') as f:
                     self.model = pickle.load(f)
-            elif preferred_format == "cloudpkl" and cloudpickle:
+            elif model_format == "cloudpickle":
                 with open(model_file, 'rb') as f:
                     self.model = cloudpickle.load(f)
-            else:
-                raise ImportError(
-                    f"Required library for format '{preferred_format}' not available"
-                )
-        else:
-            # Auto-detect format in priority order
-            model_file = None
-
-            # Try skops first (most secure)
-            if sio:
-                model_file = self._find_model_file(model_dir, ["skops"])
-                if model_file:
-                    self.model = sio.load(
-                        model_file,
-                        trusted=sio.get_untrusted_types(file=model_file))
-
-            # Try joblib
-            if not model_file and joblib:
-                model_file = self._find_model_file(model_dir, ["joblib"])
-                if model_file:
-                    self.model = joblib.load(model_file)
-
-            # Try pickle
-            if not model_file:
-                model_file = self._find_model_file(model_dir,
-                                                   ["pkl", "pickle"])
-                if model_file:
-                    with open(model_file, 'rb') as f:
-                        self.model = pickle.load(f)
-
-            # Try cloudpickle
-            if not model_file and cloudpickle:
-                model_file = self._find_model_file(model_dir, ["cloudpkl"])
-                if model_file:
-                    with open(model_file, 'rb') as f:
-                        self.model = cloudpickle.load(f)
-
-            if not model_file:
-                raise FileNotFoundError(
-                    f"No supported model file found in {model_dir}. Expected files with extensions: .skops, .joblib, .pkl, .pickle, .cloudpkl"
-                )
 
         self.initialized = True
 
@@ -125,19 +86,23 @@ class SklearnHandler:
         accept = inputs.get_property("Accept") or "application/json"
 
         if "text/csv" in content_type:
-            X = decode_csv_numeric(inputs)
+            X = decode(inputs, content_type, require_csv_headers=False)
         else:
             input_map = decode(inputs, content_type)
             data = input_map.get("inputs") if isinstance(input_map,
                                                          dict) else input_map
             X = np.array(data)
 
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+
         predictions = self.model.predict(X)
 
         outputs = Output()
         if "text/csv" in accept:
-            csv_data = "\n".join(str(pred) for pred in predictions)
-            outputs.add(csv_data)
+            csv_buffer = StringIO()
+            np.savetxt(csv_buffer, predictions, fmt='%s', delimiter=',')
+            outputs.add(csv_buffer.getvalue().rstrip())
             outputs.add_property("Content-Type", "text/csv")
         else:
             outputs.add_as_json({"predictions": predictions.tolist()})
