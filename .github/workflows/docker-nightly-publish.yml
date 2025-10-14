@@ -180,42 +180,31 @@ jobs:
           fi
           IMAGE_TAG="$SERVING_VERSION-${{ matrix.arch }}${NIGHTLY}"
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
-      - name: Start ECR scan
+      - name: Get image digest
+        id: get-digest
         run: |
-          aws ecr start-image-scan \
+          DIGEST=$(aws ecr describe-images \
             --repository-name djl-ci-temp \
-            --image-id imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
-            --region us-east-1
-      - name: Wait for scan and check results
+            --image-ids imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
+            --region us-east-1 \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+          echo "DIGEST=$DIGEST" >> $GITHUB_OUTPUT
+      - name: Check Inspector findings
         run: |
-          echo "Waiting for scan to complete..."
-          for i in {1..30}; do
-            SCAN_STATUS=$(aws ecr describe-image-scan-findings \
-              --repository-name djl-ci-temp \
-              --image-id imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
-              --region us-east-1 \
-              --query 'imageScanStatus.status' \
-              --output text 2>/dev/null || echo "IN_PROGRESS")
-            
-            if [ "$SCAN_STATUS" = "COMPLETE" ]; then
-              break
-            fi
-            echo "Scan status: $SCAN_STATUS (attempt $i/30)"
-            sleep 10
-          done
+          REPO_URI="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+          RESOURCE_ID="${REPO_URI}@${{ steps.get-digest.outputs.DIGEST }}"
           
-          if [ "$SCAN_STATUS" != "COMPLETE" ]; then
-            echo "ERROR: Scan did not complete in time"
-            exit 1
-          fi
+          echo "Checking vulnerabilities for: $RESOURCE_ID"
+          sleep 30
           
-          FINDINGS=$(aws ecr describe-image-scan-findings \
-            --repository-name djl-ci-temp \
-            --image-id imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
-            --region us-east-1)
+          FINDINGS=$(aws inspector2 list-findings \
+            --filter-criteria '{"ecrImageHash":[{"comparison":"EQUALS","value":"${{ steps.get-digest.outputs.DIGEST }}"}]}' \
+            --region us-east-1 \
+            --output json)
           
-          HIGH=$(echo "$FINDINGS" | jq -r '.imageScanFindings.findingSeverityCounts.HIGH // 0')
-          CRITICAL=$(echo "$FINDINGS" | jq -r '.imageScanFindings.findingSeverityCounts.CRITICAL // 0')
+          HIGH=$(echo "$FINDINGS" | jq '[.findings[] | select(.severity=="HIGH")] | length')
+          CRITICAL=$(echo "$FINDINGS" | jq '[.findings[] | select(.severity=="CRITICAL")] | length')
           
           echo "Scan Results for ${{ matrix.arch }}:"
           echo "HIGH: $HIGH"
@@ -223,7 +212,7 @@ jobs:
           
           if [ "$HIGH" -gt 0 ] || [ "$CRITICAL" -gt 0 ]; then
             echo "ERROR: Found HIGH or CRITICAL vulnerabilities"
-            echo "$FINDINGS" | jq '.imageScanFindings'
+            echo "$FINDINGS" | jq '.findings[] | select(.severity=="HIGH" or .severity=="CRITICAL") | {title, severity, description}'
             exit 1
           fi
           
