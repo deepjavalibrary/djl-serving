@@ -157,10 +157,82 @@ jobs:
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ env.SERVING_VERSION}}-${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
+  ecr-scan:
+    needs: nightly-build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || fromJson(format('[{0}]', inputs.arch)) }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Get image tag
+        id: get-tag
+        run: |
+          SERVING_VERSION=$(echo "${{ needs.nightly-build.outputs.djl_version }}")
+          mode=${{ inputs.mode }}
+          if [[ "$mode" != "release" ]]; then
+            NIGHTLY="-nightly"
+          fi
+          IMAGE_TAG="$SERVING_VERSION-${{ matrix.arch }}${NIGHTLY}"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+      - name: Start ECR scan
+        run: |
+          aws ecr start-image-scan \
+            --repository-name djl-ci-temp \
+            --image-id imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
+            --region us-east-1
+      - name: Wait for scan and check results
+        run: |
+          echo "Waiting for scan to complete..."
+          for i in {1..30}; do
+            SCAN_STATUS=$(aws ecr describe-image-scan-findings \
+              --repository-name djl-ci-temp \
+              --image-id imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
+              --region us-east-1 \
+              --query 'imageScanStatus.status' \
+              --output text 2>/dev/null || echo "IN_PROGRESS")
+            
+            if [ "$SCAN_STATUS" = "COMPLETE" ]; then
+              break
+            fi
+            echo "Scan status: $SCAN_STATUS (attempt $i/30)"
+            sleep 10
+          done
+          
+          if [ "$SCAN_STATUS" != "COMPLETE" ]; then
+            echo "ERROR: Scan did not complete in time"
+            exit 1
+          fi
+          
+          FINDINGS=$(aws ecr describe-image-scan-findings \
+            --repository-name djl-ci-temp \
+            --image-id imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
+            --region us-east-1)
+          
+          HIGH=$(echo "$FINDINGS" | jq -r '.imageScanFindings.findingSeverityCounts.HIGH // 0')
+          CRITICAL=$(echo "$FINDINGS" | jq -r '.imageScanFindings.findingSeverityCounts.CRITICAL // 0')
+          
+          echo "Scan Results for ${{ matrix.arch }}:"
+          echo "HIGH: $HIGH"
+          echo "CRITICAL: $CRITICAL"
+          
+          if [ "$HIGH" -gt 0 ] || [ "$CRITICAL" -gt 0 ]; then
+            echo "ERROR: Found HIGH or CRITICAL vulnerabilities"
+            echo "$FINDINGS" | jq '.imageScanFindings'
+            exit 1
+          fi
+          
+          echo "No HIGH or CRITICAL vulnerabilities found"
+
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [nightly-build, create-runners]
+    needs: [nightly-build, create-runners, ecr-scan]
     env:
       runner_output: ${{ toJson(needs.create-runners.outputs) }}
     steps:
