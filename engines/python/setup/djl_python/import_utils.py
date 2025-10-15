@@ -31,6 +31,9 @@ _joblib_available = _is_package_available("joblib")
 _cloudpickle_available = _is_package_available("cloudpickle")
 _skops_available = _is_package_available("skops")
 
+# XGBoost
+_xgboost_available = _is_package_available("xgboost")
+
 
 def is_joblib_available() -> bool:
     return _joblib_available
@@ -44,6 +47,10 @@ def is_skops_available() -> bool:
     return _skops_available
 
 
+def is_xgboost_available() -> bool:
+    return _xgboost_available
+
+
 joblib = None
 if _joblib_available:
     import joblib
@@ -55,3 +62,7 @@ if _cloudpickle_available:
 skops_io = None
 if _skops_available:
     import skops.io as skops_io
+
+xgboost = None
+if _xgboost_available:
+    import xgboost

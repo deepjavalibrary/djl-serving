@@ -77,9 +77,10 @@ RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime:$onnx_version && \
+    djl-serving -i ai.djl:basicdataset:$djl_version && \
     scripts/patch_oss_dlc.sh python && \
     pip3 install torch=="${torch_version}" torchvision --extra-index-url https://download.pytorch.org/whl/cpu && \
-    pip3 install scikit-learn skops cloudpickle && \
+    pip3 install scikit-learn skops cloudpickle xgboost pydantic && \
     echo "${djl_serving_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
     chown -R djl:djl /opt/djl && \
