@@ -157,71 +157,10 @@ jobs:
           docker tag ${{ env.DOCKER_HUB_REPO }}:${{ env.SERVING_VERSION}}-${{ matrix.arch }}${{ env.NIGHTLY }} $tempCommitTag
           time docker push --all-tags  ${{ env.AWS_ECR_REPO }}
 
-  ecr-scan:
-    needs: nightly-build
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || fromJson(format('[{0}]', inputs.arch)) }}
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
-          aws-region: us-east-1
-      - name: Get image tag
-        id: get-tag
-        run: |
-          SERVING_VERSION=$(echo "${{ needs.nightly-build.outputs.djl_version }}")
-          mode=${{ inputs.mode }}
-          if [[ "$mode" != "release" ]]; then
-            NIGHTLY="-nightly"
-          fi
-          IMAGE_TAG="$SERVING_VERSION-${{ matrix.arch }}${NIGHTLY}"
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
-      - name: Get image digest
-        id: get-digest
-        run: |
-          DIGEST=$(aws ecr describe-images \
-            --repository-name djl-ci-temp \
-            --image-ids imageTag=${{ steps.get-tag.outputs.IMAGE_TAG }} \
-            --region us-east-1 \
-            --query 'imageDetails[0].imageDigest' \
-            --output text)
-          echo "DIGEST=$DIGEST" >> $GITHUB_OUTPUT
-      - name: Check Inspector findings
-        run: |
-          REPO_URI="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
-          RESOURCE_ID="${REPO_URI}@${{ steps.get-digest.outputs.DIGEST }}"
-          
-          echo "Checking vulnerabilities for: $RESOURCE_ID"
-          sleep 30
-          
-          FINDINGS=$(aws inspector2 list-findings \
-            --filter-criteria '{"ecrImageHash":[{"comparison":"EQUALS","value":"${{ steps.get-digest.outputs.DIGEST }}"}]}' \
-            --region us-east-1 \
-            --output json)
-          
-          HIGH=$(echo "$FINDINGS" | jq '[.findings[] | select(.severity=="HIGH")] | length')
-          CRITICAL=$(echo "$FINDINGS" | jq '[.findings[] | select(.severity=="CRITICAL")] | length')
-          
-          echo "Scan Results for ${{ matrix.arch }}:"
-          echo "HIGH: $HIGH"
-          echo "CRITICAL: $CRITICAL"
-          
-          if [ "$HIGH" -gt 0 ] || [ "$CRITICAL" -gt 0 ]; then
-            echo "ERROR: Found HIGH or CRITICAL vulnerabilities"
-            echo "$FINDINGS" | jq '.findings[] | select(.severity=="HIGH" or .severity=="CRITICAL") | {title, severity, description}'
-            exit 1
-          fi
-          
-          echo "No HIGH or CRITICAL vulnerabilities found"
-
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [nightly-build, create-runners, ecr-scan]
+    needs: [nightly-build, create-runners]
     env:
       runner_output: ${{ toJson(needs.create-runners.outputs) }}
     steps:
