@@ -174,11 +174,17 @@ def find_model_file(model_dir: str, extensions: List[str]) -> Optional[str]:
         extensions: List of file extensions to search for (without dots)
         
     Returns:
-        Path to first matching model file, or None if not found
+        Path to matching model file, or None if not found
     """
+    all_matches = []
     for ext in extensions:
         pattern = os.path.join(model_dir, f"*.{ext}")
         matches = glob.glob(pattern)
-        if matches:
-            return matches[0]  # Return first match
-    return None
+        all_matches.extend(matches)
+
+    if len(all_matches) > 1:
+        raise ValueError(
+            f"Multiple model files found in {model_dir}: {all_matches}. Only one model file is supported per directory."
+        )
+
+    return all_matches[0] if all_matches else None

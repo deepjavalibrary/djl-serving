@@ -19,6 +19,7 @@ from typing import Optional
 from djl_python import Input, Output
 from djl_python.encode_decode import decode
 from djl_python.utils import find_model_file
+from djl_python.service_loader import get_annotated_function
 from djl_python.import_utils import joblib, cloudpickle, skops_io as sio
 
 
@@ -27,19 +28,26 @@ class SklearnHandler:
     def __init__(self):
         self.model = None
         self.initialized = False
+        self.custom_input_formatter = None
+        self.custom_output_formatter = None
+        self.custom_predict_formatter = None
 
-    def _get_trusted_types(self):
-        trusted_types_str = os.environ.get("SKLEARN_SKOPS_TRUSTED_TYPES", "")
+    def _get_trusted_types(self, properties: dict):
+        trusted_types_str = properties.get("skops_trusted_types", "")
         if not trusted_types_str:
             raise ValueError(
                 "SKLEARN_SKOPS_TRUSTED_TYPES environment variable must be set to load skops models. "
                 "Example: SKLEARN_SKOPS_TRUSTED_TYPES='sklearn.ensemble._forest.RandomForestClassifier,numpy.ndarray'"
             )
-        return [t.strip() for t in trusted_types_str.split(",") if t.strip()]
+        trusted_types = [
+            t.strip() for t in trusted_types_str.split(",") if t.strip()
+        ]
+        print(f"Using trusted types for skops model loading: {trusted_types}")
+        return trusted_types
 
     def initialize(self, properties: dict):
         model_dir = properties.get("model_dir")
-        model_format = os.environ.get("SKLEARN_MODEL_FORMAT", "skops")
+        model_format = properties.get("model_format", "skops")
 
         format_extensions = {
             "skops": ["skops"],
@@ -61,13 +69,13 @@ class SklearnHandler:
             )
 
         if model_format == "skops":
-            trusted_types = self._get_trusted_types()
+            trusted_types = self._get_trusted_types(properties)
             self.model = sio.load(model_file, trusted=trusted_types)
         else:
-            if os.environ.get("TRUST_INSECURE_PICKLE_FILES",
-                              "").lower() != "true":
+            if properties.get("trust_insecure_model_files",
+                              "false").lower() != "true":
                 raise ValueError(
-                    f"TRUST_INSECURE_PICKLE_FILES must be set to 'true' to use {model_format} format (only skops is secure by default)"
+                    f"trust_insecure_model_files must be set to 'true' to use {model_format} format (only skops is secure by default)"
                 )
 
             if model_format == "joblib":
@@ -79,13 +87,33 @@ class SklearnHandler:
                 with open(model_file, 'rb') as f:
                     self.model = cloudpickle.load(f)
 
+        self.custom_input_formatter = get_annotated_function(
+            model_dir, "is_input_formatter")
+        self.custom_output_formatter = get_annotated_function(
+            model_dir, "is_output_formatter")
+        self.custom_predict_formatter = get_annotated_function(
+            model_dir, "is_predict_formatter")
+
         self.initialized = True
 
     def inference(self, inputs: Input) -> Output:
         content_type = inputs.get_property("Content-Type")
         accept = inputs.get_property("Accept") or "application/json"
 
-        if "text/csv" in content_type:
+        # Validate accept type (skip validation if custom output formatter is provided)
+        if not self.custom_output_formatter:
+            supported_accept_types = ["application/json", "text/csv"]
+            if not any(supported_type in accept
+                       for supported_type in supported_accept_types):
+                raise ValueError(
+                    f"Unsupported Accept type: {accept}. Supported types: {supported_accept_types}"
+                )
+
+        # Input processing 
+        X = None
+        if self.custom_input_formatter:
+            X = self.custom_input_formatter(inputs)
+        elif "text/csv" in content_type:
             X = decode(inputs, content_type, require_csv_headers=False)
         else:
             input_map = decode(inputs, content_type)
@@ -93,11 +121,23 @@ class SklearnHandler:
                                                          dict) else input_map
             X = np.array(data)
 
+        if X is None or not hasattr(X, 'ndim'):
+            raise ValueError(
+                f"Input processing failed for content type {content_type}")
+
         if X.ndim == 1:
             X = X.reshape(1, -1)
 
-        predictions = self.model.predict(X)
+        if self.custom_predict_formatter:
+            predictions = self.custom_predict_formatter(self.model, X)
+        else:
+            predictions = self.model.predict(X)
 
+        # Output processing 
+        if self.custom_output_formatter:
+            return self.custom_output_formatter(predictions)
+
+        # Supports CSV/JSON outputs by default
         outputs = Output()
         if "text/csv" in accept:
             csv_buffer = StringIO()

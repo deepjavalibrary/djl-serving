@@ -31,20 +31,42 @@ class XGBoostHandler:
 
     def initialize(self, properties: dict):
         model_dir = properties.get("model_dir")
+        model_format = properties.get("model_format", "json")
 
-        extensions = ["pkl", "model", "xgb", "bst", "json", "ubj"]
+        format_extensions = {
+            "json": ["json"],
+            "ubj": ["ubj"],
+            "pickle": ["pkl", "pickle"],
+            "xgb": ["xgb", "model", "bst"]
+        }
+
+        extensions = format_extensions.get(model_format)
+        if not extensions:
+            raise ValueError(
+                f"Unsupported model format: {model_format}. Supported formats: json, ubj, pickle, xgb"
+            )
 
         model_file = find_model_file(model_dir, extensions)
         if not model_file:
             raise FileNotFoundError(
-                f"No XGBoost model file found in {model_dir}")
+                f"No model file found with format '{model_format}' in {model_dir}"
+            )
 
-        try:
-            with open(model_file, 'rb') as f:
-                self.model = pkl.load(f)
-        except Exception:
+        if model_format in ["json", "ubj"]:
             self.model = xgb.Booster()
             self.model.load_model(model_file)
+        else:  # unsafe formats: pickle, xgb
+            if properties.get("trust_insecure_model_files",
+                              "false").lower() != "true":
+                raise ValueError(
+                    "trust_insecure_model_files must be set to 'true' to use unsafe formats (only json/ubj are secure by default)"
+                )
+            if model_format == "pickle":
+                with open(model_file, 'rb') as f:
+                    self.model = pkl.load(f)
+            else:  # xgb format
+                self.model = xgb.Booster()
+                self.model.load_model(model_file)
 
         self.custom_input_formatter = get_annotated_function(
             model_dir, "is_input_formatter")
@@ -58,6 +80,15 @@ class XGBoostHandler:
     def inference(self, inputs: Input) -> Output:
         content_type = inputs.get_property("Content-Type")
         accept = inputs.get_property("Accept") or "application/json"
+
+        # Validate accept type (skip validation if custom output formatter is provided)
+        if not self.custom_output_formatter:
+            supported_accept_types = ["application/json", "text/csv"]
+            if not any(supported_type in accept
+                       for supported_type in supported_accept_types):
+                raise ValueError(
+                    f"Unsupported Accept type: {accept}. Supported types: {supported_accept_types}"
+                )
 
         # Input processing
         X = None
