@@ -22,9 +22,10 @@ import numpy as np
 
 
 def decode_csv(inputs: Input):  # type: (str) -> np.array
-    stream = StringIO(inputs.get_as_string())
+    csv_content = inputs.get_as_string()
+    stream = StringIO(csv_content)
     # detects if the incoming csv has headers
-    if not any(header in string_like.splitlines()[0].lower()
+    if not any(header in csv_content.splitlines()[0].lower()
                for header in ["question", "context", "inputs"]):
         raise ValueError(
             "You need to provide the correct CSV with Header columns to use it with the inference toolkit default handler.",
