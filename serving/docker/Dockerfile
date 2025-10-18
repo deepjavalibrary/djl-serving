@@ -64,23 +64,26 @@ LABEL djl-serving-version=$djl_serving_version
 
 FROM base AS cpu-full
 
-ARG python_version=3.10
+ARG python_version=3.11
 ARG torch_version=2.7.1
 ARG onnx_version=1.20.0
+ARG sklearn_version=1.7.2
+ARG xgboost_version=3.0.5
+ARG pydantic_version=2.12.2
 
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python${python_version}/dist-packages/torch/lib
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cpu
 
 COPY scripts scripts/
-RUN scripts/install_python.sh && \
+RUN scripts/install_python.sh ${python_version} && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime:$onnx_version && \
     djl-serving -i ai.djl:basicdataset:$djl_version && \
     scripts/patch_oss_dlc.sh python && \
     pip3 install torch=="${torch_version}" torchvision --extra-index-url https://download.pytorch.org/whl/cpu && \
-    pip3 install scikit-learn skops cloudpickle xgboost pydantic && \
+    pip3 install scikit-learn=="${sklearn_version}" skops cloudpickle xgboost=="${xgboost_version}" pydantic=="${pydantic_version}" && \
     echo "${djl_serving_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
     chown -R djl:djl /opt/djl && \

@@ -109,7 +109,7 @@ class SklearnHandler:
                     f"Unsupported Accept type: {accept}. Supported types: {supported_accept_types}"
                 )
 
-        # Input processing 
+        # Input processing
         X = None
         if self.custom_input_formatter:
             X = self.custom_input_formatter(inputs)
@@ -133,7 +133,7 @@ class SklearnHandler:
         else:
             predictions = self.model.predict(X)
 
-        # Output processing 
+        # Output processing
         if self.custom_output_formatter:
             return self.custom_output_formatter(predictions)
 
