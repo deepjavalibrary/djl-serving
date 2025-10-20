@@ -15,7 +15,6 @@ package ai.djl.serving.util;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.FilenameUtils;
-import ai.djl.serving.ModelServer;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.BadWorkflowException;
@@ -49,7 +48,7 @@ import java.util.stream.Stream;
 /** A class represent model server's model store. */
 public final class ModelStore {
 
-    private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ModelStore.class);
     private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?([^?]+?)]?=)?(.+)");
 
     private static final ModelStore INSTANCE = new ModelStore();
@@ -100,13 +99,7 @@ public final class ModelStore {
                 // contains only directory or archive files
                 boolean isMultiModelsDirectory;
                 try (Stream<Path> stream = Files.list(modelStore)) {
-                    isMultiModelsDirectory =
-                            stream.filter(p -> !p.getFileName().toString().startsWith("."))
-                                    .allMatch(
-                                            p ->
-                                                    Files.isDirectory(p)
-                                                            || FilenameUtils.isArchiveFile(
-                                                                    p.toString()));
+                    isMultiModelsDirectory = stream.allMatch(ModelStore::isModel);
                 }
 
                 if (isMultiModelsDirectory) {
@@ -208,10 +201,7 @@ public final class ModelStore {
      */
     public static String mapModelUrl(Path path) {
         try {
-            if (!Files.exists(path)
-                    || Files.isHidden(path)
-                    || (!Files.isDirectory(path)
-                            && !FilenameUtils.isArchiveFile(path.toString()))) {
+            if (!isModel(path)) {
                 return null;
             }
             try (Stream<Path> stream = Files.list(path)) {
@@ -231,6 +221,15 @@ public final class ModelStore {
             logger.warn("Failed to access file: {}", path, e);
             return null;
         }
+    }
+
+    private static boolean isModel(Path path) {
+        String fileName = Objects.requireNonNull(path.getFileName()).toString();
+        if (fileName.startsWith(".")) {
+            return false;
+        }
+        return Files.exists(path)
+                && (Files.isDirectory(path) || FilenameUtils.isArchiveFile(fileName));
     }
 
     private String createHuggingFaceModel(String modelId) throws IOException {
