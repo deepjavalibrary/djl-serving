@@ -36,8 +36,8 @@ class SklearnHandler:
         trusted_types_str = properties.get("skops_trusted_types", "")
         if not trusted_types_str:
             raise ValueError(
-                "SKLEARN_SKOPS_TRUSTED_TYPES environment variable must be set to load skops models. "
-                "Example: SKLEARN_SKOPS_TRUSTED_TYPES='sklearn.ensemble._forest.RandomForestClassifier,numpy.ndarray'"
+                "option.skops_trusted_types must be set to load skops models. "
+                "Example: option.skops_trusted_types='sklearn.ensemble._forest.RandomForestClassifier,numpy.ndarray'"
             )
         trusted_types = [
             t.strip() for t in trusted_types_str.split(",") if t.strip()
@@ -75,7 +75,7 @@ class SklearnHandler:
             if properties.get("trust_insecure_model_files",
                               "false").lower() != "true":
                 raise ValueError(
-                    f"trust_insecure_model_files must be set to 'true' to use {model_format} format (only skops is secure by default)"
+                    f"option.trust_insecure_model_files must be set to 'true' to use {model_format} format (only skops is secure by default)"
                 )
 
             if model_format == "joblib":

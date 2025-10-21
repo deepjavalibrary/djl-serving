@@ -84,6 +84,7 @@ RUN scripts/install_python.sh ${python_version} && \
     scripts/patch_oss_dlc.sh python && \
     pip3 install torch=="${torch_version}" torchvision --extra-index-url https://download.pytorch.org/whl/cpu && \
     pip3 install scikit-learn=="${sklearn_version}" skops cloudpickle xgboost=="${xgboost_version}" pydantic=="${pydantic_version}" && \
+    pip3 install --upgrade numpy && \
     echo "${djl_serving_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
     chown -R djl:djl /opt/djl && \

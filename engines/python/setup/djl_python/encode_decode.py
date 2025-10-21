@@ -22,15 +22,15 @@ import numpy as np
 
 
 def decode_csv(inputs: Input, require_headers=True):  # type: (str) -> np.array
-    csv_string = inputs.get_as_string()
+    csv_content = inputs.get_as_string()
 
     if require_headers:
-        if not any(header in csv_string.splitlines()[0].lower()
+        if not any(header in csv_content.splitlines()[0].lower()
                    for header in ["question", "context", "inputs"]):
             raise ValueError(
                 "You need to provide the correct CSV with Header columns to use it with the inference toolkit default handler.",
             )
-        stream = StringIO(csv_string)
+        stream = StringIO(csv_content)
         request_list = list(csv.DictReader(stream))
         if "inputs" in request_list[0].keys():
             return {"inputs": [entry["inputs"] for entry in request_list]}
@@ -38,10 +38,13 @@ def decode_csv(inputs: Input, require_headers=True):  # type: (str) -> np.array
             return {"inputs": request_list}
     else:
         # for preditive ML inputs
-        try:
-            return np.genfromtxt(StringIO(csv_string), delimiter=",")
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Failed to parse CSV data: {str(e)}")
+        result = np.genfromtxt(StringIO(csv_content), delimiter=",")
+        # Check for NaN values which indicate non-numeric data
+        if np.isnan(result).any():
+            raise ValueError(
+                "CSV contains non-numeric data. Please provide numeric data only."
+            )
+        return result
 
 
 def encode_csv(content):  # type: (str) -> np.array

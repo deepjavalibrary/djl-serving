@@ -31,7 +31,8 @@ class XGBoostHandler:
 
     def initialize(self, properties: dict):
         model_dir = properties.get("model_dir")
-        model_format = properties.get("model_format", "json")
+        model_format = (properties.get("model_format")
+                        or os.environ.get("MODEL_FORMAT") or "json")
 
         format_extensions = {
             "json": ["json"],
@@ -56,10 +57,12 @@ class XGBoostHandler:
             self.model = xgb.Booster()
             self.model.load_model(model_file)
         else:  # unsafe formats: pickle, xgb
-            if properties.get("trust_insecure_model_files",
-                              "false").lower() != "true":
+            trust_insecure = (properties.get("trust_insecure_model_files")
+                              or os.environ.get("TRUST_INSECURE_MODEL_FILES")
+                              or "false")
+            if trust_insecure.lower() != "true":
                 raise ValueError(
-                    "trust_insecure_model_files must be set to 'true' to use unsafe formats (only json/ubj are secure by default)"
+                    "option.trust_insecure_model_files must be set to 'true' to use unsafe formats (only json/ubj are secure by default)"
                 )
             if model_format == "pickle":
                 with open(model_file, 'rb') as f:

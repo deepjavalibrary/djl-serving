@@ -34,6 +34,7 @@ python_skl_models_urls=(
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_multi_model_v2.zip"
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_unsafe_model_v2.zip"
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_custom_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_skops_model_env_v2.zip"
 )
 
 python_xgb_models_urls=(
@@ -47,18 +48,10 @@ python_xgb_models_urls=(
 download() {
   urls=("$@")
   for url in "${urls[@]}"; do
-    if [[ "$url" == */ ]]; then
-      # Directory URL - use wget to download recursively
-      dirname=$(basename "${url%/}")
-      if ! [ -d "${dirname}" ]; then
-        wget -r -np -nH --cut-dirs=3 -R "index.html*" "$url"
-      fi
-    else
-      # File URL - use curl with cache-busting headers
-      filename=${url##*/}
-      if ! [ -f "${filename}" ]; then
-        curl -sf -H "Cache-Control: no-cache" -H "Pragma: no-cache" -O "$url"
-      fi
+    filename=${url##*/}
+    # does not download the file, if file already exists
+    if ! [ -f "${filename}" ]; then
+      curl -sf -O "$url"
     fi
   done
 }
