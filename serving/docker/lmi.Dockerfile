@@ -89,8 +89,7 @@ RUN scripts/patch_oss_dlc.sh python \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 COPY lmi-container-requirements.txt ./requirements.txt
-RUN pip3 install torch==2.6.0 torchvision \
-    && pip3 install flashinfer-python -i https://flashinfer.ai/whl/cu126/torch2.6/ \
+RUN pip3 install torch==2.8.0 torchvision \
     && pip3 install -r requirements.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 
