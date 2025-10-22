@@ -4,6 +4,8 @@ import os
 import subprocess
 import logging
 import pytest
+import requests
+import json
 import llm.prepare as prepare
 import llm.client as client
 import test_client

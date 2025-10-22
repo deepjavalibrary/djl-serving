@@ -26,6 +26,25 @@ inf2_models_urls=(
   "https://resources.djl.ai/test-models/pytorch/resnet18_no_reqs_inf2_2_4.tar.gz"
 )
 
+python_skl_models_urls=(
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_joblib_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_cloudpickle_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_skops_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_multi_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_unsafe_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_custom_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_skops_model_env_v2.zip"
+)
+
+python_xgb_models_urls=(
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_ubj_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_deprecated_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_unsafe_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_custom_model_v2.zip"
+)
+
 download() {
   urls=("$@")
   for url in "${urls[@]}"; do
@@ -38,8 +57,13 @@ download() {
 }
 
 case $platform in
-cpu | cpu-full | pytorch-gpu)
+cpu | pytorch-gpu)
   download "${general_platform_models_urls[@]}"
+  ;;
+cpu-full)
+  download "${general_platform_models_urls[@]}"
+  download "${python_skl_models_urls[@]}"
+  download "${python_xgb_models_urls[@]}"
   ;;
 pytorch-inf2)
   download "${inf2_models_urls[@]}"

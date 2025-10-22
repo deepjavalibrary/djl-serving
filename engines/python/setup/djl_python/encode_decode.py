@@ -21,21 +21,30 @@ from djl_python.outputs import Output
 import numpy as np
 
 
-def decode_csv(inputs: Input):  # type: (str) -> np.array
+def decode_csv(inputs: Input, require_headers=True):  # type: (str) -> np.array
     csv_content = inputs.get_as_string()
-    stream = StringIO(csv_content)
-    # detects if the incoming csv has headers
-    if not any(header in csv_content.splitlines()[0].lower()
-               for header in ["question", "context", "inputs"]):
-        raise ValueError(
-            "You need to provide the correct CSV with Header columns to use it with the inference toolkit default handler.",
-        )
-    # reads csv as io
-    request_list = list(csv.DictReader(stream))
-    if "inputs" in request_list[0].keys():
-        return {"inputs": [entry["inputs"] for entry in request_list]}
+
+    if require_headers:
+        if not any(header in csv_content.splitlines()[0].lower()
+                   for header in ["question", "context", "inputs"]):
+            raise ValueError(
+                "You need to provide the correct CSV with Header columns to use it with the inference toolkit default handler.",
+            )
+        stream = StringIO(csv_content)
+        request_list = list(csv.DictReader(stream))
+        if "inputs" in request_list[0].keys():
+            return {"inputs": [entry["inputs"] for entry in request_list]}
+        else:
+            return {"inputs": request_list}
     else:
-        return {"inputs": request_list}
+        # for preditive ML inputs
+        result = np.genfromtxt(StringIO(csv_content), delimiter=",")
+        # Check for NaN values which indicate non-numeric data
+        if np.isnan(result).any():
+            raise ValueError(
+                "CSV contains non-numeric data. Please provide numeric data only."
+            )
+        return result
 
 
 def encode_csv(content):  # type: (str) -> np.array
@@ -51,7 +60,10 @@ def encode_csv(content):  # type: (str) -> np.array
     return stream.getvalue()
 
 
-def decode(inputs: Input, content_type: str, key=None):
+def decode(inputs: Input,
+           content_type: str,
+           key=None,
+           require_csv_headers=True):
     if not content_type:
         ret = inputs.get_as_bytes(key=key)
         if not ret:
@@ -60,7 +72,7 @@ def decode(inputs: Input, content_type: str, key=None):
     elif "application/json" in content_type:
         return inputs.get_as_json(key=key)
     elif "text/csv" in content_type:
-        return decode_csv(inputs)
+        return decode_csv(inputs, require_headers=require_csv_headers)
     elif "text/plain" in content_type:
         return {"inputs": [inputs.get_as_string(key=key)]}
     if content_type.startswith("image/"):

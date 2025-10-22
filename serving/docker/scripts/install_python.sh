@@ -9,7 +9,7 @@ apt-get update
 if [ -z "$PYTHON_VERSION" ]; then
   DEBIAN_FRONTEND=noninteractive apt-get install -yq python3-dev python3-pip python3-venv git
 else
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl software-properties-common git
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl software-properties-common git gnupg
   add-apt-repository -y ppa:deadsnakes/ppa
   apt-get autoremove -y python3
   python_minor_version=$(echo "$PYTHON_VERSION" | awk -F"." '{print $2}')
