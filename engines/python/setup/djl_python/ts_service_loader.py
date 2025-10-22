@@ -76,8 +76,9 @@ class TorchServeService(ModelService):
         if content_type is not None:
             outputs.add_property("content-type", content_type)
 
-        if ts_out is None:
+        if not ts_out:
             outputs.message = "No content"
+            output.add("No content")
         else:
             val = ts_out[0]
             if isinstance(val, torch.Tensor):
