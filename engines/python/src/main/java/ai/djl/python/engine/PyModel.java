@@ -179,7 +179,10 @@ public class PyModel extends BaseModel {
                     entryPoint = modelFile.toFile().getName();
                 }
                 // find recommendedEntryPoint
-                if ("nc".equals(manager.getDevice().getDeviceType())
+                if (hasModelFile(
+                        modelDir, prefix, ".skops", ".joblib", ".pkl", ".pickle", ".cloudpkl")) {
+                    recommendedEntryPoint = "djl_python.sklearn_handler";
+                } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     recommendedEntryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
@@ -325,6 +328,18 @@ public class PyModel extends BaseModel {
             }
         }
         return modelFile;
+    }
+
+    private boolean hasModelFile(Path modelDir, String prefix, String... extensions) {
+        for (String extension : extensions) {
+            if (Files.isRegularFile(modelDir.resolve(prefix + extension))) {
+                return true;
+            }
+            if (Files.isRegularFile(modelDir.resolve("model" + extension))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void createAllPyProcesses(int mpiWorkers, int worldSize) {

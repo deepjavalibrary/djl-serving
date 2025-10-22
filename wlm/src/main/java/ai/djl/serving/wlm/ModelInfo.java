@@ -742,6 +742,18 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         return Device.fromName(deviceName, Engine.getEngine(engineName));
     }
 
+    private boolean hasModelFile(Path modelDir, String prefix, String... extensions) {
+        for (String extension : extensions) {
+            if (Files.isRegularFile(modelDir.resolve(prefix + extension))) {
+                return true;
+            }
+            if (Files.isRegularFile(modelDir.resolve("model" + extension))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private String inferEngine() throws ModelException {
         String eng = prop.getProperty("engine");
         if (eng != null) {
@@ -768,23 +780,19 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             return zoo.getSupportedEngines().iterator().next();
         } else if (isTorchServeModel()) {
             return "Python";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
-                || Files.isRegularFile(modelDir.resolve("model.pt"))) {
+        } else if (hasModelFile(modelDir, prefix, ".pt")) {
             return "PyTorch";
         } else if (Files.isRegularFile(modelDir.resolve("config.pbtxt"))) {
             return "TritonServer";
         } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
             return "TensorFlow";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".onnx"))
-                || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
+        } else if (hasModelFile(modelDir, prefix, ".onnx")) {
             return "OnnxRuntime";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))
-                || Files.isRegularFile(modelDir.resolve(prefix + ".xgb"))
-                || Files.isRegularFile(modelDir.resolve(prefix + ".bst"))
-                || Files.isRegularFile(modelDir.resolve("model.json"))
-                || Files.isRegularFile(modelDir.resolve("model.bst"))
-                || Files.isRegularFile(modelDir.resolve("model.xgb"))) {
+        } else if (hasModelFile(modelDir, prefix, ".json", ".xgb", ".bst")) {
             return "XGBoost";
+        } else if (hasModelFile(
+                modelDir, prefix, ".skops", ".joblib", ".pkl", ".pickle", ".cloudpkl")) {
+            return "Python";
         } else if (isPythonModel(prefix)) {
             // TODO: How to differentiate Rust model from Python
             return "Python";
