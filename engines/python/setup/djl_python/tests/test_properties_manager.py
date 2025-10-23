@@ -629,7 +629,7 @@ class TestConfigManager(unittest.TestCase):
                 "lora_extra_vocab_size": "123",
                 "long_lora_scaling_factors": "3.0",
                 "lora_dtype": "float16",
-                "max_cpu_lorars": "320",
+                "max_cpu_loras": "320",
                 "device": "cpu",
                 "num_scheduler_steps": "2",
                 "multi_step_stream_outputs": "false",
