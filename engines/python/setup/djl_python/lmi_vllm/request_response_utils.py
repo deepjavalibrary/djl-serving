@@ -20,7 +20,7 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
     CompletionLogProbs,
 )
-from vllm.sequence import Logprob
+from vllm.logprobs import Logprob
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 
 from djl_python.outputs import Output
