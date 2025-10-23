@@ -22,7 +22,7 @@ You can read more about the supported format in the [chat completions doc](chat_
 Deploying Vision Language Models with LMI is very similar to deploying Text Generation Models.
 
 There are some additional, optional configs that are exposed:
-* `option.limit_mm_per_prompt`: For each multimodal plugin, limit how many input instances to allow for each prompt. Expects a comma-separated list of items, e.g.: `image=16,video=2` allows a maximum of 16 images and 2 videos per prompt. Defaults to 1 for each modality.
+* `option.limit_mm_per_prompt`: For each multimodal plugin, limit how many input instances to allow for each prompt. Expects a comma-separated list of items, e.g.: `{"image": 16, "video": 2}` allows a maximum of 16 images and 2 videos per prompt. Defaults to 1 for each modality.
 
 Example SageMaker deployment code:
 
@@ -32,7 +32,7 @@ from sagemaker.djl_inference import DJLModel
 model = DJLModel(
     model_id="llava-hf/llava-v1.6-mistral-7b-hf",
     env={
-        "OPTION_LIMIT_MM_PER_PROMPT": "image=2",
+        "OPTION_LIMIT_MM_PER_PROMPT": '{"image":2}',
     }
 )
 

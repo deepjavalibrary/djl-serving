@@ -618,7 +618,7 @@ class TestConfigManager(unittest.TestCase):
                 "tokenizer_pool_size": "12",
                 "tokenizer_pool_type": "mytype",
                 "tokenizer_pool_extra_config": '{"a": "b"}',
-                "limit_mm_per_prompt": "image=2",
+                "limit_mm_per_prompt": '{"image":2}',
                 "enable_lora": "true",
                 "max_loras": "5",
                 "max_lora_rank": "123",
