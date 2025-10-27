@@ -1,7 +1,7 @@
 [test_name]
 mistral
 [vars]
-ENGINE={vllm,lmi-dist}
+ENGINE={vllm}
 [benchmark_vars]
 CONCURRENCY={1,2,4,8}
 [container]

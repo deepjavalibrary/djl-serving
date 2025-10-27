@@ -42,8 +42,8 @@ class TestInputOutput(unittest.TestCase):
         }]
         properties = [{"eula": "true", "Content-type": "application/json"}]
         serving_properties = {
-            "engine": "MPI",
-            "option.rolling_batch": "lmi-dist",
+            "engine": "Python",
+            "option.rolling_batch": "vllm",
             "option.model_id": "llama-70b"
         }
         inputs = test_model.create_concurrent_batch_request(

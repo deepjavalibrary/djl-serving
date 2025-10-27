@@ -64,9 +64,9 @@ class HuggingFaceProperties(Properties):
             self.quantize = "bitsandbytes8"
 
         # TODO remove this after refactor of all handlers
-        # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
+        # parsing bitsandbytes8, so it can be directly passed to vllm model loader.
         if self.quantize == "bitsandbytes8" \
-                and self.rolling_batch == RollingBatchEnum.lmidist:
+                and self.rolling_batch == RollingBatchEnum.vllm:
             self.quantize = "bitsandbytes"
         return self
 
@@ -123,9 +123,8 @@ class HuggingFaceProperties(Properties):
             return self
 
         # TODO remove this after refactor of all handlers
-        # device map is not required for lmi dist and vllm
+        # device map is not required for vllm
         if self.rolling_batch in {
-                RollingBatchEnum.lmidist,
                 RollingBatchEnum.vllm,
         }:
             return self

@@ -13,7 +13,6 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
-from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 from djl_python.tests.utils import parameterized, parameters
 
 import torch
@@ -305,22 +304,13 @@ class TestConfigManager(unittest.TestCase):
 
     @parameters([{
         "rolling_batch": "auto",
-    }, {
-        "rolling_batch": "lmi-dist",
-        "is_error_case": True
     }])
     def test_trt_llm_configs(self, params):
-        is_error_case = params.pop("is_error_case", False)
         properties = {**model_min_properties, **params}
-        if is_error_case:
-            with self.assertRaises(ValueError):
-                TensorRtLlmProperties(**properties)
-        else:
-            trt_configs = TensorRtLlmProperties(**properties)
-            self.assertEqual(trt_configs.model_id_or_path,
-                             properties['model_id'])
-            self.assertEqual(trt_configs.rolling_batch.value,
-                             properties['rolling_batch'])
+        trt_configs = TensorRtLlmProperties(**properties)
+        self.assertEqual(trt_configs.model_id_or_path, properties['model_id'])
+        self.assertEqual(trt_configs.rolling_batch.value,
+                         properties['rolling_batch'])
 
     def test_hf_configs(self):
         properties = {
@@ -400,15 +390,6 @@ class TestConfigManager(unittest.TestCase):
         hf_configs = HuggingFaceProperties(**properties,
                                            rolling_batch="disable")
         self.assertIsNone(hf_configs.kwargs.get("device_map"))
-
-    def test_hf_quantize(self):
-        properties = {
-            'model_id': 'model_id',
-            'quantize': 'bitsandbytes8',
-            'rolling_batch': 'lmi-dist'
-        }
-        hf_configs = HuggingFaceProperties(**properties)
-        self.assertEqual(hf_configs.quantize, "bitsandbytes")
 
     @parameters([{
         "model_id": "model_id",
@@ -699,93 +680,6 @@ class TestConfigManager(unittest.TestCase):
         test_properties = {**common_properties, **params}
         with self.assertRaises(ValueError):
             StableDiffusionNeuronXProperties(**test_properties)
-
-    def test_lmi_dist_properties(self):
-
-        def test_with_min_properties():
-            lmi_configs = LmiDistRbProperties(**min_properties)
-            self.assertEqual(lmi_configs.model_id_or_path,
-                             min_properties['model_id'])
-            self.assertEqual(lmi_configs.load_format, 'auto')
-            self.assertEqual(lmi_configs.dtype, 'auto')
-            self.assertEqual(lmi_configs.gpu_memory_utilization, 0.9)
-            self.assertTrue(lmi_configs.mpi_mode)
-            self.assertFalse(lmi_configs.enable_lora)
-
-        def test_with_most_properties():
-            properties = {
-                'trust_remote_code': 'TRUE',
-                'tensor_parallel_degree': '2',
-                'revision': 'somerevisionstr',
-                'max_rolling_batch_size': '64',
-                'max_rolling_batch_prefill_tokens': '12500',
-                'dtype': 'fp32',
-                'enable_lora': "true",
-            }
-
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.engine, min_properties['engine'])
-            self.assertEqual(lmi_configs.model_id_or_path,
-                             min_properties['model_id'])
-            self.assertEqual(lmi_configs.tensor_parallel_degree,
-                             int(properties['tensor_parallel_degree']))
-            self.assertEqual(lmi_configs.revision, properties['revision'])
-            self.assertEqual(lmi_configs.max_rolling_batch_size,
-                             int(properties['max_rolling_batch_size']))
-            self.assertEqual(
-                lmi_configs.max_rolling_batch_prefill_tokens,
-                int(properties['max_rolling_batch_prefill_tokens']))
-            self.assertEqual(lmi_configs.dtype, 'fp32')
-            self.assertTrue(lmi_configs.mpi_mode)
-            self.assertTrue(lmi_configs.trust_remote_code)
-            self.assertEqual(lmi_configs.enable_lora,
-                             bool(properties['enable_lora']))
-
-        def test_quantization_squeezellm():
-            properties = {'quantize': 'squeezellm'}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.quantize, "squeezellm")
-
-        def test_long_lora_scaling_factors():
-            properties = {"long_lora_scaling_factors": "3.0"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
-
-            properties = {"long_lora_scaling_factors": "3"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
-
-            properties = {"long_lora_scaling_factors": "3.0,4.0"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
-
-            properties = {"long_lora_scaling_factors": "3.0, 4.0 "}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
-
-            properties = {"long_lora_scaling_factors": "(3.0,)"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
-
-            properties = {"long_lora_scaling_factors": "(3.0,4.0)"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
-
-        def test_invalid_long_lora_scaling_factors():
-            properties = {'long_lora_scaling_factors': "(a,b)"}
-            with self.assertRaises(ValueError):
-                LmiDistRbProperties(**properties, **min_properties)
-
-        min_properties = {
-            'engine': 'MPI',
-            'mpi_mode': 'true',
-            'model_id': 'sample_model_id',
-        }
-        test_with_min_properties()
-        test_with_most_properties()
-        test_quantization_squeezellm()
-        test_long_lora_scaling_factors()
-        test_invalid_long_lora_scaling_factors()
 
 
 if __name__ == '__main__':
