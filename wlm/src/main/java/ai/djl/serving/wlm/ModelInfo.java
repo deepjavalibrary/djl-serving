@@ -34,6 +34,7 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.EventManager;
+import ai.djl.serving.wlm.util.SageMakerCompatibility;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
 import ai.djl.translate.NoopServingTranslatorFactory;
@@ -888,6 +889,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     logger.warn("{}: Failed read serving.properties file", uid, e);
                 }
             }
+
+            // Apply SageMaker compatibility for model-level configurations
+            SageMakerCompatibility.applyModelCompatibility(prop);
+
             // load default settings from env
             for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
                 String key = entry.getKey();
@@ -906,6 +911,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         prop.putIfAbsent("engine", value);
                         continue;
                     }
+                    logger.debug("{}: Setting model option {}={}", uid, key, value);
                     prop.putIfAbsent("option." + key, value);
                 } else if (key.startsWith("ARGS_")) {
                     key = key.substring(5);

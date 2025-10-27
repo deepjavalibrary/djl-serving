@@ -18,7 +18,7 @@ from io import StringIO
 from typing import Optional
 from djl_python import Input, Output
 from djl_python.encode_decode import decode
-from djl_python.utils import find_model_file
+from djl_python.utils import find_model_file, get_sagemaker_function
 from djl_python.service_loader import get_annotated_function
 from djl_python.import_utils import xgboost as xgb
 
@@ -28,8 +28,56 @@ class XGBoostHandler:
     def __init__(self):
         self.model = None
         self.initialized = False
+        self.custom_input_formatter = None
+        self.custom_output_formatter = None
+        self.custom_predict_formatter = None
+        self.custom_model_loading_formatter = None
+        self.init_properties = None
+        self.is_sagemaker_script = False
+
+    def _load_custom_formatters(self, model_dir: str):
+        """Load custom formatters, checking DJL decorators first, then SageMaker functions."""
+        # Check for DJL decorator-based custom formatters first
+        self.custom_model_loading_formatter = get_annotated_function(
+            model_dir, "is_model_loading_formatter")
+        self.custom_input_formatter = get_annotated_function(
+            model_dir, "is_input_formatter")
+        self.custom_output_formatter = get_annotated_function(
+            model_dir, "is_output_formatter")
+        self.custom_predict_formatter = get_annotated_function(
+            model_dir, "is_predict_formatter")
+
+        # If no decorator-based formatters found, check for SageMaker-style formatters
+        if not any([
+                self.custom_input_formatter, self.custom_output_formatter,
+                self.custom_predict_formatter,
+                self.custom_model_loading_formatter
+        ]):
+
+            sagemaker_model_fn = get_sagemaker_function(model_dir, 'model_fn')
+            sagemaker_input_fn = get_sagemaker_function(model_dir, 'input_fn')
+            sagemaker_predict_fn = get_sagemaker_function(
+                model_dir, 'predict_fn')
+            sagemaker_output_fn = get_sagemaker_function(
+                model_dir, 'output_fn')
+
+            if any([
+                    sagemaker_model_fn, sagemaker_input_fn,
+                    sagemaker_predict_fn, sagemaker_output_fn
+            ]):
+                self.is_sagemaker_script = True
+                if sagemaker_model_fn:
+                    self.custom_model_loading_formatter = sagemaker_model_fn
+                if sagemaker_input_fn:
+                    self.custom_input_formatter = sagemaker_input_fn
+                if sagemaker_predict_fn:
+                    self.custom_predict_formatter = sagemaker_predict_fn
+                if sagemaker_output_fn:
+                    self.custom_output_formatter = sagemaker_output_fn
 
     def initialize(self, properties: dict):
+        # Store initialization properties for use during inference
+        self.init_properties = properties.copy()
         model_dir = properties.get("model_dir")
         model_format = (properties.get("model_format")
                         or os.environ.get("MODEL_FORMAT") or "json")
@@ -47,42 +95,51 @@ class XGBoostHandler:
                 f"Unsupported model format: {model_format}. Supported formats: json, ubj, pickle, xgb"
             )
 
-        model_file = find_model_file(model_dir, extensions)
-        if not model_file:
-            raise FileNotFoundError(
-                f"No model file found with format '{model_format}' in {model_dir}"
-            )
+        # Load custom formatters
+        self._load_custom_formatters(model_dir)
 
-        if model_format in ["json", "ubj"]:
-            self.model = xgb.Booster()
-            self.model.load_model(model_file)
-        else:  # unsafe formats: pickle, xgb
-            trust_insecure = (properties.get("trust_insecure_model_files")
-                              or os.environ.get("TRUST_INSECURE_MODEL_FILES")
-                              or "false")
-            if trust_insecure.lower() != "true":
-                raise ValueError(
-                    "option.trust_insecure_model_files must be set to 'true' to use unsafe formats (only json/ubj are secure by default)"
+        if self.custom_model_loading_formatter:
+            self.model = self.custom_model_loading_formatter(model_dir)
+        else:
+            model_file = find_model_file(model_dir, extensions)
+            if not model_file:
+                raise FileNotFoundError(
+                    f"No model file found with format '{model_format}' in {model_dir}"
                 )
-            if model_format == "pickle":
-                with open(model_file, 'rb') as f:
-                    self.model = pkl.load(f)
-            else:  # xgb format
+
+            if model_format in ["json", "ubj"]:
                 self.model = xgb.Booster()
                 self.model.load_model(model_file)
-
-        self.custom_input_formatter = get_annotated_function(
-            model_dir, "is_input_formatter")
-        self.custom_output_formatter = get_annotated_function(
-            model_dir, "is_output_formatter")
-        self.custom_predict_formatter = get_annotated_function(
-            model_dir, "is_predict_formatter")
+            else:  # unsafe formats: pickle, xgb
+                trust_insecure = (properties.get("trust_insecure_model_files")
+                                  or
+                                  os.environ.get("TRUST_INSECURE_MODEL_FILES")
+                                  or "false")
+                if trust_insecure.lower() != "true":
+                    raise ValueError(
+                        "option.trust_insecure_model_files must be set to 'true' to use unsafe formats (only json/ubj are secure by default)"
+                    )
+                if model_format == "pickle":
+                    with open(model_file, 'rb') as f:
+                        self.model = pkl.load(f)
+                else:  # xgb format
+                    self.model = xgb.Booster()
+                    self.model.load_model(model_file)
 
         self.initialized = True
 
     def inference(self, inputs: Input) -> Output:
         content_type = inputs.get_property("Content-Type")
-        accept = inputs.get_property("Accept") or "application/json"
+        properties = inputs.get_properties()
+        # Use initialization properties as fallback for missing request properties
+        default_accept = self.init_properties.get("default_accept",
+                                                  "application/json")
+
+        accept = inputs.get_property("Accept")
+
+        # Treat */* as no preference, use default
+        if accept == "*/*":
+            accept = default_accept
 
         # Validate accept type (skip validation if custom output formatter is provided)
         if not self.custom_output_formatter:
@@ -96,7 +153,11 @@ class XGBoostHandler:
         # Input processing
         X = None
         if self.custom_input_formatter:
-            X = self.custom_input_formatter(inputs)
+            if self.is_sagemaker_script:
+                X = self.custom_input_formatter(inputs.get_as_bytes(),
+                                                content_type)
+            else:
+                X = self.custom_input_formatter(inputs)
         elif "text/csv" in content_type:
             X = decode(inputs, content_type, require_csv_headers=False)
         else:
@@ -112,18 +173,22 @@ class XGBoostHandler:
         if X.ndim == 1:
             X = X.reshape(1, -1)
         if self.custom_predict_formatter:
-            predictions = self.custom_predict_formatter(self.model, X)
+            predictions = self.custom_predict_formatter(X, self.model)
         else:
             dmatrix = xgb.DMatrix(X)
-            predictions = self.model.predict(dmatrix, validate_features=False)
+            predictions = self.model.predict(dmatrix)
 
         # Output processing
-        if self.custom_output_formatter:
-            return self.custom_output_formatter(predictions)
-
-        # Supports CSV/JSON outputs by default
         outputs = Output()
-        if "text/csv" in accept:
+        if self.custom_output_formatter:
+            if self.is_sagemaker_script:
+                data = self.custom_output_formatter(predictions, accept)
+                outputs.add_property("Content-Type", accept)
+            else:
+                data = self.custom_output_formatter(predictions)
+            outputs.add(data)
+
+        elif "text/csv" in accept:
             csv_buffer = StringIO()
             np.savetxt(csv_buffer, predictions, fmt='%s', delimiter=',')
             outputs.add(csv_buffer.getvalue().rstrip())

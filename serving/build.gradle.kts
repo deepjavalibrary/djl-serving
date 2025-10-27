@@ -147,6 +147,9 @@ tasks {
                 "if [ \"\${MODEL_SERVER_HOME}\" = \"\" ] ; then\n" +
                         "    export MODEL_SERVER_HOME=\${APP_HOME}\n" +
                         "fi\n" +
+                        "if [ \"\${SAGEMAKER_MODEL_SERVER_VMARGS}\" != \"\" ] ; then\n" +
+                        "    export JAVA_OPTS=\"\$JAVA_OPTS \$SAGEMAKER_MODEL_SERVER_VMARGS\"\n" +
+                        "fi\n" +
                         "if [ -f \"/opt/ml/.sagemaker_infra/endpoint-metadata.json\" ]; then\n" +
                         "    export JAVA_OPTS=\"\$JAVA_OPTS -XX:-UseContainerSupport\"\n" +
                         "    DEFAULT_JVM_OPTS=\"\${DEFAULT_JVM_OPTS:--Dlog4j.configurationFile=\${APP_HOME}/conf/log4j2-plain.xml}\"\n" +

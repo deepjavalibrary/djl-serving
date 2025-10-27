@@ -13,6 +13,7 @@
 package ai.djl.serving.util;
 
 import ai.djl.serving.Arguments;
+import ai.djl.serving.wlm.util.SageMakerCompatibility;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.util.Ec2Utils;
 import ai.djl.util.NeuronUtils;
@@ -127,10 +128,15 @@ public final class ConfigManager {
         if (models != null) {
             prop.setProperty(LOAD_MODELS, String.join(",", models));
         }
-        for (Map.Entry<String, String> env : Utils.getenv().entrySet()) {
-            String key = env.getKey();
+        // Apply SageMaker compatibility for server-level configurations
+        SageMakerCompatibility.applyServerCompatibility(prop);
+
+        Map<String, String> env = Utils.getenv();
+
+        for (Map.Entry<String, String> entry : env.entrySet()) {
+            String key = entry.getKey();
             if (key.startsWith("SERVING_")) {
-                prop.put(key.substring(8).toLowerCase(Locale.ROOT), env.getValue());
+                prop.put(key.substring(8).toLowerCase(Locale.ROOT), entry.getValue());
             }
         }
         for (Map.Entry<Object, Object> entry : prop.entrySet()) {

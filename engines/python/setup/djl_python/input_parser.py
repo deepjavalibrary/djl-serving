@@ -36,6 +36,28 @@ def input_formatter(function):
     return function
 
 
+def predict_formatter(function):
+    """
+    Decorator for predict_formatter. User just need to annotate @predict_formatter for their custom defined function.
+    :param function:  Decorator takes in the function and adds an attribute.
+    :return:
+    """
+    # adding an attribute to the function, which is used to find the decorated function.
+    function.is_predict_formatter = True
+    return function
+
+
+def model_loading_formatter(function):
+    """
+    Decorator for model_loading_formatter. User just need to annotate @model_loading_formatter for their custom defined function.
+    :param function:  Decorator takes in the function and adds an attribute.
+    :return:
+    """
+    # adding an attribute to the function, which is used to find the decorated function.
+    function.is_model_loading_formatter = True
+    return function
+
+
 @dataclass
 class ParsedInput:
     errors: dict = field(default_factory=lambda: {})
