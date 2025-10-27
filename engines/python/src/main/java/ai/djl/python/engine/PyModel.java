@@ -186,7 +186,7 @@ public class PyModel extends BaseModel {
                         && pyEnv.getTensorParallelDegree() > 0) {
                     recommendedEntryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
-                    recommendedEntryPoint = "djl_python.tensorrt_llm";
+                    recommendedEntryPoint = "djl_python.lmi_trtllm.trtllm_async_service";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")
                         || Files.exists(modelPath.resolve("config.json"))) {
                     recommendedEntryPoint = "djl_python.huggingface";

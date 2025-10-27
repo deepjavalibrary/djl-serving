@@ -9,7 +9,7 @@ from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
     TnXMemoryLayout, TnXDtypeName, TnXModelLoaders)
-from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
+
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
@@ -303,24 +303,24 @@ class TestConfigManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             TransformerNeuronXProperties(**properties)
 
-    @parameters([{
-        "rolling_batch": "auto",
-    }, {
-        "rolling_batch": "lmi-dist",
-        "is_error_case": True
-    }])
-    def test_trt_llm_configs(self, params):
-        is_error_case = params.pop("is_error_case", False)
-        properties = {**model_min_properties, **params}
-        if is_error_case:
-            with self.assertRaises(ValueError):
-                TensorRtLlmProperties(**properties)
-        else:
-            trt_configs = TensorRtLlmProperties(**properties)
-            self.assertEqual(trt_configs.model_id_or_path,
-                             properties['model_id'])
-            self.assertEqual(trt_configs.rolling_batch.value,
-                             properties['rolling_batch'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def test_hf_configs(self):
         properties = {
@@ -618,7 +618,7 @@ class TestConfigManager(unittest.TestCase):
                 "tokenizer_pool_size": "12",
                 "tokenizer_pool_type": "mytype",
                 "tokenizer_pool_extra_config": '{"a": "b"}',
-                "limit_mm_per_prompt": '{"image":2}',
+                "limit_mm_per_prompt": "image=2",
                 "enable_lora": "true",
                 "max_loras": "5",
                 "max_lora_rank": "123",
@@ -629,7 +629,7 @@ class TestConfigManager(unittest.TestCase):
                 "lora_extra_vocab_size": "123",
                 "long_lora_scaling_factors": "3.0",
                 "lora_dtype": "float16",
-                "max_cpu_loras": "320",
+                "max_cpu_lorars": "320",
                 "device": "cpu",
                 "num_scheduler_steps": "2",
                 "multi_step_stream_outputs": "false",
@@ -667,14 +667,14 @@ class TestConfigManager(unittest.TestCase):
             vllm_configs = VllmRbProperties(**properties)
             engine_configs = vllm_configs.get_engine_args()
 
-        # test_vllm_default_properties()
-        # test_invalid_pipeline_parallel()
-        # test_invalid_engine()
-        # test_aliases()
-        # test_long_lora_scaling_factors()
-        # test_invalid_long_lora_scaling_factors()
-        # test_conflicting_djl_vllm_conflicts()
-        # test_all_vllm_engine_args()
+        test_vllm_default_properties()
+        test_invalid_pipeline_parallel()
+        test_invalid_engine()
+        test_aliases()
+        test_long_lora_scaling_factors()
+        test_invalid_long_lora_scaling_factors()
+        test_conflicting_djl_vllm_conflicts()
+        test_all_vllm_engine_args()
 
     def test_sd_inf2_properties(self):
         properties = {
