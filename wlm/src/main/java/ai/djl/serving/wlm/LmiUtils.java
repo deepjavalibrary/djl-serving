@@ -50,7 +50,8 @@ public final class LmiUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(LmiUtils.class);
 
-    private LmiUtils() {}
+    private LmiUtils() {
+    }
 
     static void exec(List<String> cmd) throws IOException, InterruptedException {
         Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
@@ -79,11 +80,11 @@ public final class LmiUtils {
             }
             logger.warn(
                     "Unable to fetch the HuggingFace Model Config for the specified model. If the"
-                        + " model is a compiled model, or not a HuggingFace Pretrained Model, this"
-                        + " is expected. If this is a HuggingFace Pretrained model, ensure that the"
-                        + " model artifacts contain a config.json or params.json file. If you are"
-                        + " using a HuggingFace Hub modelId, ensure that you are providing the"
-                        + " HF_TOKEN environment variable for gated models.");
+                            + " model is a compiled model, or not a HuggingFace Pretrained Model, this"
+                            + " is expected. If this is a HuggingFace Pretrained model, ensure that the"
+                            + " model artifacts contain a config.json or params.json file. If you are"
+                            + " using a HuggingFace Hub modelId, ensure that you are providing the"
+                            + " HF_TOKEN environment variable for gated models.");
             return;
         }
 
@@ -111,8 +112,10 @@ public final class LmiUtils {
     }
 
     static boolean needConvertTrtLLM(ModelInfo<?, ?> info) {
-        Properties properties = info.getProperties();
-        return isTrtLlmRollingBatch(properties);
+        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
+        // Pytorch backend cannot be saved as engine currently in TRTLLM...
+        String backend = info.prop.getProperty("option.backend");
+        return features != null && features.contains("trtllm") && !"pytorch".equals(backend);
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
@@ -178,8 +181,7 @@ public final class LmiUtils {
         }
         String optimization = info.prop.getProperty("option.optimization");
         boolean trustRemoteCode = "true".equals(info.prop.getProperty("option.trust_remote_code"));
-        info.resolvedModelUrl =
-                convertOnnx(modelId, optimization, trustRemoteCode).toUri().toURL().toString();
+        info.resolvedModelUrl = convertOnnx(modelId, optimization, trustRemoteCode).toUri().toURL().toString();
     }
 
     private static Path convertOnnx(String modelId, String optimization, boolean trustRemoteCode)
@@ -289,12 +291,12 @@ public final class LmiUtils {
      * Returns the Huggingface config.json file URI.
      *
      * @param modelInfo the model object
-     * @param modelId the model id
+     * @param modelId   the model id
      * @return the Huggingface config.json file URI
      */
     public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId) {
         String[] possibleConfigFiles = {
-            "config.json", "adapter_config.json", "model_index.json", "params.json"
+                "config.json", "adapter_config.json", "model_index.json", "params.json"
         };
         URI configUri;
         for (String configFile : possibleConfigFiles) {
@@ -349,8 +351,7 @@ public final class LmiUtils {
         if (hubToken != null) {
             headers.put("Authorization", "Bearer " + hubToken);
         }
-        URI configUri =
-                URI.create("https://huggingface.co/" + modelId + "/resolve/main/" + configFile);
+        URI configUri = URI.create("https://huggingface.co/" + modelId + "/resolve/main/" + configFile);
         try (InputStream is = Utils.openUrl(configUri.toURL(), headers)) {
             is.transferTo(OutputStream.nullOutputStream());
             logger.debug("Found config file {} in hub", configFile);
@@ -380,8 +381,8 @@ public final class LmiUtils {
         }
         try (InputStream is = Utils.openUrl(modelConfigUri.toURL(), headers)) {
             if (modelConfigUri.toString().endsWith("params.json")) {
-                MistralModelConfig mistralConfig =
-                        JsonUtils.GSON.fromJson(Utils.toString(is), MistralModelConfig.class);
+                MistralModelConfig mistralConfig = JsonUtils.GSON.fromJson(Utils.toString(is),
+                        MistralModelConfig.class);
                 return new HuggingFaceModelConfig(mistralConfig);
             }
             return JsonUtils.GSON.fromJson(Utils.toString(is), HuggingFaceModelConfig.class);
@@ -393,7 +394,7 @@ public final class LmiUtils {
     private static Path buildTrtLlmArtifacts(
             Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
-        String hash = Utils.hash(modelId + tpDegree);
+        String hash = Utils.hash(modelId + tpDegree + ppDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
         Path trtLlmRepoDir = parent.resolve("trtllm").resolve(hash);
@@ -408,20 +409,19 @@ public final class LmiUtils {
             prop.store(os, "");
         }
 
-        List<String> cmd =
-                Arrays.asList(
-                        "python",
-                        "/opt/djl/partition/trt_llm_partition.py",
-                        "--properties_dir",
-                        tempDir.toAbsolutePath().toString(),
-                        "--trt_llm_model_repo",
-                        trtLlmRepoDir.toString(),
-                        "--tensor_parallel_degree",
-                        tpDegree,
-                        "--pipeline_parallel_degree",
-                        ppDegree,
-                        "--model_path",
-                        modelId);
+        List<String> cmd = Arrays.asList(
+                "python",
+                "/opt/djl/partition/trt_llm_partition.py",
+                "--properties_dir",
+                tempDir.toAbsolutePath().toString(),
+                "--trt_llm_model_repo",
+                trtLlmRepoDir.toString(),
+                "--tensor_parallel_degree",
+                tpDegree,
+                "--pipeline_parallel_degree",
+                ppDegree,
+                "--model_path",
+                modelId);
         boolean success = false;
         try {
             logger.info("Converting model to TensorRT-LLM artifacts: {}", (Object) cmd);
@@ -442,8 +442,7 @@ public final class LmiUtils {
     static String getAWSGpuMachineType() {
         String computeCapability = CudaUtils.getComputeCapability(0);
         // Get gpu memory in GB sizes
-        double totalMemory =
-                CudaUtils.getGpuMemory(Device.gpu()).getMax() / 1024.0 / 1024.0 / 1024.0;
+        double totalMemory = CudaUtils.getGpuMemory(Device.gpu()).getMax() / 1024.0 / 1024.0 / 1024.0;
         if ("7.5".equals(computeCapability)) {
             return "g4";
         } else if ("8.0".equals(computeCapability)) {
@@ -467,28 +466,20 @@ public final class LmiUtils {
     }
 
     static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
-        // TODO: match model name
-        AtomicBoolean isValid = new AtomicBoolean();
-        try (Stream<Path> walk = Files.list(modelPath)) {
-            walk.filter(Files::isDirectory)
-                    .forEach(
-                            p -> {
-                                Path confFile = p.resolve("config.pbtxt");
-                                // TODO: add stricter check for tokenizer
-                                Path tokenizer = p.resolve("tokenizer_config.json");
-                                if (Files.isRegularFile(confFile)
-                                        && Files.isRegularFile(tokenizer)) {
-                                    logger.info("Found triton model: {}", p);
-                                    isValid.set(true);
-                                }
-                            });
+        Path configFile = modelPath.resolve("config.json");
+        if (Files.exists(configFile) && Files.isRegularFile(configFile)) {
+            String config = Files.readString(configFile);
+            JsonObject json = JsonUtils.GSON.fromJson(config, JsonObject.class);
+            return json.has("build_config");
         }
-        return isValid.get();
+        return false;
     }
 
     /**
-     * This represents the config of huggingface models NLP models as well as the config of
-     * diffusers models. The config is different for both, but for now we can leverage a single
+     * This represents the config of huggingface models NLP models as well as the
+     * config of
+     * diffusers models. The config is different for both, but for now we can
+     * leverage a single
      * class since we don't need too much information from the config.
      */
     public static final class HuggingFaceModelConfig {
@@ -545,8 +536,10 @@ public final class LmiUtils {
         /**
          * Returns the model type of this HuggingFace model.
          *
-         * <p>If the model type is not explicitly set, it returns "stable-diffusion" if the
-         * diffusers version is set (i.e. it is a diffusers model), or returns null if not (i.e. it
+         * <p>
+         * If the model type is not explicitly set, it returns "stable-diffusion" if the
+         * diffusers version is set (i.e. it is a diffusers model), or returns null if
+         * not (i.e. it
          * is a transformers model).
          *
          * @return the model type
@@ -561,7 +554,9 @@ public final class LmiUtils {
         /**
          * Returns the set of all supported architectures for this model.
          *
-         * <p>This function will download the model configuration from the HuggingFace Hub the first
+         * <p>
+         * This function will download the model configuration from the HuggingFace Hub
+         * the first
          * time it is called, and then cache the result for future invocations.
          *
          * @return the set of all supported architectures
@@ -574,9 +569,12 @@ public final class LmiUtils {
         }
 
         /**
-         * Returns the default value for the n_positions model configuration. For models that do not
-         * have a pre-defined value for n_positions, this function returns the minimum of
-         * max_position_embeddings and 4096. If both max_position_embeddings and 4096 are not
+         * Returns the default value for the n_positions model configuration. For models
+         * that do not
+         * have a pre-defined value for n_positions, this function returns the minimum
+         * of
+         * max_position_embeddings and 4096. If both max_position_embeddings and 4096
+         * are not
          * available, this function returns 0.
          *
          * @return the default value for n_positions
@@ -586,9 +584,12 @@ public final class LmiUtils {
         }
 
         /**
-         * Calculates the number of parameters in a model that is similar to LLaMA. This function
-         * takes into account the hidden size, intermediate size, maximum position embeddings,
-         * number of hidden layers, vocabulary size, and number of attention heads and key-value
+         * Calculates the number of parameters in a model that is similar to LLaMA. This
+         * function
+         * takes into account the hidden size, intermediate size, maximum position
+         * embeddings,
+         * number of hidden layers, vocabulary size, and number of attention heads and
+         * key-value
          * heads to calculate the total parameter count.
          *
          * @return the total parameter count for the model
@@ -613,8 +614,11 @@ public final class LmiUtils {
         /**
          * Calculates the default parameter count for a model (GPT-2-like).
          *
-         * <p>This function takes into account the hidden size, maximum position embeddings, number
-         * of hidden layers, vocabulary size, and number of attention heads to calculate the total
+         * <p>
+         * This function takes into account the hidden size, maximum position
+         * embeddings, number
+         * of hidden layers, vocabulary size, and number of attention heads to calculate
+         * the total
          * parameter count.
          *
          * @return the total parameter count for the model
@@ -624,8 +628,7 @@ public final class LmiUtils {
             long attentionTotal = 4L * hiddenSize * hiddenSize;
             long feedForwardTotal = 8L * hiddenSize * hiddenSize;
             long layerNormTotal = 4L * hiddenSize;
-            long transformerBlockTotal =
-                    (attentionTotal + feedForwardTotal + layerNormTotal) * numHiddenLayers;
+            long transformerBlockTotal = (attentionTotal + feedForwardTotal + layerNormTotal) * numHiddenLayers;
             long finalLayerTotal = (long) hiddenSize * vocabSize;
             return embeddingLayerTotal + transformerBlockTotal + finalLayerTotal;
         }
@@ -645,11 +648,13 @@ public final class LmiUtils {
         /**
          * Returns the memory required to store a single batch of sequence data.
          *
-         * <p>The memory required is calculated as the product of the sequence length, hidden size,
+         * <p>
+         * The memory required is calculated as the product of the sequence length,
+         * hidden size,
          * number of hidden layers, and weight in bytes.
          *
          * @param sequenceLength the length in tokens of the sequence
-         * @param weightBytes the weight in bytes
+         * @param weightBytes    the weight in bytes
          * @return the memory required to store a single batch of sequence data
          */
         public long getApproxMemoryForSingleSequence(int sequenceLength, int weightBytes) {
@@ -663,15 +668,18 @@ public final class LmiUtils {
          */
         public boolean isPeftModel() {
             // TODO: refactor and make this better
-            // Peft Configs are very different than regular configs and ideally shouldn't be clubbed
+            // Peft Configs are very different than regular configs and ideally shouldn't be
+            // clubbed
             // into this class.
-            // This method works now, as the only info we need for the peft model is whether it is
+            // This method works now, as the only info we need for the peft model is whether
+            // it is
             // peft
             return peftType != null;
         }
 
         /**
-         * Determines all architectures by combining the configured architectures and the auto-map.
+         * Determines all architectures by combining the configured architectures and
+         * the auto-map.
          */
         private void determineAllArchitectures() {
             allArchitectures = new HashSet<>();
@@ -685,7 +693,8 @@ public final class LmiUtils {
     }
 
     /**
-     * This represents a Mistral Model Config. Mistral artifacts are different from HuggingFace
+     * This represents a Mistral Model Config. Mistral artifacts are different from
+     * HuggingFace
      * artifacts. Some Mistral vended models only come in Mistral artifact form.
      */
     static final class MistralModelConfig {

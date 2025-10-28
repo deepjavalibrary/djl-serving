@@ -27,10 +27,11 @@ public final class LmiConfigRecommender {
 
     private static final Logger logger = LoggerFactory.getLogger(LmiConfigRecommender.class);
 
-    private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
-            Set.of("ForCausalLM", "LMHeadModel", "ForConditionalGeneration");
+    private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES = Set.of("ForCausalLM", "LMHeadModel",
+            "ForConditionalGeneration");
 
-    private LmiConfigRecommender() {}
+    private LmiConfigRecommender() {
+    }
 
     static void configure(Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
@@ -69,16 +70,13 @@ public final class LmiConfigRecommender {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
         } else if (isTnxEnabled(features)) {
-            if (Integer.parseInt(lmiProperties.getProperty("option.max_rolling_batch_size", "1"))
-                    >= 12) {
+            if (Integer.parseInt(lmiProperties.getProperty("option.max_rolling_batch_size", "1")) >= 12) {
                 rollingBatch = "vllm";
             } else {
                 rollingBatch = "tnx";
             }
         } else if (isVllmEnabled(features)) {
             rollingBatch = "vllm";
-        } else if (isTrtLlmEnabled(features)) {
-            rollingBatch = "trtllm";
         } else {
             rollingBatch = "disable";
         }
@@ -97,8 +95,7 @@ public final class LmiConfigRecommender {
             return;
         }
         String tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-        int ppDegree =
-                Integer.parseInt(lmiProperties.getProperty("option.pipeline_parallel_degree"));
+        int ppDegree = Integer.parseInt(lmiProperties.getProperty("option.pipeline_parallel_degree"));
         if ("max".equals(tpDegree)) {
             int numGpus = CudaUtils.getGpuCount();
             if (numGpus > 0) {
@@ -154,7 +151,8 @@ public final class LmiConfigRecommender {
     }
 
     private static void setPropertiesForLora(Properties lmiProperties) {
-        // If option.enable_lora=true, set load_on_devices=0 and maxWorkers=1 because we only
+        // If option.enable_lora=true, set load_on_devices=0 and maxWorkers=1 because we
+        // only
         // support one worker thread
         // for LoRA.
         // TODO: Support multiple worker threads for LoRA.
@@ -169,11 +167,12 @@ public final class LmiConfigRecommender {
     }
 
     private static void setPropertiesForStatefulSessions(Properties lmiProperties) {
-        // If option.enable_stateful_sessions=true, set load_on_devices=0 and maxWorkers=1 because
+        // If option.enable_stateful_sessions=true, set load_on_devices=0 and
+        // maxWorkers=1 because
         // we
         // only support one worker thread for stateful sessions.
-        boolean enableStatefulSessions =
-                Boolean.parseBoolean(lmiProperties.getProperty("option.enable_stateful_sessions"));
+        boolean enableStatefulSessions = Boolean
+                .parseBoolean(lmiProperties.getProperty("option.enable_stateful_sessions"));
         if (enableStatefulSessions) {
             logger.info(
                     "option.enable_stateful_sessions is set to true,"
@@ -206,16 +205,15 @@ public final class LmiConfigRecommender {
 
     private static boolean isTextGenerationModel(LmiUtils.HuggingFaceModelConfig modelConfig) {
         for (String arch : modelConfig.getArchitectures()) {
-            boolean isTextGenerationModel =
-                    OPTIMIZED_TASK_ARCHITECTURES.stream().anyMatch(arch::endsWith);
+            boolean isTextGenerationModel = OPTIMIZED_TASK_ARCHITECTURES.stream().anyMatch(arch::endsWith);
             if (isTextGenerationModel) {
                 return true;
             }
         }
         logger.warn(
                 "The model task architecture {} is not supported for optimized inference. LMI will"
-                    + " attempt to load the model using HuggingFace Accelerate. Optimized inference"
-                    + " performance is only available for the following task architectures: {}",
+                        + " attempt to load the model using HuggingFace Accelerate. Optimized inference"
+                        + " performance is only available for the following task architectures: {}",
                 modelConfig.getArchitectures(),
                 OPTIMIZED_TASK_ARCHITECTURES);
         return false;

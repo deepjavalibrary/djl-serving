@@ -55,7 +55,7 @@ public class PyModel extends BaseModel {
     /**
      * Constructs a new Model on a given device.
      *
-     * @param name the model name
+     * @param name    the model name
      * @param manager the {@link NDManager} to holds the NDArray
      */
     PyModel(String name, NDManager manager) {
@@ -79,7 +79,8 @@ public class PyModel extends BaseModel {
         String entryPoint = null;
         String recommendedEntryPoint = null;
         if (options != null) {
-            // If tp_degree set to "max", we defer and set it at the end to ensure we take pp degree
+            // If tp_degree set to "max", we defer and set it at the end to ensure we take
+            // pp degree
             // into account.
             boolean setTensorParallelDegreeToMax = false;
             logger.debug("options in serving.properties for model: {}", modelName);
@@ -158,8 +159,7 @@ public class PyModel extends BaseModel {
             }
 
             if (setTensorParallelDegreeToMax) {
-                int tpDegree =
-                        PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
+                int tpDegree = PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
                 pyEnv.setTensorParallelDegree(tpDegree);
             }
         }
@@ -186,7 +186,7 @@ public class PyModel extends BaseModel {
                         && pyEnv.getTensorParallelDegree() > 0) {
                     recommendedEntryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
-                    recommendedEntryPoint = "djl_python.tensorrt_llm";
+                    recommendedEntryPoint = "djl_python.lmi_trtllm.trtllm_async_service";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")
                         || Files.exists(modelPath.resolve("config.json"))) {
                     recommendedEntryPoint = "djl_python.huggingface";
