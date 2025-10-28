@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import json
+import logging
 from typing import Callable, Tuple, Union, List, Dict
 from vllm.entrypoints.openai.protocol import (
     CompletionRequest,
@@ -25,6 +26,8 @@ from vllm.transformers_utils.tokenizer import AnyTokenizer
 
 from djl_python.outputs import Output
 from djl_python.async_utils import create_non_stream_output, create_stream_chunk_output
+
+logger = logging.getLogger(__name__)
 
 
 class ProcessedRequest:
@@ -52,16 +55,21 @@ class ProcessedRequest:
 
 def convert_lmi_schema_to_completion_request(
     payload: dict, ) -> Tuple[CompletionRequest, bool, bool]:
-    parameters = payload.get("parameters", {})
+    # Create a copy to avoid mutating the original
+    parameters = payload.get("parameters", {}).copy()
+    
+    prompt = payload.get("inputs", "")
+    if not prompt:
+        raise ValueError("Input prompt cannot be empty")
 
     completion_dict = {
-        "prompt": payload.pop("inputs"),
+        "prompt": prompt,
         "max_tokens": parameters.pop("max_new_tokens", 30),
         "echo": parameters.pop("return_full_text", False),
         "truncate_prompt_tokens": parameters.pop("truncate", None),
         "n": parameters.pop("top_n_tokens", 1),
         "ignore_eos": parameters.pop("ignore_eos_token", False),
-        "stream": payload.pop("stream", False),
+        "stream": payload.get("stream", False),
     }
     # 1. when details are requested, return token details for the likely tokens (logprobs=1)
     # TGI only returns prompt token details when details is also enabled

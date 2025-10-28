@@ -1800,7 +1800,7 @@ def test_handler_adapters(model, model_spec):
         }
         req["parameters"] = params
         req["adapters"] = adapter
-        reqs.append(req)
+        reqs.append(req.copy())
     for req in reqs:
         for stream in stream_values:
             req["stream"] = stream
@@ -1830,13 +1830,19 @@ def test_handler_adapters(model, model_spec):
     LOGGER.info(f"del adapter {res}")
     headers = {'content-type': 'application/json'}
     endpoint = f"http://127.0.0.1:8080/invocations"
+    # Create a fresh copy to avoid using mutated request
+    import copy
+    req0_copy = copy.deepcopy(reqs[0])
     res = requests.post(endpoint, headers=headers,
-                        json=reqs[0]).content.decode("utf-8")
+                        json=req0_copy).content.decode("utf-8")
     LOGGER.info(f"call deleted adapter {res}")
 
     if len(reqs) > 1:
+        # Create a fresh copy to avoid using mutated request
+        req1_copy = copy.deepcopy(reqs[1])
+        LOGGER.info(f"Request being sent: {req1_copy}")
         res = requests.post(endpoint, headers=headers,
-                            json=reqs[1]).content.decode("utf-8")
+                            json=req1_copy).content.decode("utf-8")
         LOGGER.info(f"call valid adapter after deletion {res}")
         if not res or res.strip() == "":
             LOGGER.error(f"Empty response received from model API: {res}")
@@ -1871,7 +1877,6 @@ def test_handler_adapters(model, model_spec):
             msg = f"Deleting adapter should not break inference for remaining adapters"
             LOGGER.error(msg)
             raise RuntimeError(msg)
-
 
 def test_handler_rolling_batch_chat(model, model_spec):
     modelspec_checker(model, model_spec)

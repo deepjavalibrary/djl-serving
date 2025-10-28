@@ -10,6 +10,8 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import asyncio
+import copy
 import logging
 import os
 import types
@@ -23,7 +25,8 @@ from vllm.entrypoints.openai.protocol import (
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
-from vllm.utils import kill_process_tree, AtomicCounter
+from vllm.utils import AtomicCounter
+from vllm.utils.system_utils import kill_process_tree
 
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
@@ -74,6 +77,7 @@ class VLLMHandler(CustomFormatterHandler):
         self.adapter_registry = {}
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
+        self._lora_lock = asyncio.Lock()
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -93,7 +97,7 @@ class VLLMHandler(CustomFormatterHandler):
         self.vllm_engine = AsyncLLMEngine.from_engine_args(
             self.vllm_engine_args)
         self.tokenizer = await self.vllm_engine.get_tokenizer()
-        model_config = await self.vllm_engine.get_model_config()
+        model_config = self.vllm_engine.model_config
 
         model_names = self.vllm_engine_args.served_model_name or "lmi"
         if not isinstance(model_names, list):
@@ -108,19 +112,16 @@ class VLLMHandler(CustomFormatterHandler):
         self.model_name = model_names[0]
         self.model_registry = OpenAIServingModels(
             self.vllm_engine,
-            model_config,
             base_model_paths,
         )
         self.completion_service = OpenAIServingCompletion(
             self.vllm_engine,
-            model_config,
             self.model_registry,
             request_logger=None,
         )
 
         self.chat_completion_service = OpenAIServingChat(
             self.vllm_engine,
-            model_config,
             self.model_registry,
             "assistant",
             request_logger=None,
@@ -142,6 +143,9 @@ class VLLMHandler(CustomFormatterHandler):
         session = get_session(self.session_manager, raw_request)
         content_type = raw_request.get_property("Content-Type")
         decoded_payload = decode(raw_request, content_type)
+        # Create a deep copy to prevent mutations from affecting the original
+        decoded_payload = copy.deepcopy(decoded_payload)
+        logger.info(f"Decoded payload after deepcopy: inputs={decoded_payload.get('inputs', 'N/A')}, stream={decoded_payload.get('stream', 'N/A')}")
 
         adapter_name = _extract_lora_adapter(raw_request, decoded_payload)
 
@@ -177,8 +181,10 @@ class VLLMHandler(CustomFormatterHandler):
             stream_output_formatter = vllm_stream_output_formatter
         # TGI request gets mapped to completions
         elif "inputs" in decoded_payload:
+            logger.info(f"Before convert_lmi_schema: inputs={decoded_payload.get('inputs', 'N/A')}")
             vllm_request, include_details, include_prompt = convert_lmi_schema_to_completion_request(
                 decoded_payload)
+            logger.info(f"After convert_lmi_schema: vllm_request.prompt={vllm_request.prompt if hasattr(vllm_request, 'prompt') else 'N/A'}")
             vllm_invoke_function = self.completion_service.create_completion
             non_stream_output_formatter = lmi_with_details_non_stream_output_formatter if include_details else lmi_non_stream_output_formatter
             stream_output_formatter = lmi_with_details_stream_output_formatter if include_details else lmi_stream_output_formatter
@@ -242,6 +248,7 @@ class VLLMHandler(CustomFormatterHandler):
             return output
 
         if processed_request.lora_request:
+            logger.info(f"Processing LoRA request: {processed_request.lora_request.lora_name}")
             original_add_request = self.vllm_engine.add_request
 
             async def add_request_with_lora(*args, **kwargs):
@@ -249,13 +256,14 @@ class VLLMHandler(CustomFormatterHandler):
                 return await original_add_request(*args, **kwargs)
 
             self.vllm_engine.add_request = add_request_with_lora
-
-        try:
+            try:
+                response = await processed_request.inference_invoker(
+                    processed_request.vllm_request)
+            finally:
+                self.vllm_engine.add_request = original_add_request
+        else:
             response = await processed_request.inference_invoker(
                 processed_request.vllm_request)
-        finally:
-            if processed_request.lora_request:
-                self.vllm_engine.add_request = original_add_request
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response
