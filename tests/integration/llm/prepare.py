@@ -1701,9 +1701,6 @@ def build_vllm_async_model(model):
         )
     options = vllm_model_list[model]
     options["engine"] = "Python"
-    options["option.rolling_batch"] = "disable"
-    options["option.async_mode"] = "true"
-    options["option.entryPoint"] = "djl_python.lmi_vllm.vllm_async_service"
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])

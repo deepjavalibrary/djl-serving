@@ -76,11 +76,13 @@ public final class LmiConfigRecommender {
                 rollingBatch = "tnx";
             }
         } else if (isVllmEnabled(features)) {
-            rollingBatch = "vllm";
+            rollingBatch = "disable";
+            lmiProperties.setProperty("option.async_mode", "true");
         } else if (isTrtLlmEnabled(features)) {
             rollingBatch = "trtllm";
         } else {
             rollingBatch = "disable";
+            lmiProperties.setProperty("option.async_mode", "true");
         }
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }

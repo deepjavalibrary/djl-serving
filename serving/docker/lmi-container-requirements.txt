@@ -1,8 +1,9 @@
-torch==2.8.0
+torch==2.9.0
+autoawq
 torchvision
 peft==0.15.1
 protobuf==4.25.1
-transformers==4.55.2
+transformers==4.56.0
 hf-transfer
 zstandard
 datasets==3.0.1
@@ -25,12 +26,12 @@ sentence_transformers
 onnxruntime-gpu==1.20.0
 autoawq
 tokenizers
-pydantic==2.11.7
+pydantic>=2.12.0
 optimum==1.23.2
 uvloop
 ninja
 peft
 llmcompressor
-vllm==0.10.2
+https://vllm-wheels.s3.us-west-2.amazonaws.com/nightly/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl
 xgrammar
-flashinfer-python==0.2.5
+flashinfer-python==0.4.1

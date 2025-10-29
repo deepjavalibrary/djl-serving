@@ -15,8 +15,7 @@ import logging
 from typing import Optional, Any, Dict, Tuple, Literal, Union
 from pydantic import field_validator, model_validator, ConfigDict, Field
 from vllm import EngineArgs, AsyncEngineArgs
-from vllm.utils import FlexibleArgumentParser
-from vllm.utils import StoreBoolean
+from vllm.utils.argparse_utils import FlexibleArgumentParser
 
 from djl_python.properties_manager.properties import Properties
 
@@ -31,22 +30,24 @@ DTYPE_MAPPER = {
 }
 
 
-def construct_vllm_args_list(vllm_engine_args: dict,
-                             parser: FlexibleArgumentParser):
-    # Modified from https://github.com/vllm-project/vllm/blob/v0.6.4/vllm/utils.py#L1258
+def construct_vllm_args_list(vllm_engine_args: dict):
+    # Modified from https://github.com/vllm-project/vllm/blob/94666612a938380cb643c1555ef9aa68b7ab1e53/vllm/utils/argparse_utils.py#L441
     args_list = []
-    store_boolean_arguments = {
-        action.dest
-        for action in parser._actions if isinstance(action, StoreBoolean)
-    }
-    for engine_arg, engine_arg_value in vllm_engine_args.items():
-        if str(engine_arg_value).lower() in {
-                'true', 'false'
-        } and engine_arg not in store_boolean_arguments:
-            if str(engine_arg_value).lower() == 'true':
-                args_list.append(f"--{engine_arg}")
+    for key, value in vllm_engine_args.items():
+        if str(value).lower() in {'true', 'false'}:
+            if str(value).lower() == 'true':
+                args_list.append("--" + key)
+        elif isinstance(value, bool):
+            if value:
+                args_list.append("--" + key)
+        elif isinstance(value, list):
+            if value:
+                args_list.append("--" + key)
+                for item in value:
+                    args_list.append(str(item))
         else:
-            args_list.append(f"--{engine_arg}={engine_arg_value}")
+            args_list.append("--" + key)
+            args_list.append(str(value))
     return args_list
 
 
@@ -228,7 +229,7 @@ class VllmRbProperties(Properties):
         )
         arg_cls = AsyncEngineArgs if async_engine else EngineArgs
         parser = arg_cls.add_cli_args(FlexibleArgumentParser())
-        args_list = construct_vllm_args_list(vllm_engine_arg_dict, parser)
+        args_list = construct_vllm_args_list(vllm_engine_arg_dict)
         args = parser.parse_args(args=args_list)
         engine_args = arg_cls.from_cli_args(args)
         # we have to do this separately because vllm converts it into a string
