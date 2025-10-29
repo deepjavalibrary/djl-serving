@@ -113,8 +113,12 @@ def _preprocess_chat(
     add_special_tokens: bool = False,
 ) -> Tuple[List[ConversationMessage], RequestPrompt, TokensPrompt, str]:
     resolved_content_format = resolve_chat_template_content_format(
-        chat_template, tool_dicts, chat_template_content_format, tokenizer)
-    conversation, mm_data = parse_chat_messages(
+        chat_template,
+        tool_dicts,
+        chat_template_content_format,
+        tokenizer,
+        model_config=rolling_batch.engine.model_config)
+    conversation, mm_data, mm_uuids = parse_chat_messages(
         messages,
         rolling_batch.engine.model_config,
         tokenizer,
@@ -134,9 +138,11 @@ def _preprocess_chat(
                                                      messages=messages,
                                                      **chat_template_kwargs)
     else:
-        request_prompt = apply_hf_chat_template(tokenizer,
-                                                conversation=conversation,
-                                                **chat_template_kwargs)
+        request_prompt = apply_hf_chat_template(
+            tokenizer,
+            conversation=conversation,
+            model_config=rolling_batch.engine.model_config,
+            **chat_template_kwargs)
 
     should_parse_tools = tool_parser is not None and request.tool_choice != "none"
     if should_parse_tools:
@@ -162,6 +168,8 @@ def _preprocess_chat(
         prompt_token_ids=prompt_inputs["prompt_token_ids"])
     if mm_data is not None:
         engine_prompt["multi_modal_data"] = mm_data
+    if mm_uuids is not None:
+        engine_prompt["multi_modal_uuids"] = mm_uuids
     return conversation, request_prompt, engine_prompt, prompt_inputs["prompt"]
 
 
