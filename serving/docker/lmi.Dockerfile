@@ -89,8 +89,10 @@ RUN scripts/patch_oss_dlc.sh python \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 COPY lmi-container-requirements.txt ./requirements.txt
+COPY lmi-container-requirements-no-iso.txt ./requirements-no-build-isolation.txt
 RUN pip3 install torch==2.8.0 torchvision \
     && pip3 install -r requirements.txt \
+    && pip3 install --no-build-isolation -r requirements-no-build-isolation.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 
 COPY distribution[s]/ ./

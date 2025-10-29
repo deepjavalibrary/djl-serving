@@ -1,0 +1,2 @@
+autoawq
+flashinfer-python==0.2.5
