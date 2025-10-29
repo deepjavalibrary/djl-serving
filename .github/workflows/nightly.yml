@@ -11,6 +11,11 @@ on:
                 options:
                 - nightly
                 - release
+            arch:
+                description: 'which images to build [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+                type: string
+                required: false
+                default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
     workflow_call:
         inputs:
             mode:
@@ -18,6 +23,11 @@ on:
                 type: string
                 required: true
                 default: 'nightly'
+            arch:
+                description: 'which images to build [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+                type: string
+                required: false
+                default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
     schedule:
         - cron: '0 13 * * *'
 
@@ -32,6 +42,7 @@ jobs:
         secrets: inherit
         with:
             mode: ${{ inputs.mode || 'nightly' }}
+            arch: ${{ inputs.arch }}
     integration-test:
         needs: [build]
         uses: ./.github/workflows/integration.yml
@@ -51,22 +62,22 @@ jobs:
             - name: Generate image list from test results
               id: generate-images
               run: |
-                  images=()
-                  if [[ "${{ needs.integration-test.outputs.failure_cpu }}" == "0" ]]; then
-                    images+=("cpu")
-                    images+=("cpu-full")
+                  images=($(echo '${{ inputs.arch }}' | jq -r '.[]'))
+                  if [[ "${{ needs.integration-test.outputs.failure_cpu }}" != "0" ]]; then
+                    images-=("cpu")
+                    images-=("cpu-full")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_gpu }}" == "0" ]]; then
-                    images+=("pytorch-gpu") 
+                  if [[ "${{ needs.integration-test.outputs.failure_gpu }}" != "0" ]]; then
+                    images-=("pytorch-gpu") 
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_aarch64 }}" == "0" ]]; then
-                    images+=("aarch64")
+                  if [[ "${{ needs.integration-test.outputs.failure_aarch64 }}" != "0" ]]; then
+                    images-=("aarch64")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" == "0" ]]; then
-                    images+=("lmi")
+                  if [[ "${{ needs.integration-test.outputs.failure_lmi }}" != "0" ]]; then
+                    images-=("lmi")
                   fi
-                  if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" == "0" ]]; then
-                    images+=("tensorrt-llm")
+                  if [[ "${{ needs.integration-test.outputs.failure_trtllm }}" != "0" ]]; then
+                    images-=("tensorrt-llm")
                   fi
                   json_images=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${images[@]}")
                   echo "images are ${json_images}"

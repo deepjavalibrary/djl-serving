@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
+      arch:
+        description: 'which arch to run test [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        type: string
+        required: false
+        default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
   workflow_call:
     inputs:
       djl-version:
@@ -34,6 +39,11 @@ on:
         required: false
         type: string
         default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
+      arch:
+        description: 'which arch to run test [ cpu, cpu-full, pytorch-gpu, tensorrt-llm, lmi, aarch64]'
+        type: string
+        required: false
+        default: '["cpu", "cpu-full", "pytorch-gpu", "tensorrt-llm", "lmi", "aarch64"]'
     outputs:
       failure_cpu:
         value: ${{ jobs.test.outputs.failure_cpu || '0' }}
@@ -222,6 +232,7 @@ jobs:
           aws-region: us-east-1
           role-duration-seconds: 7200
       - name: Test
+        if: contains(fromJson(${{ inputs.arch }}), ${{ matrix.test.failure-prefix }})
         working-directory: tests/integration
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
