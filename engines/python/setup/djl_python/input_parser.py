@@ -36,25 +36,25 @@ def input_formatter(function):
     return function
 
 
-def predict_formatter(function):
+def prediction_handler(function):
     """
-    Decorator for predict_formatter. User just need to annotate @predict_formatter for their custom defined function.
+    Decorator for prediction_handler. User just need to annotate @prediction_handler for their custom defined function.
     :param function:  Decorator takes in the function and adds an attribute.
     :return:
     """
     # adding an attribute to the function, which is used to find the decorated function.
-    function.is_predict_formatter = True
+    function.is_prediction_handler = True
     return function
 
 
-def model_loading_formatter(function):
+def init_handler(function):
     """
-    Decorator for model_loading_formatter. User just need to annotate @model_loading_formatter for their custom defined function.
+    Decorator for init_handler. User just need to annotate @init_handler for their custom defined function.
     :param function:  Decorator takes in the function and adds an attribute.
     :return:
     """
     # adding an attribute to the function, which is used to find the decorated function.
-    function.is_model_loading_formatter = True
+    function.is_init_handler = True
     return function
 
 

@@ -3,6 +3,7 @@ import requests
 import tempfile
 import shutil
 import zipfile
+import pytest
 from tests import Runner
 
 
@@ -15,7 +16,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_custom::Python=file:/opt/ml/model/sklearn_custom_model_sm.zip"
+                "serve -m sklearn_custom::Python=file:/opt/ml/model/sklearn_custom_model_sm_v2.zip"
             )
 
             # Test custom formatters
@@ -46,7 +47,7 @@ class TestCustomFormatters:
             r.launch(
                 env_vars=env,
                 cmd=
-                "serve -m sagemaker_custom::Python=file:/opt/ml/model/sklearn_custom_model_sm.zip"
+                "serve -m sagemaker_custom::Python=file:/opt/ml/model/sklearn_custom_model_sm_v2.zip"
             )
 
             # Test with custom formatters - use features format from existing model
@@ -73,7 +74,7 @@ class TestCustomFormatters:
             r.launch(
                 env_vars=env,
                 cmd=
-                "serve -m sagemaker_custom::Python=file:/opt/ml/model/sklearn_custom_model_sm.zip"
+                "serve -m sagemaker_custom::Python=file:/opt/ml/model/sklearn_custom_model_sm_v2.zip"
             )
 
             # Test should fail because output_fn only supports application/json
@@ -93,7 +94,7 @@ class TestCustomFormatters:
         with Runner('cpu-full', 'sagemaker_input_output', download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_io::Python=file:/opt/ml/model/sklearn_custom_model_input_output.zip"
+                "serve -m sklearn_io::Python=file:/opt/ml/model/sklearn_custom_model_input_output_v2.zip"
             )
 
             # Test with SageMaker input/output formatters
@@ -124,7 +125,7 @@ class TestCustomFormatters:
         with Runner('cpu-full', 'sagemaker_invalid_input', download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_invalid::Python=file:/opt/ml/model/sklearn_custom_model_input_output_invalid.zip"
+                "serve -m sklearn_invalid::Python=file:/opt/ml/model/sklearn_custom_model_input_output_invalid_v2.zip"
             )
 
             # Test should fail because input_fn returns raw list instead of numpy array
@@ -274,7 +275,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_mixed::Python=file:/opt/ml/model/sklearn_mixed_djl_sagemaker.zip"
+                "serve -m sklearn_mixed::Python=file:/opt/ml/model/sklearn_mixed_djl_sagemaker_v2.zip"
             )
 
             # When DJL decorators are present, SageMaker functions should be completely ignored
@@ -302,7 +303,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m xgboost_mixed::Python=file:/opt/ml/model/xgboost_mixed_djl_sagemaker.zip"
+                "serve -m xgboost_mixed::Python=file:/opt/ml/model/xgboost_mixed_djl_sagemaker_v2.zip"
             )
 
             # When DJL decorators are present, SageMaker functions should be completely ignored
@@ -329,7 +330,7 @@ class TestCustomFormatters:
         with Runner('cpu-full', 'sklearn_djl_all', download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_djl_all::Python=file:/opt/ml/model/sklearn_djl_all_formatters_v3.zip"
+                "serve -m sklearn_djl_all::Python=file:/opt/ml/model/sklearn_djl_all_formatters_v4.zip"
             )
 
             # Test DJL decorators
@@ -361,7 +362,7 @@ class TestCustomFormatters:
             r.launch(
                 env_vars=env,
                 cmd=
-                "serve -m sklearn_djl_env::Python=file:/opt/ml/model/sklearn_djl_all_formatters_v3.zip"
+                "serve -m sklearn_djl_env::Python=file:/opt/ml/model/sklearn_djl_all_formatters_v4.zip"
             )
 
             test_data = {
@@ -438,7 +439,7 @@ class TestCustomFormatters:
         with Runner('cpu-full', 'xgboost_djl_all', download=True) as r:
             r.launch(
                 cmd=
-                "serve -m xgboost_djl_all::Python=file:/opt/ml/model/xgboost_djl_all_formatters_v3.zip"
+                "serve -m xgboost_djl_all::Python=file:/opt/ml/model/xgboost_djl_all_formatters.zip"
             )
 
             # Test DJL decorators
@@ -470,7 +471,7 @@ class TestCustomFormatters:
             r.launch(
                 env_vars=env,
                 cmd=
-                "serve -m xgboost_djl_env::Python=file:/opt/ml/model/xgboost_djl_all_formatters_v3.zip"
+                "serve -m xgboost_djl_env::Python=file:/opt/ml/model/xgboost_djl_all_formatters.zip"
             )
 
             test_data = {

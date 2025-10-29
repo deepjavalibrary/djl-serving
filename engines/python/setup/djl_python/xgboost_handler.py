@@ -18,8 +18,8 @@ from io import StringIO
 from typing import Optional
 from djl_python import Input, Output
 from djl_python.encode_decode import decode
-from djl_python.utils import find_model_file, get_sagemaker_function
-from djl_python.service_loader import get_annotated_function
+from djl_python.utils import find_model_file
+from djl_python.custom_formatter_handling import load_custom_code
 from djl_python.import_utils import xgboost as xgb
 
 
@@ -28,52 +28,8 @@ class XGBoostHandler:
     def __init__(self):
         self.model = None
         self.initialized = False
-        self.custom_input_formatter = None
-        self.custom_output_formatter = None
-        self.custom_predict_formatter = None
-        self.custom_model_loading_formatter = None
+        self.custom_code = None
         self.init_properties = None
-        self.is_sagemaker_script = False
-
-    def _load_custom_formatters(self, model_dir: str):
-        """Load custom formatters, checking DJL decorators first, then SageMaker functions."""
-        # Check for DJL decorator-based custom formatters first
-        self.custom_model_loading_formatter = get_annotated_function(
-            model_dir, "is_model_loading_formatter")
-        self.custom_input_formatter = get_annotated_function(
-            model_dir, "is_input_formatter")
-        self.custom_output_formatter = get_annotated_function(
-            model_dir, "is_output_formatter")
-        self.custom_predict_formatter = get_annotated_function(
-            model_dir, "is_predict_formatter")
-
-        # If no decorator-based formatters found, check for SageMaker-style formatters
-        if not any([
-                self.custom_input_formatter, self.custom_output_formatter,
-                self.custom_predict_formatter,
-                self.custom_model_loading_formatter
-        ]):
-
-            sagemaker_model_fn = get_sagemaker_function(model_dir, 'model_fn')
-            sagemaker_input_fn = get_sagemaker_function(model_dir, 'input_fn')
-            sagemaker_predict_fn = get_sagemaker_function(
-                model_dir, 'predict_fn')
-            sagemaker_output_fn = get_sagemaker_function(
-                model_dir, 'output_fn')
-
-            if any([
-                    sagemaker_model_fn, sagemaker_input_fn,
-                    sagemaker_predict_fn, sagemaker_output_fn
-            ]):
-                self.is_sagemaker_script = True
-                if sagemaker_model_fn:
-                    self.custom_model_loading_formatter = sagemaker_model_fn
-                if sagemaker_input_fn:
-                    self.custom_input_formatter = sagemaker_input_fn
-                if sagemaker_predict_fn:
-                    self.custom_predict_formatter = sagemaker_predict_fn
-                if sagemaker_output_fn:
-                    self.custom_output_formatter = sagemaker_output_fn
 
     def initialize(self, properties: dict):
         # Store initialization properties for use during inference
@@ -95,11 +51,11 @@ class XGBoostHandler:
                 f"Unsupported model format: {model_format}. Supported formats: json, ubj, pickle, xgb"
             )
 
-        # Load custom formatters
-        self._load_custom_formatters(model_dir)
+        # Load custom code
+        self.custom_code = load_custom_code(model_dir)
 
-        if self.custom_model_loading_formatter:
-            self.model = self.custom_model_loading_formatter(model_dir)
+        if self.custom_code.handlers.init_handler:
+            self.model = self.custom_code.handlers.init_handler(model_dir)
         else:
             model_file = find_model_file(model_dir, extensions)
             if not model_file:
@@ -142,7 +98,7 @@ class XGBoostHandler:
             accept = default_accept
 
         # Validate accept type (skip validation if custom output formatter is provided)
-        if not self.custom_output_formatter:
+        if not self.custom_code.formatters.output_formatter:
             supported_accept_types = ["application/json", "text/csv"]
             if not any(supported_type in accept
                        for supported_type in supported_accept_types):
@@ -152,12 +108,12 @@ class XGBoostHandler:
 
         # Input processing
         X = None
-        if self.custom_input_formatter:
-            if self.is_sagemaker_script:
-                X = self.custom_input_formatter(inputs.get_as_bytes(),
-                                                content_type)
+        if self.custom_code.formatters.input_formatter:
+            if self.custom_code.is_sagemaker_script:
+                X = self.custom_code.formatters.input_formatter(
+                    inputs.get_as_bytes(), content_type)
             else:
-                X = self.custom_input_formatter(inputs)
+                X = self.custom_code.formatters.input_formatter(inputs)
         elif "text/csv" in content_type:
             X = decode(inputs, content_type, require_csv_headers=False)
         else:
@@ -172,20 +128,23 @@ class XGBoostHandler:
 
         if X.ndim == 1:
             X = X.reshape(1, -1)
-        if self.custom_predict_formatter:
-            predictions = self.custom_predict_formatter(X, self.model)
+        if self.custom_code.handlers.prediction_handler:
+            predictions = self.custom_code.handlers.prediction_handler(
+                X, self.model)
         else:
             dmatrix = xgb.DMatrix(X)
             predictions = self.model.predict(dmatrix)
 
         # Output processing
         outputs = Output()
-        if self.custom_output_formatter:
-            if self.is_sagemaker_script:
-                data = self.custom_output_formatter(predictions, accept)
+        if self.custom_code.formatters.output_formatter:
+            if self.custom_code.is_sagemaker_script:
+                data = self.custom_code.formatters.output_formatter(
+                    predictions, accept)
                 outputs.add_property("Content-Type", accept)
             else:
-                data = self.custom_output_formatter(predictions)
+                data = self.custom_code.formatters.output_formatter(
+                    predictions)
             outputs.add(data)
 
         elif "text/csv" in accept:
