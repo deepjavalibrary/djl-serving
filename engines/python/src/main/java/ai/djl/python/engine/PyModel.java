@@ -188,10 +188,10 @@ public class PyModel extends BaseModel {
                 } else if ("trtllm".equals(features)) {
                     recommendedEntryPoint = "djl_python.tensorrt_llm";
                 } else if ("vllm".equals(features)) {
-                    recommendedEntryPoint = "djl_python.lmi_vllm.vllm_async_service";
-                    pyEnv.setAsyncMode(true);
-                    if (!properties.containsKey("rolling_batch")) {
-                        setProperty("rolling_batch", "disable");
+                    if (pyEnv.isAsyncMode()) {
+                        recommendedEntryPoint = "djl_python.lmi_vllm.vllm_async_service";
+                    } else {
+                        recommendedEntryPoint = "djl_python.huggingface";
                     }
                 } else if (pyEnv.getInitParameters().containsKey("model_id")
                         || Files.exists(modelPath.resolve("config.json"))) {

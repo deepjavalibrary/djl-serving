@@ -1777,6 +1777,7 @@ def build_vllm_model(model):
         )
     options = vllm_model_list[model]
     options["engine"] = "Python"
+    options["option.rolling_batch"] = "vllm"
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])

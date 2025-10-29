@@ -599,43 +599,4 @@ public class PyEngineTest {
             Assert.assertEquals(output.getCode(), 200);
         }
     }
-
-    @Test
-    public void testVllmFeaturesRollingBatch() throws IOException, ModelException {
-        System.setProperty("SERVING_FEATURES", "vllm");
-        try {
-            Criteria<Input, Output> criteria =
-                    Criteria.builder()
-                            .setTypes(Input.class, Output.class)
-                            .optModelPath(Paths.get("src/test/resources/echo"))
-                            .optEngine("Python")
-                            .build();
-            try (ZooModel<Input, Output> model = criteria.loadModel()) {
-                // Verify rolling_batch is set to disable when features=vllm
-                Assert.assertEquals(model.getProperty("rolling_batch"), "disable");
-            }
-        } finally {
-            System.clearProperty("SERVING_FEATURES");
-        }
-    }
-
-    @Test
-    public void testVllmFeaturesRollingBatchOverride() throws IOException, ModelException {
-        System.setProperty("SERVING_FEATURES", "vllm");
-        try {
-            Criteria<Input, Output> criteria =
-                    Criteria.builder()
-                            .setTypes(Input.class, Output.class)
-                            .optModelPath(Paths.get("src/test/resources/echo"))
-                            .optOption("rolling_batch", "vllm")
-                            .optEngine("Python")
-                            .build();
-            try (ZooModel<Input, Output> model = criteria.loadModel()) {
-                // Verify user override is respected
-                Assert.assertEquals(model.getProperty("rolling_batch"), "vllm");
-            }
-        } finally {
-            System.clearProperty("SERVING_FEATURES");
-        }
-    }
 }

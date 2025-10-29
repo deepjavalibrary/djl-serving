@@ -555,7 +555,7 @@ class TestVllm1:
 
     def test_llama2_7b_chat(self):
         with Runner('lmi', 'llama2-7b-chat') as r:
-            prepare.build_vllm_model("llama2-7b-chat")
+            prepare.build_vllm_async_model("llama2-7b-chat")
             r.launch()
             client.run("vllm_chat llama2-7b-chat".split())
 
@@ -563,7 +563,7 @@ class TestVllm1:
                         reason="Unsupported CUDA capability")
     def test_qwen2_7b_fp8(self):
         with Runner('lmi', 'qwen2-7b-fp8') as r:
-            prepare.build_vllm_model("qwen2-7b-fp8")
+            prepare.build_vllm_async_model("qwen2-7b-fp8")
             r.launch()
             client.run("vllm qwen2-7b-fp8".split())
 
@@ -576,7 +576,7 @@ class TestVllm1:
 
     def test_falcon_11b_chunked_prefill(self):
         with Runner('lmi', 'falcon-11b-chunked-prefill') as r:
-            prepare.build_vllm_model("falcon-11b-chunked-prefill")
+            prepare.build_vllm_async_model("falcon-11b-chunked-prefill")
             r.launch()
             client.run(
                 "vllm falcon-11b-chunked-prefill --in_tokens 1200".split())
@@ -589,31 +589,31 @@ class TestVllm1:
 
     def test_llama_68m_speculative_eagle(self):
         with Runner('lmi', 'llama-68m-speculative-eagle') as r:
-            prepare.build_vllm_model("llama-68m-speculative-eagle")
+            prepare.build_vllm_async_model("llama-68m-speculative-eagle")
             r.launch()
             client.run("vllm llama-68m-speculative-eagle".split())
 
     def test_llama3_1_8b_instruct_tool(self):
         with Runner('lmi', 'llama3-1-8b-instruct-tool') as r:
-            prepare.build_vllm_model("llama3-1-8b-instruct-tool")
+            prepare.build_vllm_async_model("llama3-1-8b-instruct-tool")
             r.launch()
             client.run("vllm_tool llama3-1-8b-instruct-tool".split())
 
     def test_mistral_7b_instruct_v03_tool(self):
         with Runner('lmi', 'mistral-7b-instruct-v03-tool') as r:
-            prepare.build_vllm_model("mistral-7b-instruct-v03-tool")
+            prepare.build_vllm_async_model("mistral-7b-instruct-v03-tool")
             r.launch()
             client.run("vllm_tool mistral-7b-instruct-v03-tool".split())
 
     def test_deepseek_r1_distill_qwen_1_5b(self):
         with Runner('lmi', 'deepseek-r1-distill-qwen-1-5b') as r:
-            prepare.build_vllm_model("deepseek-r1-distill-qwen-1-5b")
+            prepare.build_vllm_async_model("deepseek-r1-distill-qwen-1-5b")
             r.launch()
             client.run("vllm_chat deepseek-r1-distill-qwen-1-5b".split())
 
     def test_tiny_llama_input_length_exceeded(self):
         with Runner('lmi', 'tinyllama-test-input-length-exceeded') as r:
-            prepare.build_vllm_model("tinyllama-input-len-exceeded")
+            prepare.build_vllm_async_model("tinyllama-input-len-exceeded")
             r.launch()
             start = time.perf_counter()
             with pytest.raises(ValueError, match=r".*424.*"):
@@ -1020,16 +1020,16 @@ class TestMultiModalVllm:
 
     def test_pixtral_12b(self):
         with Runner('lmi', 'pixtral-12b') as r:
-            prepare.build_vllm_model('pixtral-12b')
+            prepare.build_vllm_async_model('pixtral-12b')
             r.launch()
             client.run("multimodal pixtral-12b".split())
 
-    # MLlama is only supported by vllm backend currently
-    def test_mllama_11b(self):
-        with Runner('lmi', 'llama32-11b-multimodal') as r:
-            prepare.build_vllm_model('llama32-11b-multimodal')
-            r.launch()
-            client.run("multimodal llama32-11b-multimodal".split())
+    # MLlama is not supported in vllm v1, see https://github.com/vllm-project/vllm/issues/27198
+    # def test_mllama_11b(self):
+    #     with Runner('lmi', 'llama32-11b-multimodal') as r:
+    #         prepare.build_vllm_model('llama32-11b-multimodal')
+    #         r.launch()
+    #         client.run("multimodal llama32-11b-multimodal".split())
 
 
 class TestLmiDistPipelineParallel:

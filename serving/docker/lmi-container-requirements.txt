@@ -32,6 +32,6 @@ uvloop
 ninja
 peft
 llmcompressor
-vllm @ git+https://github.com/vllm-project/vllm.git
+https://vllm-wheels.s3.us-west-2.amazonaws.com/nightly/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl
 xgrammar
 flashinfer-python==0.4.1

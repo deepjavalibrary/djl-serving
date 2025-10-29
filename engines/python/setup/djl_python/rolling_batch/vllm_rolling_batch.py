@@ -14,7 +14,8 @@ from collections import OrderedDict
 
 from vllm import LLMEngine, SamplingParams
 from vllm.sampling_params import RequestOutputKind
-from vllm.utils import random_uuid, AtomicCounter
+from vllm.utils import random_uuid
+from vllm.utils.counter import AtomicCounter
 
 from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
@@ -58,8 +59,7 @@ class VLLMRollingBatch(RollingBatch):
             try:
                 self.tool_parser = ToolParserManager.get_tool_parser(
                     self.vllm_configs.tool_call_parser)
-                self.tool_parser = self.tool_parser(
-                    self.engine.tokenizer.tokenizer)
+                self.tool_parser = self.tool_parser(self.get_tokenizer())
             except Exception as e:
                 raise TypeError("Error in tool parser creation.") from e
         if self.vllm_configs.enable_reasoning:
@@ -68,12 +68,12 @@ class VLLMRollingBatch(RollingBatch):
                 self.reasoning_parser = ReasoningParserManager.get_reasoning_parser(
                     self.vllm_configs.reasoning_parser)
                 self.reasoning_parser = self.reasoning_parser(
-                    self.engine.tokenizer.tokenizer)
+                    self.get_tokenizer())
             except Exception as e:
                 raise TypeError("Error in reasoning parser creation.") from e
 
     def get_tokenizer(self):
-        return self.engine.tokenizer.tokenizer
+        return self.engine.get_tokenizer()
 
     def get_model_config(self):
         return self.engine.model_config
