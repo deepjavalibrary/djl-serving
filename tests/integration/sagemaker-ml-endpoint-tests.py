@@ -14,7 +14,6 @@ ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-Integration
 DEFAULT_INSTANCE_TYPE = "ml.m5.xlarge"
 DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
 
-# DJL Serving CPU images
 CANDIDATE_IMAGES = {
     "cpu-full":
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving-cpu-full-test:latest"
@@ -43,7 +42,7 @@ SKLEARN_CONFIGS = {
     },
     "sklearn-djl-formatters": {
         "model_data":
-        "s3://djl-llm-sm-endpoint-tests/skl_xgb/sklearn_djl_all_formatters_v4.tar",
+        "s3://djl-llm-sm-endpoint-tests/skl_xgb/sklearn_djl_all_formatters.tar",
         "payload": {
             "features": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
         },
@@ -170,6 +169,47 @@ MULTI_MODEL_CONFIGS = {
             "SAGEMAKER_DEFAULT_INVOCATIONS_ACCEPT": "application/json",
             "SAGEMAKER_NUM_MODEL_WORKERS": "2"
         }
+    },
+}
+
+# Multi-container endpoint configuration
+MULTI_CONTAINER_CONFIGS = {
+    "sklearn-xgboost-multi-container": {
+        "containers": [{
+            "name": "sklearn-container",
+            "model_data":
+            "s3://djl-llm-sm-endpoint-tests/skl_xgb/sklearn_skops_model.tar",
+            "env_vars": {
+                "OPTION_SKOPS_TRUSTED_TYPES":
+                "sklearn.ensemble._forest.RandomForestClassifier",
+                "SAGEMAKER_DEFAULT_INVOCATIONS_ACCEPT": "application/json",
+                "SAGEMAKER_NUM_MODEL_WORKERS": "2"
+            }
+        }, {
+            "name": "xgboost-container",
+            "model_data":
+            "s3://djl-llm-sm-endpoint-tests/skl_xgb/xgboost_model.tar",
+            "env_vars": {
+                "SAGEMAKER_DEFAULT_INVOCATIONS_ACCEPT": "application/json",
+                "SAGEMAKER_NUM_MODEL_WORKERS": "2"
+            }
+        }],
+        "test_payloads": {
+            "sklearn": {
+                "payload": {
+                    "inputs":
+                    [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+                },
+                "csv_payload": "1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0"
+            },
+            "xgboost": {
+                "payload": {
+                    "inputs":
+                    [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+                },
+                "csv_payload": "1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0"
+            }
+        }
     }
 }
 
@@ -204,6 +244,9 @@ def parse_args():
                         action="store_true")
     parser.add_argument("--test-multi-model",
                         help="Test multi-model endpoint",
+                        action="store_true")
+    parser.add_argument("--test-multi-container",
+                        help="Test multi-container endpoint",
                         action="store_true")
 
     return parser.parse_args()
@@ -306,11 +349,10 @@ def test_endpoint(framework,
 
         batch_msg = " with batch" if test_batch else ""
         print(
-            f"✓ Successfully tested {framework} model: {model_name}{batch_msg}"
-        )
+            f"Successfully tested {framework} model: {model_name}{batch_msg}")
 
     except Exception as e:
-        print(f"✗ Error testing {framework} model {model_name}: {e}")
+        print(f"Error testing {framework} model {model_name}: {e}")
         raise e
     finally:
         if predictor:
@@ -383,16 +425,129 @@ def test_multi_model_endpoint(model_name, image_type, test_format="json"):
                 predictor.serializer = JSONSerializer()
                 predictor.deserializer = JSONDeserializer()
 
-        print(f"✓ Successfully tested multi-model endpoint: {model_name}")
+        print(f"Successfully tested multi-model endpoint: {model_name}")
 
     except Exception as e:
-        print(f"✗ Error testing multi-model endpoint {model_name}: {e}")
+        print(f"Error testing multi-model endpoint {model_name}: {e}")
         raise e
     finally:
         if predictor:
             predictor.delete_endpoint()
         if model:
             model.delete_model()
+
+
+def test_multi_container_endpoint(config_name, image_uri):
+    """Test multi-container endpoint with sklearn and xgboost models"""
+    import time
+
+    if config_name not in MULTI_CONTAINER_CONFIGS:
+        raise ValueError(f"Unknown multi-container config: {config_name}")
+
+    config = MULTI_CONTAINER_CONFIGS[config_name]
+    endpoint_name = f"djl-mc-{config_name}-{int(time.time())}"
+
+    print(f"Testing multi-container endpoint: {endpoint_name}")
+
+    sagemaker_client = boto3.client('sagemaker', region_name='us-west-2')
+    runtime_client = boto3.client('sagemaker-runtime', region_name='us-west-2')
+
+    model_name = None
+    endpoint_config_name = None
+
+    try:
+        # Create container definitions
+        container_defs = []
+        for container_config in config["containers"]:
+            container_def = {
+                "Image": image_uri,
+                "ModelDataUrl": container_config["model_data"],
+                "Environment": container_config["env_vars"],
+                "ContainerHostname": container_config["name"]
+            }
+            container_defs.append(container_def)
+
+        # Create model with Direct inference execution mode for multi-container
+        model_name = f"djl-mc-model-{int(time.time())}"
+        sagemaker_client.create_model(
+            ModelName=model_name,
+            ExecutionRoleArn=ROLE,
+            Containers=container_defs,
+            InferenceExecutionConfig={"Mode": "Direct"})
+
+        # Create endpoint configuration
+        endpoint_config_name = f"djl-mc-config-{int(time.time())}"
+        sagemaker_client.create_endpoint_config(
+            EndpointConfigName=endpoint_config_name,
+            ProductionVariants=[{
+                'VariantName': 'AllTraffic',
+                'ModelName': model_name,
+                'InitialInstanceCount': 1,
+                'InstanceType': DEFAULT_INSTANCE_TYPE,
+                'InitialVariantWeight': 1
+            }])
+
+        # Create endpoint
+        sagemaker_client.create_endpoint(
+            EndpointName=endpoint_name,
+            EndpointConfigName=endpoint_config_name)
+
+        # Wait for endpoint to be in service
+        print(f"Waiting for endpoint {endpoint_name} to be in service...")
+        waiter = sagemaker_client.get_waiter('endpoint_in_service')
+        waiter.wait(EndpointName=endpoint_name,
+                    WaiterConfig={
+                        'Delay': 30,
+                        'MaxAttempts': 60
+                    })
+
+        # Test predictions on both containers using TargetContainerHostname
+        for container_name, test_payload in config["test_payloads"].items():
+            print(f"Testing {container_name} container...")
+
+            container_hostname = next(c["name"] for c in config["containers"]
+                                      if container_name in c["name"])
+
+            # Test JSON payload
+            response = runtime_client.invoke_endpoint(
+                EndpointName=endpoint_name,
+                ContentType='application/json',
+                Accept='application/json',
+                Body=json.dumps(test_payload["payload"]),
+                TargetContainerHostname=container_hostname)
+
+            result = json.loads(response['Body'].read().decode())
+            print(f"{container_name} JSON prediction result: {result}")
+
+            # Test CSV payload
+            response = runtime_client.invoke_endpoint(
+                EndpointName=endpoint_name,
+                ContentType='text/csv',
+                Accept='application/json',
+                Body=test_payload["csv_payload"],
+                TargetContainerHostname=container_hostname)
+
+            result = json.loads(response['Body'].read().decode())
+            print(f"{container_name} CSV prediction result: {result}")
+
+        print(f"Multi-container endpoint test completed successfully!")
+
+    except Exception as e:
+        print(f"Multi-container endpoint test failed: {str(e)}")
+        raise
+    finally:
+        # Cleanup
+        try:
+            if endpoint_name:
+                sagemaker_client.delete_endpoint(EndpointName=endpoint_name)
+            if endpoint_config_name:
+                sagemaker_client.delete_endpoint_config(
+                    EndpointConfigName=endpoint_config_name)
+            if model_name:
+                sagemaker_client.delete_model(ModelName=model_name)
+            print(f"Cleaned up multi-container endpoint resources")
+        except Exception as cleanup_error:
+            print(f"Error during cleanup: {cleanup_error}")
 
 
 if __name__ == "__main__":
@@ -406,8 +561,16 @@ if __name__ == "__main__":
     else:
         test_format = "json"  # Default
 
+    # Handle multi-container endpoint testing
+    if args.test_multi_container:
+        if args.model_name not in MULTI_CONTAINER_CONFIGS:
+            raise ValueError(
+                f"Unknown multi-container config: {args.model_name}. Available: {list(MULTI_CONTAINER_CONFIGS.keys())}"
+            )
+        test_multi_container_endpoint(args.model_name,
+                                      get_image_uri(args.image_type))
     # Handle multi-model endpoint testing
-    if args.test_multi_model:
+    elif args.test_multi_model:
         if args.model_name not in MULTI_MODEL_CONFIGS:
             raise ValueError(
                 f"Unknown multi-model config: {args.model_name}. Available: {list(MULTI_MODEL_CONFIGS.keys())}"

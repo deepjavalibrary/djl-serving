@@ -19,16 +19,16 @@ from typing import Optional
 from djl_python import Input, Output
 from djl_python.encode_decode import decode
 from djl_python.utils import find_model_file
-from djl_python.custom_formatter_handling import load_custom_code
+from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 from djl_python.import_utils import xgboost as xgb
 
 
-class XGBoostHandler:
+class XGBoostHandler(CustomFormatterHandler):
 
     def __init__(self):
+        super().__init__()
         self.model = None
         self.initialized = False
-        self.custom_code = None
         self.init_properties = None
 
     def initialize(self, properties: dict):
@@ -52,10 +52,14 @@ class XGBoostHandler:
             )
 
         # Load custom code
-        self.custom_code = load_custom_code(model_dir)
+        try:
+            self.load_formatters(model_dir)
+        except CustomFormatterError as e:
+            raise
 
-        if self.custom_code.handlers.init_handler:
-            self.model = self.custom_code.handlers.init_handler(model_dir)
+        init_result = self.apply_init_handler(model_dir)
+        if init_result is not None:
+            self.model = init_result
         else:
             model_file = find_model_file(model_dir, extensions)
             if not model_file:
@@ -98,29 +102,23 @@ class XGBoostHandler:
             accept = default_accept
 
         # Validate accept type (skip validation if custom output formatter is provided)
-        if not self.custom_code.formatters.output_formatter:
-            supported_accept_types = ["application/json", "text/csv"]
+        if self.output_formatter is None:  # No formatter available
             if not any(supported_type in accept
-                       for supported_type in supported_accept_types):
+                       for supported_type in ["application/json", "text/csv"]):
                 raise ValueError(
-                    f"Unsupported Accept type: {accept}. Supported types: {supported_accept_types}"
+                    f"Unsupported Accept type: {accept}. Supported types: application/json, text/csv"
                 )
 
         # Input processing
-        X = None
-        if self.custom_code.formatters.input_formatter:
-            if self.custom_code.is_sagemaker_script:
-                X = self.custom_code.formatters.input_formatter(
-                    inputs.get_as_bytes(), content_type)
+        X = self.apply_input_formatter(inputs, content_type=content_type)
+        if X is inputs:  # No formatter applied
+            if "text/csv" in content_type:
+                X = decode(inputs, content_type, require_csv_headers=False)
             else:
-                X = self.custom_code.formatters.input_formatter(inputs)
-        elif "text/csv" in content_type:
-            X = decode(inputs, content_type, require_csv_headers=False)
-        else:
-            input_map = decode(inputs, content_type)
-            data = input_map.get("inputs") if isinstance(input_map,
-                                                         dict) else input_map
-            X = np.array(data)
+                input_map = decode(inputs, content_type)
+                data = input_map.get("inputs") if isinstance(
+                    input_map, dict) else input_map
+                X = np.array(data)
 
         if X is None or not hasattr(X, 'ndim'):
             raise ValueError(
@@ -128,25 +126,19 @@ class XGBoostHandler:
 
         if X.ndim == 1:
             X = X.reshape(1, -1)
-        if self.custom_code.handlers.prediction_handler:
-            predictions = self.custom_code.handlers.prediction_handler(
-                X, self.model)
-        else:
+        predictions = self.apply_prediction_handler(X, self.model)
+        if predictions is None:
             dmatrix = xgb.DMatrix(X)
             predictions = self.model.predict(dmatrix)
 
         # Output processing
         outputs = Output()
-        if self.custom_code.formatters.output_formatter:
-            if self.custom_code.is_sagemaker_script:
-                data = self.custom_code.formatters.output_formatter(
-                    predictions, accept)
+        formatted_output = self.apply_output_formatter(predictions,
+                                                       accept=accept)
+        if formatted_output is not predictions:  # Formatter was applied
+            if self.is_sagemaker_script:
                 outputs.add_property("Content-Type", accept)
-            else:
-                data = self.custom_code.formatters.output_formatter(
-                    predictions)
-            outputs.add(data)
-
+            outputs.add(formatted_output)
         elif "text/csv" in accept:
             csv_buffer = StringIO()
             np.savetxt(csv_buffer, predictions, fmt='%s', delimiter=',')

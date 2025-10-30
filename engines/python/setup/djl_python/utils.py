@@ -23,10 +23,12 @@ from djl_python.service_loader import load_model_service, has_function_in_module
 
 # SageMaker function signatures for validation
 SAGEMAKER_SIGNATURES = {
-    'model_fn': ['model_dir'],
-    'input_fn': ['request_body', 'content_type'],
-    'predict_fn': ['input_data', 'model'],
-    'output_fn': ['prediction', 'accept']
+    'model_fn': [['model_dir']],
+    'input_fn': [['request_body', 'content_type'],
+                 ['request_body', 'request_content_type']],
+    'predict_fn': [['input_data', 'model']],
+    'output_fn': [['prediction', 'accept'],
+                  ['prediction', 'response_content_type']]
 }
 
 
@@ -201,9 +203,8 @@ def find_model_file(model_dir: str, extensions: List[str]) -> Optional[str]:
     return all_matches[0] if all_matches else None
 
 
-def _validate_sagemaker_function(
-        module, func_name: str,
-        expected_params: List[str]) -> Optional[Callable]:
+def _validate_sagemaker_function(module, func_name: str,
+                                 expected_params) -> Optional[Callable]:
     """
     Validate that function exists and has correct signature
     Returns the function if valid, None otherwise
@@ -219,9 +220,10 @@ def _validate_sagemaker_function(
         sig = inspect.signature(func)
         param_names = list(sig.parameters.keys())
 
-        # Check parameter count and names match exactly
-        if param_names == expected_params:
-            return func
+        # Handle multiple signature options
+        for signature_option in expected_params:
+            if param_names == signature_option:
+                return func
     except (ValueError, TypeError):
         # Handle cases where signature inspection fails
         pass

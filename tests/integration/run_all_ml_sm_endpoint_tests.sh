@@ -26,6 +26,11 @@ MULTI_MODELS=(
     "sklearn-multi"
 )
 
+# Multi-container tests
+MULTI_CONTAINER_MODELS=(
+    "sklearn-xgboost-multi-container"
+)
+
 for model in "${MODELS[@]}"; do
     echo "" | tee -a "$OUTPUT_FILE"
     echo "Testing: $model with JSON and CSV" | tee -a "$OUTPUT_FILE"
@@ -77,6 +82,25 @@ for model in "${MULTI_MODELS[@]}"; do
         fi
     else
         echo "FAILED: $model (multi-model) - Script returned error" | tee -a "$OUTPUT_FILE"
+    fi
+    
+    echo "----------------------------------------" | tee -a "$OUTPUT_FILE"
+done
+
+# Test multi-container endpoints
+for model in "${MULTI_CONTAINER_MODELS[@]}"; do
+    echo "" | tee -a "$OUTPUT_FILE"
+    echo "Testing: $model multi-container endpoint" | tee -a "$OUTPUT_FILE"
+    echo "----------------------------------------" | tee -a "$OUTPUT_FILE"
+    
+    if python3 sagemaker-ml-endpoint-tests.py "$model" "$IMAGE_TYPE" --test-multi-container 2>&1 | tee -a "$OUTPUT_FILE"; then
+        if grep -q "Multi-container endpoint test completed successfully" "$OUTPUT_FILE"; then
+            echo "SUCCESS: $model (multi-container)" | tee -a "$OUTPUT_FILE"
+        else
+            echo "FAILED: $model (multi-container) - No success message found" | tee -a "$OUTPUT_FILE"
+        fi
+    else
+        echo "FAILED: $model (multi-container) - Script returned error" | tee -a "$OUTPUT_FILE"
     fi
     
     echo "----------------------------------------" | tee -a "$OUTPUT_FILE"

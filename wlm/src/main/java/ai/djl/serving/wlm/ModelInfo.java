@@ -890,9 +890,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 }
             }
 
-            // Apply SageMaker compatibility for model-level configurations
-            SageMakerCompatibility.applyModelCompatibility(prop);
-
             // load default settings from env
             for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
                 String key = entry.getKey();
@@ -921,6 +918,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     arguments.putIfAbsent(key, value);
                 }
             }
+
+            // Apply SageMaker compatibility for model-level configurations
+            SageMakerCompatibility.applyModelCompatibility(prop);
         }
     }
 

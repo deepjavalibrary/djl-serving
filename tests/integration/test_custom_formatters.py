@@ -330,7 +330,7 @@ class TestCustomFormatters:
         with Runner('cpu-full', 'sklearn_djl_all', download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_djl_all::Python=file:/opt/ml/model/sklearn_djl_all_formatters_v4.zip"
+                "serve -m sklearn_djl_all::Python=file:/opt/ml/model/sklearn_djl_all_formatters.zip"
             )
 
             # Test DJL decorators
@@ -362,7 +362,7 @@ class TestCustomFormatters:
             r.launch(
                 env_vars=env,
                 cmd=
-                "serve -m sklearn_djl_env::Python=file:/opt/ml/model/sklearn_djl_all_formatters_v4.zip"
+                "serve -m sklearn_djl_env::Python=file:/opt/ml/model/sklearn_djl_all_formatters.zip"
             )
 
             test_data = {
@@ -385,7 +385,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_djl_io::Python=file:/opt/ml/model/sklearn_djl_input_output_v3.zip"
+                "serve -m sklearn_djl_io::Python=file:/opt/ml/model/sklearn_djl_input_output.zip"
             )
 
             test_data = {
@@ -417,7 +417,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m sklearn_djl_invalid::Python=file:/opt/ml/model/sklearn_djl_invalid_input_v3.zip"
+                "serve -m sklearn_djl_invalid::Python=file:/opt/ml/model/sklearn_djl_invalid_input.zip"
             )
 
             # Test should fail because input_formatter returns raw list instead of numpy array
@@ -439,7 +439,7 @@ class TestCustomFormatters:
         with Runner('cpu-full', 'xgboost_djl_all', download=True) as r:
             r.launch(
                 cmd=
-                "serve -m xgboost_djl_all::Python=file:/opt/ml/model/xgboost_djl_all_formatters.zip"
+                "serve -m xgboost_djl_all::Python=file:/opt/ml/model/xgboost_djl_all_formatters_v1.zip"
             )
 
             # Test DJL decorators
@@ -471,7 +471,7 @@ class TestCustomFormatters:
             r.launch(
                 env_vars=env,
                 cmd=
-                "serve -m xgboost_djl_env::Python=file:/opt/ml/model/xgboost_djl_all_formatters.zip"
+                "serve -m xgboost_djl_env::Python=file:/opt/ml/model/xgboost_djl_all_formatters_v1.zip"
             )
 
             test_data = {
@@ -494,7 +494,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m xgboost_djl_io::Python=file:/opt/ml/model/xgboost_djl_input_output_v3.zip"
+                "serve -m xgboost_djl_io::Python=file:/opt/ml/model/xgboost_djl_input_output.zip"
             )
 
             test_data = {
@@ -526,7 +526,7 @@ class TestCustomFormatters:
                     download=True) as r:
             r.launch(
                 cmd=
-                "serve -m xgboost_djl_invalid::Python=file:/opt/ml/model/xgboost_djl_invalid_input_v3.zip"
+                "serve -m xgboost_djl_invalid::Python=file:/opt/ml/model/xgboost_djl_invalid_input.zip"
             )
 
             # Test should fail because input_formatter returns raw list instead of numpy array

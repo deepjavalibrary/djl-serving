@@ -128,8 +128,6 @@ public final class ConfigManager {
         if (models != null) {
             prop.setProperty(LOAD_MODELS, String.join(",", models));
         }
-        // Apply SageMaker compatibility for server-level configurations
-        SageMakerCompatibility.applyServerCompatibility(prop);
 
         Map<String, String> env = Utils.getenv();
 
@@ -139,6 +137,10 @@ public final class ConfigManager {
                 prop.put(key.substring(8).toLowerCase(Locale.ROOT), entry.getValue());
             }
         }
+
+        // Apply SageMaker compatibility for server-level configurations
+        SageMakerCompatibility.applyServerCompatibility(prop);
+
         for (Map.Entry<Object, Object> entry : prop.entrySet()) {
             String key = (String) entry.getKey();
             if (key.startsWith("error_rate_")) {
