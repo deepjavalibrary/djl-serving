@@ -23,7 +23,8 @@ from vllm.entrypoints.openai.protocol import (
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
-from vllm.utils import kill_process_tree, AtomicCounter
+from vllm.utils.counter import AtomicCounter
+from vllm.utils.system_utils import kill_process_tree
 
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
@@ -93,7 +94,6 @@ class VLLMHandler(CustomFormatterHandler):
         self.vllm_engine = AsyncLLMEngine.from_engine_args(
             self.vllm_engine_args)
         self.tokenizer = await self.vllm_engine.get_tokenizer()
-        model_config = await self.vllm_engine.get_model_config()
 
         model_names = self.vllm_engine_args.served_model_name or "lmi"
         if not isinstance(model_names, list):
@@ -108,19 +108,16 @@ class VLLMHandler(CustomFormatterHandler):
         self.model_name = model_names[0]
         self.model_registry = OpenAIServingModels(
             self.vllm_engine,
-            model_config,
             base_model_paths,
         )
         self.completion_service = OpenAIServingCompletion(
             self.vllm_engine,
-            model_config,
             self.model_registry,
             request_logger=None,
         )
 
         self.chat_completion_service = OpenAIServingChat(
             self.vllm_engine,
-            model_config,
             self.model_registry,
             "assistant",
             request_logger=None,
@@ -249,13 +246,14 @@ class VLLMHandler(CustomFormatterHandler):
                 return await original_add_request(*args, **kwargs)
 
             self.vllm_engine.add_request = add_request_with_lora
-
-        try:
+            try:
+                response = await processed_request.inference_invoker(
+                    processed_request.vllm_request)
+            finally:
+                self.vllm_engine.add_request = original_add_request
+        else:
             response = await processed_request.inference_invoker(
                 processed_request.vllm_request)
-        finally:
-            if processed_request.lora_request:
-                self.vllm_engine.add_request = original_add_request
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response

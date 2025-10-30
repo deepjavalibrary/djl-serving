@@ -187,6 +187,12 @@ public class PyModel extends BaseModel {
                     recommendedEntryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
                     recommendedEntryPoint = "djl_python.lmi_trtllm.trtllm_async_service";
+                } else if ("vllm".equals(features)) {
+                    if (pyEnv.isAsyncMode()) {
+                        recommendedEntryPoint = "djl_python.lmi_vllm.vllm_async_service";
+                    } else {
+                        recommendedEntryPoint = "djl_python.huggingface";
+                    }
                 } else if (pyEnv.getInitParameters().containsKey("model_id")
                         || Files.exists(modelPath.resolve("config.json"))) {
                     recommendedEntryPoint = "djl_python.huggingface";
