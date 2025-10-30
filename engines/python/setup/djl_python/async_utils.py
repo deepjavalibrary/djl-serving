@@ -128,7 +128,7 @@ def _extract_lora_adapter(raw_request, decoded_payload):
             SAGEMAKER_ADAPTER_IDENTIFIER_HEADER)
         logging.debug(f"Found adapter in headers: {adapter_name}")
     elif "adapters" in decoded_payload:
-        adapter_name = decoded_payload.get("adapters")
+        adapter_name = decoded_payload.pop("adapters")
         logging.debug(f"Found adapter in payload: {adapter_name}")
 
     return adapter_name
