@@ -115,7 +115,8 @@ class TestEncodeDecode(unittest.TestCase):
             mock_decode_csv.return_value = {"inputs": ["test input"]}
             result = decode(self.mock_input, "text/csv")
 
-        mock_decode_csv.assert_called_once_with(self.mock_input)
+        mock_decode_csv.assert_called_once_with(self.mock_input,
+                                                require_headers=True)
         self.assertEqual(result, {"inputs": ["test input"]})
 
     def test_decode_text_plain(self):

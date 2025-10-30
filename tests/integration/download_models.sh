@@ -35,6 +35,15 @@ python_skl_models_urls=(
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_unsafe_model_v2.zip"
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_custom_model_v2.zip"
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_skops_model_env_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_custom_model_sm_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_custom_model_input_output_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_custom_model_input_output_invalid_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_mixed_djl_sagemaker_v2.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_djl_all_formatters.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_djl_input_output.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/sklearn_djl_invalid_input.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/slow_loading_model.zip"
+  "https://resources.djl.ai/test-models/python/sklearn/slow_predict_model.zip"
 )
 
 python_xgb_models_urls=(
@@ -43,6 +52,13 @@ python_xgb_models_urls=(
   "https://resources.djl.ai/test-models/python/xgboost/xgboost_deprecated_model_v2.zip"
   "https://resources.djl.ai/test-models/python/xgboost/xgboost_unsafe_model_v2.zip"
   "https://resources.djl.ai/test-models/python/xgboost/xgboost_custom_model_v2.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_sagemaker_all.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_sagemaker_input_output.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_sagemaker_input_output_invalid.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_mixed_djl_sagemaker_v2.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_djl_all_formatters_v1.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_djl_input_output.zip"
+  "https://resources.djl.ai/test-models/python/xgboost/xgboost_djl_invalid_input.zip"
 )
 
 download() {

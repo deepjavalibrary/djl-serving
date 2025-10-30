@@ -241,59 +241,6 @@ class TestXgbSkl:
             result = response.json()
             assert "predictions" in result
 
-    # Custom formatter tests
-    def test_sklearn_custom_formatters(self):
-        with Runner('cpu-full', 'sklearn_custom', download=True) as r:
-            r.launch(
-                cmd=
-                "serve -m sklearn_custom::Python=file:/opt/ml/model/sklearn_custom_model_v2.zip"
-            )
-            test_data = {
-                "features":
-                [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-            }
-            response = requests.post(
-                "http://localhost:8080/predictions/sklearn_custom",
-                data=json.dumps(test_data),
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                })
-            assert response.status_code == 200
-            result = response.json()
-            assert "result" in result
-            assert "confidence" in result
-            assert "model_type" in result
-            assert result["model_type"] == "sklearn_custom"
-            assert result["confidence"] == 0.95
-
-    def test_xgboost_custom_formatters(self):
-        with Runner('cpu-full', 'xgboost_custom', download=True) as r:
-            r.launch(
-                cmd=
-                "serve -m xgboost_custom::Python=file:/opt/ml/model/xgboost_custom_model_v2.zip"
-            )
-            test_data = {
-                "data": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-            }
-            response = requests.post(
-                "http://localhost:8080/predictions/xgboost_custom",
-                data=json.dumps(test_data),
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                })
-            assert response.status_code == 200
-            result = response.json()
-            assert "probability" in result
-            assert "prediction" in result
-            assert "model_version" in result
-            assert "processed_by" in result
-            assert result["model_version"] == "1.0"
-            assert result["processed_by"] == "xgboost_custom"
-            assert isinstance(result["probability"], float)
-            assert result["prediction"] in [0, 1]
-
     # Error handling tests - CSV format errors
     def test_sklearn_csv_with_headers(self):
         with Runner('cpu-full', 'sklearn_csv_headers', download=True) as r:
@@ -462,7 +409,12 @@ class TestXgbSkl:
                 cmd=
                 "serve -m xgboost_test::Python=file:/opt/ml/model/xgboost_model_v2.zip"
             )
-            test_data = {"inputs": [[1.0, 2.0, 3.0, 4.0, 5.0]]}
+            test_data = {
+                "inputs": [[
+                    1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0,
+                    3.0, 4.0, 5.0
+                ]]
+            }
             response = requests.post(
                 "http://localhost:8080/predictions/xgboost_test",
                 json=test_data,

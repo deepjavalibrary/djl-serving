@@ -31,6 +31,7 @@ node_modules/
 
 # dir
 tests/integration/models/
+tests/integration/sagemaker_test_results.txt
 engines/python/setup/djl_python/tests/resources*
 
 tests/integration/awscurl
@@ -39,3 +40,4 @@ __pycache__
 dist/
 *.egg-info/
 *.pt
+
