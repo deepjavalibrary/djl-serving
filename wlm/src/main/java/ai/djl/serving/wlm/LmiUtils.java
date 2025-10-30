@@ -18,6 +18,7 @@ import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.util.JsonUtils;
+import com.google.gson.JsonObject;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
