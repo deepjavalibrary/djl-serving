@@ -111,8 +111,5 @@ interface SecureModeAllowList {
                     "option.pythonExecutable");
 
     public static final Set<String> PYTHON_EXECUTABLE_ALLOWLIST =
-            Set.of(
-                    "/opt/djl/lmi_dist_venv/bin/python",
-                    "/opt/djl/vllm_venv/bin/python",
-                    "/usr/bin/python3");
+            Set.of("/opt/djl/vllm_venv/bin/python", "/usr/bin/python3");
 }

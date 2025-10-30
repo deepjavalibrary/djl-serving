@@ -78,7 +78,7 @@ class TnXMemoryLayout(str, Enum):
 
 TNX_SUPPORTED_ROLLING_BATCH_TYPES = [
     RollingBatchEnum.auto.value, RollingBatchEnum.vllm.value,
-    RollingBatchEnum.lmidist.value, RollingBatchEnum.tnx.value
+    RollingBatchEnum.tnx.value
 ]
 
 

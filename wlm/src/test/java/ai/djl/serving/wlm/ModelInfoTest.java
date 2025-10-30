@@ -226,7 +226,7 @@ public class ModelInfoTest {
 
     @Test
     public void testInferLmiEngine() throws IOException, ModelException {
-        // vllm/lmi-dist features enabled
+        // vllm features enabled
         System.setProperty("SERVING_FEATURES", "vllm");
         Map<String, String> modelToRollingBatch =
                 Map.of(

@@ -166,7 +166,7 @@ class TNXModelLoader(ModelLoader):
     def can_use_continuous_batching(self) -> bool:
         """
         Set configuration for continuous batching, currently all vllm implementations are continuous batching
-        and batch size greater than 1 for tnx and lmi-dist support rolling batch.
+        and batch size greater than 1 for tnx support rolling batch.
 
         :return: bool indicating if continuous batching can be used
         """

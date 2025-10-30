@@ -220,228 +220,6 @@ custom_formatter_spec = {
     },
 }
 
-lmi_dist_model_spec = {
-    "gpt-neox-20b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "EleutherAI/gpt-neox-20b"
-    },
-    "falcon-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-7b"
-    },
-    "falcon-11b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-11B"
-    },
-    "flan-t5-xxl": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "google/flan-t5-xxl"
-    },
-    "gpt2": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "gpt2"
-    },
-    "mpt-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "mosaicml/mpt-7b"
-    },
-    "octocoder": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "bigcode/octocoder"
-    },
-    "speculative-llama-13b": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "starcoder2-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "bigcode/starcoder2-7b"
-    },
-    "gemma-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256]
-    },
-    "gemma-2b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama2-13b-gptq": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16",
-        "parameters": {
-            "decoder_input_details": True
-        },
-        "stream": [False],
-    },
-    "mistral-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "llama3-8b-chunked-prefill": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
-    },
-    "falcon-11b-chunked-prefill": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-11B"
-    },
-    "llama2-7b-32k": {
-        "batch_size": [1, 4],
-        "seq_length": [1024],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16",
-        "parameters": {
-            "decoder_input_details": True
-        },
-        "stream": [False],
-    },
-    "mistral-7b-128k-awq": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "mistral-7b-marlin": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "llama-2-13b-flashinfer": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16",
-    },
-    "llama-7b-unmerged-lora": {
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
-        "tokenizer": "TheBloke/Llama-2-7B-fp16"
-    },
-    "llama-7b-unmerged-lora-overflow": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": [f"english-alpaca-{i}" for i in range(20)],
-        "tokenizer": "TheBloke/Llama-2-7B-fp16"
-    },
-    "llama2-13b-awq-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["french", "spanish"],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "mistral-7b-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "unsloth/mistral-7b-instruct-v0.2"
-    },
-    "mistral-7b-awq-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
-    },
-    "mistral-7b-gptq-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
-    },
-    "llama3-8b-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["french", "spanish"],
-        "tokenizer": "unsloth/llama-3-8b-Instruct"
-    },
-    "gemma-7b-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["alpaca", "dante"],
-        "tokenizer": "unsloth/gemma-7b"
-    },
-    "phi2-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["sql", "bunny"],
-        "tokenizer": "microsoft/phi-2"
-    },
-    "llama-2-tiny": {
-        "batch_size": [1, 4],
-        "seq_length": [256]
-    },
-    "llama3-8b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-3-8B-fp16"
-    },
-    "llama-3.1-8b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-3-Llama-3.1-8B"
-    },
-    "llama32-3b-multi-worker-tp1-pp1": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama32-3b-multi-worker-tp2-pp1": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama32-3b-multi-worker-tp1-pp2": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama31-8b-pp-only": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama31-8b-tp2-pp2": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama31-8b-tp2-pp2-spec-dec": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "flan-t5-xl": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "tinyllama-input-len-exceeded": {
-        "batch_size": [1],
-        "seq_length": [25],
-        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    },
-}
-
-lmi_dist_chat_model_spec = {
-    "llama2-7b-chat": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
-    }
-}
-
 vllm_model_spec = {
     "gpt-neox-20b": {
         "batch_size": [1, 4],
@@ -655,29 +433,6 @@ vllm_tool_model_spec = {
     },
 }
 
-lmi_dist_aiccl_model_spec = {
-    "llama-2-70b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "codellama-34b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "codellama/CodeLlama-34b-hf"
-    },
-    "falcon-40b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-40b"
-    },
-    "mixtral-8x7b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
-    },
-}
-
 trtllm_model_spec = {
     "llama2-13b": {
         "batch_size": [1, 4],
@@ -856,17 +611,6 @@ correctness_model_spec = {
             "return_full_text": True
         }
     },
-    "lmi-dist-codestral-22b": {
-        "batch_size": [41],
-        "seq_length": [512],
-        "num_run": 4,
-        "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
-        "dataset": "humaneval",
-        "score": 0.5,
-        "parameters": {
-            "return_full_text": True
-        }
-    },
     "neuronx-codestral-22b": {
         "batch_size": [41],
         "seq_length": [512],
@@ -876,14 +620,6 @@ correctness_model_spec = {
         "score": 0.01
     },
     "trtllm-llama3-8b": {
-        "batch_size": [213],
-        "seq_length": [1],
-        "num_run": 66,
-        "tokenizer": "TheBloke/Llama-2-7B-fp16",
-        "dataset": "mmlu",
-        "score": 0.6
-    },
-    "lmi-dist-llama3-1-8b": {
         "batch_size": [213],
         "seq_length": [1],
         "num_run": 66,
@@ -2348,10 +2084,7 @@ def run(raw_args):
     elif args.handler == "transformers_neuronx_neo_rolling_batch":
         test_handler_rolling_batch(args.model,
                                    transformers_neuronx_neo_model_spec)
-    elif args.handler == "lmi_dist":
-        test_handler_rolling_batch(args.model, lmi_dist_model_spec)
-    elif args.handler == "lmi_dist_adapters":
-        test_handler_adapters(args.model, lmi_dist_model_spec)
+
     elif args.handler == "vllm":
         test_handler_rolling_batch(args.model, vllm_model_spec)
     elif args.handler == "custom":
@@ -2362,8 +2095,7 @@ def run(raw_args):
         test_handler_adapters(args.model, vllm_model_spec)
     elif args.handler == "vllm_async_adapters":
         test_handler_adapters(args.model, vllm_model_spec)
-    elif args.handler == "lmi_dist_chat":
-        test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
+
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
     elif args.handler == "vllm_tool":
@@ -2374,8 +2106,7 @@ def run(raw_args):
         test_handler_performance(args.model, handler_performance_model_spec)
     elif args.handler == "performance":
         test_performance()
-    elif args.handler == "lmi_dist_aiccl":
-        test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
+
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm_chat":

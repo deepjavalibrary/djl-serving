@@ -23,7 +23,7 @@ def is_chat_completions_request(inputs: Dict) -> bool:
 def parse_mistral_chat_request_inputs(messages, tokenizer):
     # TODO: get rid of this mess of an integration
     # Mistral has their own tokenizer with custom tokenization logic for chat type requests
-    # This dependency is only available in vllm/lmi-dist, so we import it here as necessary
+    # This dependency is only available in vllm, so we import it here as necessary
     from mistral_common.protocol.instruct.request import ChatCompletionRequest
     chat_request = ChatCompletionRequest(messages=messages)
     # The tokenized object contains the converted prompt, token ids, and images
@@ -76,8 +76,8 @@ def parse_chat_completions_request(
         images.extend(message.get_images())
 
     # Less than ideal, but need a working solution for now
-    # is_mistral_tokenizer can only be true if lmi-dist or vllm
-    # mistral tokenization only works with these engines if we pass token ids directly, not text.
+    # is_mistral_tokenizer can only be true if vllm
+    # mistral tokenization only works with this engine if we pass token ids directly, not text.
     # every other use case is designed for the actual string prompt being provided...
     if is_mistral_tokenizer:
         text_inputs = parse_mistral_chat_request_inputs(messages, tokenizer)

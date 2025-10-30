@@ -4,7 +4,7 @@ Run the below code like
 pip install git+https://github.com/deepjavalibrary/djl-serving.git#subdirectory=engines/python/setup
 
 torchrun --standalone --nnodes=1 --nproc-per-node=4 \
-  run_rolling_batch_alone.py openlm-research/open_llama_7b_v2 -rb lmi-dist
+  run_rolling_batch_alone.py openlm-research/open_llama_7b_v2 -rb vllm
 """
 import argparse
 import logging
@@ -16,10 +16,7 @@ import torch.distributed as dist
 
 
 def get_rolling_batch_class_from_str(rolling_batch_type: str):
-    if rolling_batch_type == "lmi-dist":
-        from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
-        return LmiDistRollingBatch
-    elif rolling_batch_type == "vllm":
+    if rolling_batch_type == "vllm":
         from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
         logging.warning(
             "vLLM rolling batcher is experimental, use with caution")
@@ -142,7 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("-rb",
                         "--rollingbatch",
                         type=str,
-                        choices=["vllm", "lmi-dist", "neuron"])
+                        choices=["vllm", "neuron"])
     parser.add_argument("--properties",
                         type=str,
                         required=False,
@@ -157,9 +154,7 @@ if __name__ == "__main__":
             "trust_remote_code": True,
             "engine": "Python"
         }
-    if args.rollingbatch == "lmi-dist":
-        dist.init_process_group("nccl")
-        properties["engine"] = "MPI"
+
     batcher = init_rolling_batch(args.rollingbatch, args.model_id, properties)
     simulator(batcher, "write a program that can sum two number in python", {
         "max_new_tokens": 256,

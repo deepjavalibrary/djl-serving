@@ -93,7 +93,7 @@ def run_benchmark(config_yml, benchmark_config_dir, benchmark_metric_dir):
         metrics = config.get("metrics", {})
         hf_token = os.getenv("HF_TOKEN", "")
         s3_bucket = config.get("s3", {}).get("bucket_name", "djl-benchmark")
-        s3_folder = config.get("s3", {}).get("folder", "lmi-dist")
+        s3_folder = config.get("s3", {}).get("folder", "vllm")
         current_date = datetime.now().strftime("%Y-%m-%d")
         s3_metrics_folder = f"{current_date}/{s3_folder}/metrics/"
         s3_config_folder = f"{current_date}/{s3_folder}/config/"

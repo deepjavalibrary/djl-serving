@@ -23,12 +23,10 @@ The config.yml file defines the overall benchmark configuration, including:
 * benchmark_report_s3_location: The S3 location where the benchmark reports will be stored.
 * model_test_cases: A list of model test cases to be benchmarked.
 
-An example can be found at: ./config/lmi-dist/config.yml
 
 ### benchmark_config_xxx.json
 The xxx.json files in the configs directory define the IR-LLM configuration for each model's test case. 
 
-An example can be found at: ./config/lmi-dist/config_ir_job/benchmark_config_passive_Llama-3-1-405b-fp8.json
 
 ## Benchmark Reports
 After running the benchmark, the reports will be saved in the specified S3 location. The reports will contain detailed metrics and performance data for each benchmarked model test case.

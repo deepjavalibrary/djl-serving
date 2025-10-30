@@ -294,33 +294,6 @@ To enable sampling in LMI <= 0.31.0, you must specify `do_sample: true` in addit
 This behavior will change starting LMI 0.32.0 where you will no longer be required to set `do_sample`,
 it will be inferred from the other sampling parameters.
 
-#### Additional LMI Dist Generation parameters
-
-```
-LmiDistRollingBatchParameters : {
-    'typical_p' : float (default= 1.0),
-    'truncate' : integer (default = None),
-    'ignore_eos_token' : boolean (default = false),
-    'top_k' : integer (default = -1),
-    'min_p': float (default = 0.0),
-    'presence_penalty': float (default = 0.0),
-    'frequency_penalty' : float (default = 0.0),
-    'n': integer (default = 1), (set this greater than 1 to get mutliple sequences. only works with non-streaming case) 
-    'best_of': integer (default = 1)
-    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search. only works with non-streaming case)
-    'length_penalty' : float (default = 1.0),
-    'early_stopping' : boolean (default = false),
-    'stop_token_ids': list (default = None),
-    'include_stop_str_in_output' : boolean (default = false),
-    'ignore_eos_token' : boolean (default = false),
-    'logprobs' : int (default = None),
-    'prompt_logprobs' : int (default = None),
-    'skip_special_tokens': boolean (default = true),
-    'spaces_between_special_tokens': boolean (default = true),
-}
-```
-
-Decoding methods supported in LmiDist : Greedy (Default) and Sampling.
 
 
 #### Additional vLLM Generation Parameters

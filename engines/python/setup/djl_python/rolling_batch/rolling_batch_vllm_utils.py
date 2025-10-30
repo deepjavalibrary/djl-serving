@@ -43,7 +43,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     cache = request_cache[request_id]
     request_output = cache["request_output"]
 
-    # For beam search, vllm and lmi-dist produces entirely different sequences at the same index
+    # For beam search, vllm produces entirely different sequences at the same index
     # after a certain step, despite tracking previous outputs. This leads to garbage output, so we wait till
     # entire generation finishes.
     parameters = request_output.input.parameters
@@ -185,9 +185,9 @@ def get_speculative_decoding_metrics_record(
 
 def supports_speculative_decoding() -> bool:
     try:
-        # Moved the import inside a try to support neuron vllm container w/o lmi-dist
-        from lmi_dist.arg_utils import VllmEngineArgs
-        return "draft_model" in VllmEngineArgs.__annotations__
+        # Check if vllm supports speculative decoding by looking for draft_model parameter
+        from vllm import EngineArgs
+        return "draft_model" in EngineArgs.__annotations__
     except ImportError:
         return False
 

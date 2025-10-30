@@ -100,7 +100,7 @@ def is_beam_search(parameters: dict) -> bool:
 def is_multiple_sequences(parameters: dict) -> bool:
     """
     Returns whether the parameters indicate number of output sequences to return is more than 1.
-    When the user give us n, best_of is automatically applied in vllm and lmi-dist.
+    When the user give us n, best_of is automatically applied in vllm.
     :param parameters: parameters dictionary
     :return: boolean
     """
