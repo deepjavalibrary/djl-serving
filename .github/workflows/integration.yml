@@ -157,6 +157,9 @@ jobs:
           - test: TestVllm1
             instance: g6
             failure-prefix: lmi
+          - test: TestVllm2
+            instance: g6
+            failure-prefix: lmi
           - test: TestVllmCustomHandlers
             instance: g6
             failure-prefix: lmi
