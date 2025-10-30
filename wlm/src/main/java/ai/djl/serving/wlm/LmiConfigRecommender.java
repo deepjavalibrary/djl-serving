@@ -82,7 +82,6 @@ public final class LmiConfigRecommender {
             rollingBatch = "trtllm";
         } else {
             rollingBatch = "disable";
-            lmiProperties.setProperty("option.async_mode", "true");
         }
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
