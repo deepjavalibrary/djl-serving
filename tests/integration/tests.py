@@ -587,6 +587,11 @@ class TestVllm1:
             r.launch()
             client.run("vllm llama-68m-speculative-medusa".split())
 
+
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllm2:
+
     def test_llama_68m_speculative_eagle(self):
         with Runner('lmi', 'llama-68m-speculative-eagle') as r:
             prepare.build_vllm_async_model("llama-68m-speculative-eagle")
