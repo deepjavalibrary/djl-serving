@@ -501,6 +501,36 @@ class TestVllmAsyncLora:
             client.run("vllm_async_adapters phi2-unmerged-lora".split())
 
 
+@pytest.mark.gpt_oss
+@pytest.mark.lora
+@pytest.mark.gpu_4
+class TestGPTOSS:
+
+    def test_lora_llama3_8b(self):
+        with Runner('lmi', 'llama3-8b-unmerged-lora-gpt-oss') as r:
+            prepare.build_gpt_oss_model("llama3-8b-unmerged-lora")
+            r.launch()
+            client.run("vllm_adapters llama3-8b-unmerged-lora".split())
+
+    def test_lora_gemma_7b(self):
+        with Runner('lmi', 'gemma-7b-unmerged-lora-gpt-oss') as r:
+            prepare.build_gpt_oss_model("gemma-7b-unmerged-lora")
+            r.launch()
+            client.run("vllm_adapters gemma-7b-unmerged-lora".split())
+
+    def test_lora_phi2(self):
+        with Runner('lmi', 'phi2-unmerged-lora-gpt-oss') as r:
+            prepare.build_gpt_oss_model("phi2-unmerged-lora")
+            r.launch()
+            client.run("vllm_adapters phi2-unmerged-lora".split())
+
+    def test_llama_68m_speculative_eagle(self):
+        with Runner('lmi', 'llama-68m-speculative-eagle-gpt-oss') as r:
+            prepare.build_gpt_oss_model("llama-68m-speculative-eagle")
+            r.launch()
+            client.run("vllm llama-68m-speculative-eagle".split())
+
+
 @pytest.mark.inf
 class TestNeuronx1:
 

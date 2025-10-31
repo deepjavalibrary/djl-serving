@@ -375,7 +375,7 @@ vllm_model_list = {
     "llama-68m-speculative-eagle": {
         "option.model_id": "s3://djl-llm/llama-68m/",
         "option.task": "text-generation",
-        "option.speculative_model": "abhigoyal/vllm-eagle-llama-68m-random",
+        "option.speculative_model": "yuhuili/EAGLE-LLaMA3-Instruct-8B",  # TODO: Replace with actual EAGLE3 model for llama-68m
         "option.num_speculative_tokens": 4,
         "option.use_v2_block_manager": True,
         "option.tensor_parallel_degree": 1,
@@ -1377,6 +1377,23 @@ def build_stateful_model(model):
     options["option.enable_stateful_sessions"] = "true"
     options["option.sessions_path"] = "/tmp/djl_sessions"
     write_model_artifacts(options)
+
+
+def build_gpt_oss_model(model):
+    if model not in vllm_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
+        )
+    options = vllm_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "vllm"
+
+    adapter_ids = options.pop("adapter_ids", [])
+    adapter_names = options.pop("adapter_names", [])
+
+    write_model_artifacts(options,
+                          adapter_ids=adapter_ids,
+                          adapter_names=adapter_names)
 
 
 supported_handler = {
