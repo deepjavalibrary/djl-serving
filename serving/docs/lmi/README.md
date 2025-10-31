@@ -12,15 +12,14 @@ The latest release notes can be found [here](release_notes.md).
 # Overview - Large Model Inference (LMI) Containers
 
 LMI containers are a set of high-performance Docker Containers purpose built for large language model (LLM) inference. 
-We provide three containers that support [vLLM](https://github.com/vllm-project/vllm), [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM), and
-[Transformers NeuronX](https://github.com/aws-neuron/transformers-neuronx) to deploy LLMs on [AWS SageMaker Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html). 
+We provide containers that support [vLLM](https://github.com/vllm-project/vllm) and [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM) to deploy LLMs on [AWS SageMaker Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html). 
 These containers bundle together a model server with open-source inference libraries to deliver an all-in-one LLM serving solution.
 We provide quick start notebooks that get you deploying popular open source models in minutes, and advanced guides to maximize performance of your endpoint.
 
 LMI containers provide many features, including:
 
 * Optimized inference performance for popular model architectures like Llama, Qwen, Mistral, and more
-* Integration with open source inference libraries like vLLM, TensorRT-LLM, and Transformers NeuronX
+* Integration with open source inference libraries like vLLM and TensorRT-LLM
 * Continuous Batching for maximizing throughput at high concurrency
 * Token Streaming
 * Quantization through AWQ, GPTQ, FP8 and more 
@@ -61,7 +60,7 @@ You can learn more about their integration with LMI from the respective user gui
 
 * [vLLM - User Guide](user_guides/vllm_user_guide.md)
 * [TensorRT-LLM - User Guide](user_guides/trt_llm_user_guide.md)
-* [Transformers NeuronX - User Guide](user_guides/tnx_user_guide.md)
+
 
 LMI provides access to multiple libraries to enable users to find the best stack for their model and use-case. 
 Each inference framework provides a unique set of features and optimizations that can be tuned for your model and use case.
@@ -76,7 +75,6 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 |------------------------|-----------------|-------------------------------------------------------------------------------------------|
 | `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-lmi14.0.0-cu126         |
 | `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.32.0-tensorrtllm0.12.0-cu125 |
-| `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-neuronx-sdk2.20.1       |
 
 ## Advanced Features
 

@@ -30,7 +30,6 @@ Registers a new model as a single model workflow. The workflow name and version 
 * device - the device to load the model. DJL will pick optimal device if not specified, the value device can be:
     * CPU device: cpu or simply -1
     * GPU device: gpu0, gpu1, ... or simply 0, 1, 2, 3, ...
-    * Neuron core: nc1, nc2, ...
 * job_queue_size: the request job queue size, default is `1000`.
 * batch_size - the inference batch size, default is `1`.
 * max_batch_delay - the maximum delay for batch aggregation in millis, default value is `100` milliseconds.
@@ -78,7 +77,6 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 * device - the device to load the model. DJL will pick optimal device if not specified, the value device can be:
     * CPU device: cpu or simply -1
     * GPU device: gpu0, gpu1, ... or simply 0, 1, 2, 3, ...
-    * Neuron core: nc1, nc2, ...
 * min_worker - the minimum number of worker processes. The default value is `1`.
 * max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
 * synchronous - if the creation of worker is synchronous. The default value is true.

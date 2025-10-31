@@ -94,20 +94,7 @@ elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"
   else
     shm="12gb"
   fi
-elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
-  host_device="--device /dev/neuron0"
-elif [[ "$platform" == *"inf2"* ]]; then # inf2: pytorch-inf2-24 24 will be the total devices
-  OIFS=$IFS
-  IFS='-'
-  read -a strarr <<<"$platform"
-  devices=${strarr[2]}
-  IFS=$OIFS
-  if [[ $devices -gt 1 ]]; then
-    is_llm=true
-  fi
-  for ((i = 0; i < $devices; i++)); do
-    host_device+=" --device /dev/neuron${i}"
-  done
+
 fi
 
 if [[ -f ${PWD}/docker_env ]]; then
@@ -299,9 +286,7 @@ echo "Launching ${container_id}..."
 total_retries=24
 if $is_llm; then
   total_retries=60
-  if [[ "$platform" == *"inf2"* ]]; then
-    total_retries=160
-  fi
+
   if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then
     total_retries=150
     echo "extra sleep of 10 min for trtllm compilation"

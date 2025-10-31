@@ -22,7 +22,7 @@ For a more in-depth instance type sizing guide, you can follow the steps below.
 Selecting an instance is based on a few factors:
 
 * Model Size
-* Desired Accelerators (A10, A100, H100, AWS Inferentia etc.)
+* Desired Accelerators (A10, A100, H100, etc.)
     * We recommend using instances with at least A series gpus (g5/p4). The performance is much greater compared to older T series gpus
     * g6 instance types are slightly less performant than g5 instances, but provide fp8 support and are typically more price-performant
     * You should select an instance that has sufficient aggregate memory (across all gpus) for both loading the model, and making requests at runtime
