@@ -72,7 +72,7 @@ public final class LmiUtils {
         Properties prop = modelInfo.getProperties();
         if (modelConfig == null) {
             // Precompiled models may not have config, set mpi mode when trtllm
-            // TODO: Include TRT/Neuron compiled models in this configure flow
+            // TODO: Include TRT compiled models in this configure flow
             String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
             if (features != null && features.contains("trtllm")) {
                 prop.setProperty("option.mpi_mode", "true");

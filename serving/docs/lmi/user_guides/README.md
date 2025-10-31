@@ -5,7 +5,7 @@ LMI provides backend-specific user guides that cover the following topics:
 * Model Artifact Structure
 
   * All backends support standard HuggingFace Transformers Pretrained artifacts
-  * The TensorRT-LLM and Transformer-NeuronX user guides provide information on compiled model artifact structures
+  * The TensorRT-LLM user guide provides information on compiled model artifact structures
 
 * Supported Model Architectures
 
@@ -27,4 +27,4 @@ The available backends and their respective user guides are available below:
 
 * [vLLM](vllm_user_guide.md)
 * [TensorRT-LLM](trt_llm_user_guide.md)
-* [Transformers-NeuronX](tnx_user_guide.md)
+

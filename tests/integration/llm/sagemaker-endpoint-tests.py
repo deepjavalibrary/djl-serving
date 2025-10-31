@@ -37,8 +37,6 @@ NIGHTLY_IMAGES = {
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:lmi-nightly",
     "tensorrt-llm":
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:tensorrt-llm-nightly",
-    "neuronx":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:pytorch-inf2-nightly",
 }
 
 CANDIDATE_IMAGES = {
@@ -47,8 +45,6 @@ CANDIDATE_IMAGES = {
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-deepspeed",
     "tensorrt-llm":
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-tensorrt-llm",
-    "neuronx":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-pytorch-inf2"
 }
 
 SINGLE_MODEL_ENDPOINT_CONFIGS = {
@@ -120,7 +116,7 @@ def parse_args():
     )
     parser.add_argument("container",
                         help="Which container to use",
-                        choices=["lmi", "tensorrt-llm", "neuronx"])
+                        choices=["lmi", "tensorrt-llm"])
     parser.add_argument(
         "run_benchmark",
         help="Whether to run benchmark and upload the metrics to cloudwatch",

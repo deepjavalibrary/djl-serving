@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # used in the dockerfiles to create virtualenvs per engine
-# currently only intended for use in lmi.Dockerfile, need to refactor this to work for trtllm/neuron if needed
+# currently only intended for use in lmi.Dockerfile, need to refactor this to work for trtllm if needed
 venv_directory=$1
 requirements_file=$2
 

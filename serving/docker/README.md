@@ -64,18 +64,6 @@ curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 docker run -it --runtime=nvidia --shm-size 2g -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.33.0-pytorch-gpu
 ```
 
-### AWS Inferentia
-
-```shell
-docker pull deepjavalibrary/djl-serving:0.33.0-pytorch-inf2
-
-mkdir models
-cd models
-
-curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
-docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.33.0-pytorch-inf2
-```
-
 ### aarch64 machine
 
 ```shell
@@ -84,7 +72,7 @@ docker pull deepjavalibrary/djl-serving:0.33.0-aarch64
 mkdir models
 cd models
 
-curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
+curl -O https://resources.djl.ai/test-models/pytorch/resnet18.tar.gz
 docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.33.0-aarch64
 ```
 

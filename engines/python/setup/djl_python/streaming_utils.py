@@ -68,7 +68,7 @@ class StreamingUtils:
     SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM = (
         "T5ForConditionalGeneration", )
     SUPPORTED_MODEL_ARCH_SUFFIXES = SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM + SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM
-    BUILTIN_ENGINES = {"Accelerate", "transformers-neuronx"}
+    BUILTIN_ENGINES = {"Accelerate"}
 
     @staticmethod
     def use_hf_default_streamer(model, tokenizer, inputs, device, **kwargs):
@@ -101,7 +101,7 @@ class StreamingUtils:
     @staticmethod
     def get_stream_generator(execution_engine: str):
         ## execution_engine passed to this function is not the same engine specified in serving.properties
-        ## in djl-serving. For e.g Accelerate and neuronx use Python as the engine serving.properties
+        ## in djl-serving. For e.g Accelerate uses Python as the engine serving.properties
         ## The engine here refers to backend model parallel framework.
         if execution_engine in StreamingUtils.BUILTIN_ENGINES:
             return StreamingUtils._hf_model_stream_generator
@@ -139,9 +139,6 @@ class StreamingUtils:
         if "engine" in kwargs.keys():
             engine = kwargs["engine"]
 
-        if "transformers-neuronx" == engine:
-            model.reset_generation()
-
         if generic_model_class == "CausalLM":
             input_length = input_ids.shape[1]
             all_decoder_input_ids = input_ids
@@ -177,10 +174,7 @@ class StreamingUtils:
                     "past_key_values": past_key_values,
                     "use_cache": True
                 }
-                if "transformers-neuronx" == engine:
-                    model_inputs = model.prepare_inputs_for_generation(
-                        **model_inputs)
-                    model_inputs["return_dict"] = True
+
                 outputs = model.forward(**model_inputs)
 
             if generic_model_class == "Seq2SeqLM":

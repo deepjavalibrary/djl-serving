@@ -78,10 +78,7 @@ class VllmRbProperties(Properties):
     enable_reasoning: bool = False
     reasoning_parser: Optional[str] = None
 
-    # Neuron vLLM properties
     device: str = 'auto'
-    preloaded_model: Optional[Any] = None
-    override_neuron_config: Optional[Dict] = None
 
     # Non engine arg properties
     chat_template: Optional[str] = None
@@ -143,19 +140,6 @@ class VllmRbProperties(Properties):
                     f"Invalid reasoning parser: {self.reasoning_parser} "
                     f"(chose from {{ {','.join(valid_reasoning_parses)} }})")
         return self
-
-    @field_validator('override_neuron_config', mode="before")
-    def validate_override_neuron_config(cls, val):
-        if isinstance(val, str):
-            neuron_config = ast.literal_eval(val)
-            if not isinstance(neuron_config, dict):
-                raise ValueError(
-                    f"Invalid json format for override_neuron_config")
-            return neuron_config
-        elif isinstance(val, Dict):
-            return val
-        else:
-            raise ValueError("Invalid json format for override_neuron_config")
 
     # TODO: processing of this field is broken in vllm via from_cli_args
     # we should upstream a fix for this to vllm
@@ -234,11 +218,7 @@ class VllmRbProperties(Properties):
         engine_args = arg_cls.from_cli_args(args)
         # we have to do this separately because vllm converts it into a string
         engine_args.long_lora_scaling_factors = self.long_lora_scaling_factors
-        # These neuron configs are not implemented in the vllm arg parser
-        if self.device == 'neuron':
-            setattr(engine_args, 'preloaded_model', self.preloaded_model)
-            setattr(engine_args, 'override_neuron_config',
-                    self.override_neuron_config)
+
         return engine_args
 
     def get_additional_vllm_engine_args(self) -> Dict[str, Any]:

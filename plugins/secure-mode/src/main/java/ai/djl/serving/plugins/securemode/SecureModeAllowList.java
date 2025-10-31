@@ -46,7 +46,6 @@ interface SecureModeAllowList {
                     "option.n_positions",
                     "option.load_in_8bit",
                     "option.unroll",
-                    "option.neuron_optimize_level",
                     "option.context_length_estimate",
                     "option.low_cpu_mem_usage",
                     "option.load_split_model",

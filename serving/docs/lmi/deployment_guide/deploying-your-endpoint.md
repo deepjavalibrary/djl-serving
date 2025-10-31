@@ -51,7 +51,7 @@ sagemaker_session = sagemaker.session.Session()
 # region is needed to retrieve the lmi container
 region = sagemaker_session._region_name
 # get the lmi image uri
-# available frameworks: "djl-lmi" (for vllm), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
+# available frameworks: "djl-lmi" (for vllm), "djl-tensorrtllm" (for tensorrt-llm)
 container_uri = sagemaker.image_uris.retrieve(framework="djl-lmi", version="0.30.0", region=region)
 # create a unique endpoint name
 endpoint_name = sagemaker.utils.name_from_base("my-lmi-endpoint")
@@ -106,7 +106,7 @@ sagemaker_session = sagemaker.session.Session()
 # region is needed to retrieve the lmi container
 region = sagemaker_session._region_name
 # get the lmi image uri
-# available frameworks: "djl-lmi" (for vllm), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
+# available frameworks: "djl-lmi" (for vllm), "djl-tensorrtllm" (for tensorrt-llm)
 container_uri = sagemaker.image_uris.retrieve(framework="djl-lmi", version="0.30.0", region=region)
 # create a unique endpoint name
 endpoint_name = sagemaker.utils.name_from_base("my-lmi-endpoint")

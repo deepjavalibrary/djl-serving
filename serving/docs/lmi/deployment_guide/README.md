@@ -15,7 +15,7 @@ This guide is organized as follows:
 - [1. Selecting an Instance Type](instance-type-selection.md)
   - Pick a SageMaker instance type based on your model size and expected runtime usage 
 - [2. Backend Selection](backend-selection.md)
-  - Pick a backend (vLLM, TensorRT-LLM, Transformers NeuronX) and corresponding container
+  - Pick a backend (vLLM, TensorRT-LLM) and corresponding container
 - [3. Model and Container Configurations](configurations.md)
   - Configure your model for optimized performance based on your use-case 
 - [4. Deploying a SageMaker Endpoint](deploying-your-endpoint.md)
@@ -43,8 +43,8 @@ The Engine is an abstraction provided by DJL that you can think of as the interf
 In LMI, we use the Python Engine as it allows us to directly leverage the growing Python ecosystem of LLM inference libraries.
 
 ### Python Engine and Inference Backends
-The Python Engine allows LMI containers to leverage many Python-based inference libraries like vLLM, TensorRT-LLM, and Transformers NeuronX.
-These libraries expose Python APIs for loading and executing models with optimized inference on accelerators like GPUs and AWS Inferentia.
+The Python Engine allows LMI containers to leverage many Python-based inference libraries like vLLM and TensorRT-LLM.
+These libraries expose Python APIs for loading and executing models with optimized inference on accelerators like GPUs.
 LMI containers integrate the front-end model server with backend workers running Python processes to provide high-performance inference of LLMs.
 
 To support multi-gpu inference of large models using model parallelism techniques like tensor parallelism, many of the inference libraries support distributed inference through MPI.

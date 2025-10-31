@@ -49,7 +49,7 @@ If you are deploying with the LMI container (e.g. `763104351884.dkr.ecr.us-east-
 
 If you are deploying with the LMI-TRT container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.33.0-tensorrtllm0.21.0-cu128`), you can find the list of supported models [here](trt_llm_user_guide.md#supported-model-architectures).
 
-If you are deploying with the LMI-Neuron container (e.g. `763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-neuronx-sdk2.20.1`), you can find the list of supported models [here](tnx_user_guide.md#supported-model-architecture).
+
 
 ## Available Environment Variable Configurations
 

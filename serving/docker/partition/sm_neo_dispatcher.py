@@ -32,8 +32,7 @@ class NeoTask(Enum):
 
     TENSORRT_LLM = ("TensorRT-LLM compilation",
                     "/opt/djl/partition/sm_neo_trt_llm_partition.py")
-    NEURON = ("Neuron compilation",
-              "/opt/djl/partition/sm_neo_neuron_partition.py")
+
     QUANTIZATION = ("Quantization", "/opt/djl/partition/sm_neo_quantize.py")
     SHARDING = ("SageMaker Fast Model Loader sharding",
                 "/opt/djl/partition/sm_neo_shard.py")
@@ -132,8 +131,7 @@ class NeoDispatcher:
                     self.run_task(NeoTask.QUANTIZATION, python_exec)
             case "trtllm":
                 self.run_task(NeoTask.TENSORRT_LLM, SYSTEM_PY_EXEC)
-            case "vllm,tnx":
-                self.run_task(NeoTask.NEURON, SYSTEM_PY_EXEC)
+
             case _:
                 raise ValueError(
                     "Container does not support SageMaker Neo context")
