@@ -4,17 +4,18 @@ set -ex
 
 ARCH=$1
 
+# Download custom s5cmd binary built with Go 1.24.2
 if [[ $ARCH == "aarch64" ]]; then
-  curl https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-arm64.tar.gz -L -o s5cmd.tar.gz
+  curl -f https://publish.djl.ai/s5cmd/go1.24.2/s5cmd-linux-arm64 -L -o s5cmd
 else
-  curl https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz -L -o s5cmd.tar.gz
+  curl -f https://publish.djl.ai/s5cmd/go1.24.2/s5cmd-linux-amd64 -L -o s5cmd
 fi
 
 INSTALL_DIR="/opt/djl/bin"
 
 mkdir -p "${INSTALL_DIR}"
-tar -xvf s5cmd.tar.gz -C "${INSTALL_DIR}"
-rm -rf s5cmd.tar.gz
+mv s5cmd "${INSTALL_DIR}/"
+chmod +x "${INSTALL_DIR}/s5cmd"
 
 export PATH="${INSTALL_DIR}:${PATH}"
 echo "export PATH=${INSTALL_DIR}:\$PATH" >>~/.bashrc
