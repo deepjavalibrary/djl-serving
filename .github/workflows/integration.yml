@@ -175,6 +175,9 @@ jobs:
           - test: TestMultiModalVllm
             instance: g6
             failure-prefix: lmi
+          - test: TestGPTOSS
+            instance: g6
+            failure-prefix: lmi
           # - test: TestTextEmbedding
           #   instance: g6
           #   failure-prefix: lmi
