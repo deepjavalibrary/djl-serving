@@ -184,6 +184,15 @@ jobs:
           - test: TestStatefulModel
             instance: g6
             failure-prefix: lmi
+          - test: TestSageMakerCompatibility
+            instance: cpu
+            failure-prefix: cpu
+          - test: TestCustomFormatters
+            instance: cpu
+            failure-prefix: cpu
+          - test: TestXgbSkl
+            instance: cpu
+            failure-prefix: cpu
     outputs:
       failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
       failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}

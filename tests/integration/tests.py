@@ -10,6 +10,9 @@ import llm.prepare as prepare
 import llm.client as client
 import test_client
 import time
+import test_sagemaker_compatibility
+import test_custom_formatters
+import test_xgb_skl
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '0.34.0').strip()
 override_image_tag_suffix = os.environ.get('IMAGE_TAG_SUFFIX', '').strip()
