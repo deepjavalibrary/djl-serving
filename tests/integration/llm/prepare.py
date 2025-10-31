@@ -375,7 +375,7 @@ vllm_model_list = {
     "llama-68m-speculative-eagle": {
         "option.model_id": "s3://djl-llm/llama-68m/",
         "option.task": "text-generation",
-        "option.speculative_model": "yuhuili/EAGLE-LLaMA3-Instruct-8B",  # TODO: Replace with actual EAGLE3 model for llama-68m
+        "option.speculative_model": "yuhuili/EAGLE-LLaMA3-Instruct-8B",
         "option.num_speculative_tokens": 4,
         "option.use_v2_block_manager": True,
         "option.tensor_parallel_degree": 1,
