@@ -229,18 +229,7 @@ def write_model_artifacts(properties, requirements=None, env=None):
 
 
 def machine_translation(machine_name: str):
-    translation = {
-        "inf2.2xlarge": 1,
-        "inf2.8xlarge": 1,
-        "inf2.24xlarge": 6,
-        "inf2.48xlarge": 12,
-        "trn1.2xlarge": 1,
-        "trn1.32xlarge": 16
-    }
-    if machine_name.startswith("inf2") or machine_name.startswith("trn1"):
-        return f"pytorch-inf2-{translation[machine_name]}"
-    else:
-        return "lmi"
+    return "lmi"
 
 
 def build_running_script(template, job, instance, record):

@@ -286,9 +286,7 @@ echo "Launching ${container_id}..."
 total_retries=24
 if $is_llm; then
   total_retries=60
-  if [[ "$platform" == *"inf2"* ]]; then
-    total_retries=160
-  fi
+
   if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then
     total_retries=150
     echo "extra sleep of 10 min for trtllm compilation"
