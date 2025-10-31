@@ -322,6 +322,11 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4
     },
+    "gpt-oss-20b": {
+        "option.model_id": "openai/gpt-oss-20b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4
+    },
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03",
         "option.task": "text-generation",
@@ -367,6 +372,15 @@ vllm_model_list = {
         "option.model_id": "s3://djl-llm/llama-68m/",
         "option.task": "text-generation",
         "option.speculative_model": "abhigoyal/vllm-medusa-llama-68m-random",
+        "option.num_speculative_tokens": 4,
+        "option.use_v2_block_manager": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
+    },
+    "gpt-oss-20b-speculative-eagle3": {
+        "option.model_id": "openai/gpt-oss-20b",
+        "option.task": "text-generation",
+        "option.speculative_model": "yuhuili/EAGLE-LLaMA3-Instruct-8B",
         "option.num_speculative_tokens": 4,
         "option.use_v2_block_manager": True,
         "option.tensor_parallel_degree": 1,
@@ -551,6 +565,29 @@ vllm_model_list = {
             "girtcius/gemma-7b-dante-lora",
         ],
         "adapter_names": ["alpaca", "dante"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
+    "gpt-oss-20b-unmerged-lora": {
+        "option.model_id":
+        "openai/gpt-oss-20b",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        1,
+        "option.max_lora_rank":
+        128,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "UnderstandLing/Llama-3-8B-Instruct-fr",
+            "UnderstandLing/Llama-3-8B-Instruct-es",
+        ],
+        "adapter_names": ["french", "spanish"],
         "option.gpu_memory_utilization":
         "0.8",
     },

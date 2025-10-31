@@ -338,6 +338,12 @@ vllm_model_spec = {
         "adapters": ["french", "spanish"],
         "tokenizer": "unsloth/llama-3-8b-Instruct"
     },
+    "gpt-oss-20b-lora": {
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
+    },
     "gemma-7b-unmerged-lora": {
         "batch_size": [4],
         "seq_length": [16, 32],
@@ -362,6 +368,10 @@ vllm_model_spec = {
         "seq_length": [256]
     },
     "gemma-2b": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "gpt-oss": {
         "batch_size": [1, 4],
         "seq_length": [256],
     },
