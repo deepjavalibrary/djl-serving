@@ -4,11 +4,11 @@ set -ex
 
 ARCH=$1
 
-# Download custom s5cmd binary built with Go 1.24.2
+# Download custom s5cmd binary built with Go 1.25.2
 if [[ $ARCH == "aarch64" ]]; then
-  curl -f https://publish.djl.ai/s5cmd/go1.24.2/s5cmd-linux-arm64 -L -o s5cmd
+  curl -f https://publish.djl.ai/s5cmd/go1.25.2/s5cmd-linux-arm64 -L -o s5cmd
 else
-  curl -f https://publish.djl.ai/s5cmd/go1.24.2/s5cmd-linux-amd64 -L -o s5cmd
+  curl -f https://publish.djl.ai/s5cmd/go1.25.2/s5cmd-linux-amd64 -L -o s5cmd
 fi
 
 INSTALL_DIR="/opt/djl/bin"
