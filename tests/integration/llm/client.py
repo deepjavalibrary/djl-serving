@@ -342,7 +342,7 @@ vllm_model_spec = {
         "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
-        "adapters": ["french", "spanish"],
+        "adapters": ["promptinj", "uncensored"],
     },
     "gemma-7b-unmerged-lora": {
         "batch_size": [4],
