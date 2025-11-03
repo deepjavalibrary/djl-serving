@@ -376,6 +376,12 @@ class TestVllm1:
             r.launch()
             client.run("vllm_chat llama2-7b-chat".split())
 
+    def test_gpt_oss_20b(self):
+        with Runner('lmi', 'gpt-oss-20b') as r:
+            prepare.build_vllm_async_model("gpt-oss-20b")
+            r.launch()
+            client.run("vllm gpt-oss".split())
+
     @pytest.mark.skipif(not is_applicable_cuda_capability(89),
                         reason="Unsupported CUDA capability")
     def test_qwen2_7b_fp8(self):
@@ -408,6 +414,12 @@ class TestVllm1:
 @pytest.mark.vllm
 @pytest.mark.gpu_4
 class TestVllm2:
+
+    def test_gpt_oss_speculative_eagle3(self):
+        with Runner('lmi', 'gpt-oss-20b-speculative-eagle3') as r:
+            prepare.build_vllm_async_model("gpt-oss-20b-speculative-eagle3")
+            r.launch()
+            client.run("vllm gpt-oss".split())
 
     def test_llama_68m_speculative_eagle(self):
         with Runner('lmi', 'llama-68m-speculative-eagle') as r:
@@ -481,6 +493,12 @@ class TestVllmLora:
 @pytest.mark.lora
 @pytest.mark.gpu_4
 class TestVllmAsyncLora:
+
+    def test_gpt_oss_20b_lora(self):
+        with Runner('lmi', 'gpt-oss-20b-unmerged-lora') as r:
+            prepare.build_vllm_async_model("gpt-oss-20b-unmerged-lora")
+            r.launch()
+            client.run("vllm_async_adapters gpt-oss-20b-lora".split())
 
     def test_lora_llama3_8b_async(self):
         with Runner('lmi', 'llama3-8b-unmerged-lora-async') as r:
