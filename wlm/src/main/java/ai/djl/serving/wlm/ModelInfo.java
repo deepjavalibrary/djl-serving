@@ -1138,8 +1138,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         throw new EngineException(
                                 "Neuron devices are not enough to run "
                                         + ncPerWorker
-                                        + " partitions. Please refer to: "
-                                        + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
+                                        + " partitions.");
                     }
                     neurons = procs;
                 } else {

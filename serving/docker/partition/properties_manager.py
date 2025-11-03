@@ -139,8 +139,6 @@ class PropertiesManager(object):
                         pass
                     elif engine is None:
                         raise ValueError("Please specify engine")
-                    elif engine.lower() == "python":
-                        entry_point = "djl_python.transformers_neuronx"
                     else:
                         raise ValueError(f"Invalid engine: {engine}")
                     self.properties['option.entryPoint'] = entry_point

@@ -2,7 +2,7 @@
 
 set -e
 
-platform=$1 # expected values are "cpu" "cpu-full" "pytorch-gpu" "pytorch-inf2" "aarch64"
+platform=$1 # expected values are "cpu" "cpu-full" "pytorch-gpu" "aarch64"
 
 rm -rf models
 mkdir models && cd models
@@ -21,10 +21,7 @@ aarch_models_urls=(
   "https://resources.djl.ai/test-models/onnxruntime/resnet18-v1-7.zip"
 )
 
-inf2_models_urls=(
-  "https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz"
-  "https://resources.djl.ai/test-models/pytorch/resnet18_no_reqs_inf2_2_4.tar.gz"
-)
+
 
 python_skl_models_urls=(
   "https://resources.djl.ai/test-models/python/sklearn/sklearn_model_v2.zip"
@@ -81,14 +78,12 @@ cpu-full)
   download "${python_skl_models_urls[@]}"
   download "${python_xgb_models_urls[@]}"
   ;;
-pytorch-inf2)
-  download "${inf2_models_urls[@]}"
-  ;;
+
 aarch64)
   download "${aarch_models_urls[@]}"
   ;;
 *)
-  echo "Bad argument. Expecting one of the values: cpu, cpu-full, pytorch-gpu, pytorch-inf2, aarch64"
+  echo "Bad argument. Expecting one of the values: cpu, cpu-full, pytorch-gpu, aarch64"
   exit 1
   ;;
 esac

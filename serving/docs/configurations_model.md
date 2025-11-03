@@ -20,7 +20,7 @@ and python handler functions.
 - `log_request_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
 - `metrics_aggregation`: Number of model metrics to aggregate, default is `1000`.
 - `minWorkers`: Minimum number of workers, default is `1`.
-- `maxWorkers`: Maximum number of workers, default is `#CPU/OMP_NUM_THREAD` for CPU, GPU default is `2`, inferentia default is `2` (PyTorch engine), `1` (Python engine) .
+- `maxWorkers`: Maximum number of workers, default is `#CPU/OMP_NUM_THREAD` for CPU, GPU default is `2`.
 - `gpu.minWorkers`: Minimum number of workers for GPU.
 - `gpu.maxWorkers`: Maximum number of workers for GPU.
 - `cpu.minWorkers`: Minimum number of workers for CPU.

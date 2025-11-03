@@ -3,7 +3,7 @@
 
 version=$1
 repo=$2
-images="cpu aarch64 cpu-full pytorch-inf2 pytorch-gpu lmi tensorrt-llm"
+images="cpu aarch64 cpu-full pytorch-gpu lmi tensorrt-llm"
 
 for image in $images; do
   if [[ ! "$version" == "nightly" ]]; then

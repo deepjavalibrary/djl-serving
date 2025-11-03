@@ -56,222 +56,6 @@ hf_handler_list = {
 
 performance_test_list = {}
 
-transformers_neuronx_handler_list = {
-    "gpt2": {
-        "option.model_id": "s3://djl-llm/gpt2/",
-        "max_dynamic_batch_size": 4,
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 600
-    },
-    "gpt2-quantize": {
-        "option.model_id": "s3://djl-llm/gpt2/",
-        "batch_size": 4,
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 600,
-        "option.quantize": "static_int8"
-    },
-    "opt-1.3b": {
-        "option.model_id": "s3://djl-llm/opt-1.3b/",
-        "batch_size": 4,
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 600
-    },
-    "gpt-j-6b": {
-        "option.model_id": "s3://djl-llm/gpt-j-6b/",
-        "batch_size": 4,
-        "option.tensor_parallel_degree": 8,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp32",
-        "option.model_loading_timeout": 2400
-    },
-    "pythia-2.8b": {
-        "option.model_id": "s3://djl-llm/pythia-2.8b/",
-        "batch_size": 4,
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 900
-    },
-    "bloom-7b1": {
-        "option.model_id": "s3://djl-llm/bloom-7b1/",
-        "batch_size": 4,
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 256,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 1200
-    },
-    "mixtral-8x7b": {
-        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
-        "option.tensor_parallel_degree": 8,
-        "option.n_positions": 1024,
-        "option.rolling_batch": "disable",
-        "batch_size": 4,
-        "option.model_loading_timeout": 3600,
-    },
-    "opt-1.3b-streaming": {
-        "option.model_id": "s3://djl-llm/opt-1.3b/",
-        "batch_size": 2,
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 600,
-        "option.enable_streaming": True,
-    },
-    "stable-diffusion-2.1-neuron": {
-        "option.model_id":
-        "s3://djl-llm/optimum/latest/stable-diffusion-2-1-neuron-compiled/",
-        "option.height": 512,
-        "option.width": 512,
-        "batch_size": 1,
-        "option.num_images_per_prompt": 1,
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "bf16",
-        "option.use_stable_diffusion": True
-    },
-    "stable-diffusion-1.5-neuron": {
-        "option.model_id":
-        "s3://djl-llm/optimum/latest/stable-diffusion-1-5-neuron-compiled/",
-        "option.height": 512,
-        "option.width": 512,
-        "batch_size": 1,
-        "option.num_images_per_prompt": 1,
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "bf16",
-        "option.use_stable_diffusion": True
-    },
-    "stable-diffusion-xl-neuron": {
-        "option.model_id":
-        "s3://djl-llm/optimum/latest/stable-diffusion-xl-neuron-compiled/",
-        "option.height": 1024,
-        "option.width": 1024,
-        "batch_size": 1,
-        "option.num_images_per_prompt": 1,
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "bf16",
-        "option.use_stable_diffusion": True
-    },
-    "llama-7b-rb": {
-        "option.model_id": "s3://djl-llm/llama-2-7b-split-inf2/split-model/",
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 512,
-        "option.max_rolling_batch_size": 4,
-        "option.model_loading_timeout": 2400,
-        "option.load_split_model": True,
-    },
-    "llama-3-8b-rb-vllm": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 8,
-        "option.n_positions": 1024,
-        "option.max_rolling_batch_size": 4,
-        "option.rolling_batch": 'vllm',
-        "option.model_loading_timeout": 2400,
-    },
-    "tiny-llama-rb-vllm": {
-        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 1024,
-        "option.max_rolling_batch_size": 4,
-        "option.rolling_batch": 'vllm',
-        "option.model_loader": 'vllm',
-        "option.model_loading_timeout": 1200,
-    },
-    "mistral-7b-rb": {
-        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02/",
-        "option.max_rolling_batch_size": 4,
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 1024,
-        "option.model_loading_timeout": 2400,
-    },
-    "llama-speculative-rb": {
-        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
-        "option.speculative_draft_model": "s3://djl-llm/llama-2-tiny/",
-        "option.speculative_length": 7,
-        "option.tensor_parallel_degree": 12,
-        "option.max_rolling_batch_size": 1,
-        "option.model_loading_timeout": 3600,
-    },
-    "llama-speculative-compiled-rb": {
-        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
-        "option.compiled_graph_path":
-        "s3://djl-llm/inf2-compiled-graphs/llama-2-13b-hf/",
-        "option.speculative_draft_model": "s3://djl-llm/llama-2-tiny/",
-        "option.draft_model_compiled_path":
-        "s3://djl-llm/inf2-compiled-graphs/llama-2-tiny/",
-        "option.speculative_length": 4,
-        "option.tensor_parallel_degree": 12,
-        "option.max_rolling_batch_size": 1,
-        "option.model_loading_timeout": 3600,
-    },
-    "tiny-llama-rb-lcnc": {
-        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.rolling_batch": "auto",
-        "option.model_loading_timeout": 3600,
-        # TODO: Remove this once neuron 2.21 issue if fixed.
-        "option.tensor_parallel_degree": 2,
-    },
-    "tiny-llama-rb-aot": {
-        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.rolling_batch": "auto",
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 1024,
-        "option.max_rolling_batch_size": 4,
-        "option.model_loading_timeout": 1200,
-    },
-    "tiny-llama-rb-aot-quant": {
-        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.quantize": "static_int8",
-        "option.rolling_batch": "auto",
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 1024,
-        "option.max_rolling_batch_size": 4,
-        "option.model_loading_timeout": 1200,
-    },
-    "llama-3-1-8b-instruct-vllm-nxdi": {
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
-        "option.tensor_parallel_degree": 8,
-        "option.rolling_batch": "vllm",
-        "option.model_loader": "nxdi",
-        "option.max_rolling_batch_size": 1,
-        "option.model_loading_timeout": 1200,
-        "option.override_neuron_config": {
-            "on_device_sampling_config": {
-                "global_topk": 64,
-                "dynamic": True,
-                "deterministic": False
-            }
-        }
-    },
-    "llama-3-2-1b-instruct-vllm-nxdi-aot": {
-        "option.model_id": "s3://djl-llm/llama-3-2-1b-instruct/",
-        "option.tensor_parallel_degree": 2,
-        "option.rolling_batch": "vllm",
-        "option.model_loading_timeout": 1200,
-        "option.model_loader": "nxdi",
-        "option.override_neuron_config": {
-            "on_device_sampling_config": {
-                "global_topk": 64,
-                "dynamic": True,
-                "deterministic": False
-            }
-        },
-        "option.n_positions": 128,
-        "option.max_rolling_batch_size": 1,
-    }
-}
-
 rolling_batch_model_list = {
     "gpt2": {
         "option.model_id": "gpt2",
@@ -802,17 +586,6 @@ correctness_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 41
     },
-    "neuronx-codestral-22b": {
-        "engine": "Python",
-        "option.entryPoint": "djl_python.transformers_neuronx",
-        "option.model_id": "s3://djl-llm/Codestral-22B-v0.1-hf/",
-        "option.tensor_parallel_degree": 8,
-        "option.block_size": 32,
-        "option.n_positions": 1024,
-        "option.rolling_batch": "auto",
-        "option.max_rolling_batch_size": 41,
-        "option.model_loading_timeout": 1800
-    },
     "trtllm-llama3-8b": {
         "engine": "Python",
         "option.task": "text-generation",
@@ -820,17 +593,6 @@ correctness_model_list = {
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 213
-    },
-    "neuronx-llama3-2-1b": {
-        "engine": "Python",
-        "option.entryPoint": "djl_python.transformers_neuronx",
-        "option.model_id": "s3://djl-llm/llama-3-2-1b-instruct/",
-        "option.tensor_parallel_degree": 2,
-        "option.n_positions": 1024,
-        "option.block_size": 32,
-        "option.rolling_batch": "vllm",
-        "option.max_rolling_batch_size": 32,
-        "option.model_loading_timeout": 2400
     },
     "trtllm-meta-llama3-8b-fp8": {
         "engine": "Python",
@@ -903,53 +665,6 @@ trtllm_neo_list = {
         "option.tensor_parallel_degree": 8,
         "option.rolling_batch": "trtllm",
         "option.quantize": "smoothquant"
-    }
-}
-
-transformers_neuronx_neo_list = {
-    "llama-3.1-8b-rb": {
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
-        "option.tensor_parallel_degree": 8,
-        "option.n_positions": 1024,
-        "option.rolling_batch": "auto",
-        "option.max_rolling_batch_size": 4,
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 3600,
-    },
-    "mixtral-random-tiny": {
-        "option.model_id": "s3://djl-llm/mixtral-random-tiny/",
-        "option.tensor_parallel_degree": 8,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.batch_size": 2,
-        "option.model_loading_timeout": 3600,
-    },
-    "codellama-7b-instruct": {
-        "option.model_id": "s3://djl-llm/CodeLlama-7b-Instruct-hf/",
-        "option.tensor_parallel_degree": 8,
-        "option.n_positions": 256,
-        "option.rolling_batch": "disable",
-        "option.batch_size": 4,
-        "option.model_loading_timeout": 3600,
-    },
-    "mistral-7b": {
-        "option.model_id": "s3://djl-llm/mistral-7b/",
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 512,
-        "option.rolling_batch": "disable",
-        "option.batch_size": 2,
-        "option.dtype": "fp16",
-        "option.model_loading_timeout": 3600,
-    },
-    "llama-3.1-8b": {
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
-        "option.tensor_parallel_degree": 8
-    },
-    "llama-2-tiny-speculative": {
-        "option.model_id": "s3://djl-llm/llama-2-tiny/",
-        "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.tensor_parallel_degree": 2,
-        "option.max_rolling_batch_size": 1
     }
 }
 
@@ -1183,17 +898,6 @@ def build_performance_model(model):
     write_model_artifacts(options)
 
 
-def build_transformers_neuronx_handler_model(model):
-    if model not in transformers_neuronx_handler_list.keys():
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(transformers_neuronx_handler_list.keys())}"
-        )
-    options = transformers_neuronx_handler_list[model]
-    options["engine"] = "Python"
-    options["option.entryPoint"] = "djl_python.transformers_neuronx"
-    write_model_artifacts(options)
-
-
 def build_vllm_async_model(model):
     if model not in vllm_model_list.keys():
         raise ValueError(
@@ -1324,15 +1028,6 @@ def build_trtllm_neo_model(model):
     create_neo_input_model(options)
 
 
-def build_transformers_neuronx_neo_model(model):
-    if model not in transformers_neuronx_neo_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(transformers_neuronx_neo_list.keys())}"
-        )
-    options = transformers_neuronx_neo_list[model]
-    create_neo_input_model(options)
-
-
 def build_correctness_model(model):
     if model not in correctness_model_list:
         raise ValueError(
@@ -1379,14 +1074,12 @@ def build_stateful_model(model):
 
 supported_handler = {
     'huggingface': build_hf_handler_model,
-    'transformers_neuronx': build_transformers_neuronx_handler_model,
     'performance': build_performance_model,
     'handler_performance': build_handler_performance_model,
     'vllm': build_vllm_model,
     'vllm_neo': build_vllm_neo_model,
     'trtllm': build_trtllm_handler_model,
     'trtllm_neo': build_trtllm_neo_model,
-    'transformers_neuronx_neo': build_transformers_neuronx_neo_model,
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
     'vllm_async': build_vllm_async_model,
