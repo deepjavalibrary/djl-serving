@@ -409,11 +409,11 @@ class TestVllm1:
 @pytest.mark.gpu_4
 class TestVllm2:
 
-    def test_llama_68m_speculative_eagle(self):
-        with Runner('lmi', 'llama-68m-speculative-eagle') as r:
-            prepare.build_vllm_async_model("llama-68m-speculative-eagle")
+    def test_llama3_1_8b_speculative_eagle(self):
+        with Runner('lmi', 'llama3-1-8b-speculative-eagle') as r:
+            prepare.build_vllm_async_model("llama3-1-8b-speculative-eagle")
             r.launch()
-            client.run("vllm llama-68m-speculative-eagle".split())
+            client.run("vllm llama3-1-8b-speculative-eagle".split())
 
     def test_llama3_1_8b_instruct_tool(self):
         with Runner('lmi', 'llama3-1-8b-instruct-tool') as r:

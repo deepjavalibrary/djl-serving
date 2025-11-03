@@ -366,19 +366,17 @@ vllm_model_list = {
     "llama-68m-speculative-medusa": {
         "option.model_id": "s3://djl-llm/llama-68m/",
         "option.task": "text-generation",
-        "option.speculative_model": "abhigoyal/vllm-medusa-llama-68m-random",
-        "option.num_speculative_tokens": 4,
-        "option.use_v2_block_manager": True,
+        "option.speculative_config":
+        '{"method":"medusa","model":"abhigoyal/vllm-medusa-llama-68m-random","num_speculative_tokens":4}',
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
     },
-    "llama-68m-speculative-eagle": {
-        "option.model_id": "s3://djl-llm/llama-68m/",
+    "llama3-1-8b-speculative-eagle": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.task": "text-generation",
-        "option.speculative_model": "abhigoyal/vllm-eagle-llama-68m-random",
-        "option.num_speculative_tokens": 4,
-        "option.use_v2_block_manager": True,
-        "option.tensor_parallel_degree": 1,
+        "option.speculative_config":
+        '{"method":"eagle","model":"yuhuili/EAGLE-LLaMA3.1-Instruct-8B","num_speculative_tokens":4}',
+        "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
     },
     "llama-7b-unmerged-lora": {

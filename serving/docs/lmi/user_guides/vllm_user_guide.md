@@ -182,7 +182,7 @@ These are supported in LMI.
 For example, if you want to enable the `speculative_config`, you can do:
 
 * `option.speculative_config={"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}`
-* `OPTION_SPECULATIVE_CONFIG={"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}`
+* `OPTION_SPECULATIVE_CONFIG='{"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}'`
 
 
 ## Custom Handlers
