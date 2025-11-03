@@ -284,10 +284,10 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "JackFram/llama-68m"
     },
-    "llama-68m-speculative-eagle": {
+    "llama3-1-8b-speculative-eagle": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "JackFram/llama-68m"
+        "tokenizer": "unsloth/Meta-Llama-3.1-8B"
     },
     "llama-7b-unmerged-lora": {
         "batch_size": [3],
