@@ -120,7 +120,11 @@ class TensorRTLlmAsyncService:
         # That means we do not expose build config customization here, and only set runtime configs
         try:
             self.llm = LLM(
-                self.trt_configs.model_id_or_path,
+                model=self.trt_configs.model_id_or_path,
+                tensor_parallel_size=llm_kwargs.get("tensor_parallel_degree", 1),
+                trust_remote_code=llm_kwargs.get("trust_remote_code", False),
+                dtype=llm_kwargs.get("dtype", "auto"),
+                revision=llm_kwargs.get("revision", None),
                 **llm_kwargs,
             )
         except Exception as e:

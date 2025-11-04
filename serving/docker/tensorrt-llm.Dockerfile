@@ -13,7 +13,7 @@ ARG version=12.8.1-devel-ubuntu24.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu128
 ARG python_version=3.12
-ARG trtllm_version=0.21.0rc1
+ARG trtllm_version=1.0.0
 ARG djl_version
 ARG djl_serving_version
 

@@ -34,7 +34,8 @@ test = [
     "yapf",
     "pydantic>=2.0",
     "objgraph",
-    "vllm==0.10.2"
+    "vllm==0.10.2",
+    "tensorrt-llm==1.0.0"
 ]
 
 [project.scripts]
