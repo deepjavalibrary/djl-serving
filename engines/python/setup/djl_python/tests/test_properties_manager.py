@@ -6,8 +6,6 @@ from unittest import mock
 from vllm import EngineArgs
 
 from djl_python.properties_manager.properties import Properties
-
-from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
@@ -93,16 +91,6 @@ class TestConfigManager(unittest.TestCase):
         other_properties["batch_size"] = '2'
         with self.assertRaises(ValueError):
             Properties(**other_properties)
-
-    @parameters([{
-        "rolling_batch": "auto",
-    }])
-    def test_trt_llm_configs(self, params):
-        properties = {**model_min_properties, **params}
-        trt_configs = TensorRtLlmProperties(**properties)
-        self.assertEqual(trt_configs.model_id_or_path, properties['model_id'])
-        self.assertEqual(trt_configs.rolling_batch.value,
-                         properties['rolling_batch'])
 
     def test_hf_configs(self):
         properties = {

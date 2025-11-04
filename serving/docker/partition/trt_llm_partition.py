@@ -31,7 +31,7 @@ from utils import update_kwargs_with_env_vars, load_properties, remove_option_fr
 
 
 def build_engine(
-    trtllm_engine_configs: Dict,
+    trtllm_engine_configs: dict,
     model_id: str,
     output_dir: str,
     tensor_parallel_degree: int,
@@ -54,7 +54,7 @@ def build_engine(
     logger.info(f'Total time of building all engines: {t}')
 
 
-def parse_build_config(properties: dict) -> Dict:
+def parse_build_config(properties: dict) -> BuildConfig:
     if "max_rolling_batch_size" in properties:
         properties["max_batch_size"] = properties["max_rolling_batch_size"]
     trtllm_args = []
@@ -168,10 +168,10 @@ def parse_build_config(properties: dict) -> Dict:
     else:
         build_config = BuildConfig.from_json_file(args.build_config,
                                                   plugin_config=plugin_config)
-    return build_config.to_dict()
+    return build_config
 
 
-def parse_quant_config(properties: dict) -> Dict:
+def parse_quant_config(properties: dict) -> Optional[QuantConfig]:
     quant_config = {}
     if "quant_algo" in properties:
         quant_config["quant_algo"] = QuantAlgo(
@@ -198,11 +198,12 @@ def parse_quant_config(properties: dict) -> Dict:
     if "exclude_modules" in properties:
         quant_config["exclude_modules"] = json.loads(
             properties.pop("exclude_modules"))
+    if quant_config:
+        return QuantConfig(**quant_config)
+    return None
 
-    return quant_config
 
-
-def parse_calib_config(properties: dict) -> Dict:
+def parse_calib_config(properties: dict) -> Optional[CalibConfig]:
     calib_config = {}
     if "device" in properties:
         calib_config["device"] = properties.pop("device")
@@ -221,8 +222,9 @@ def parse_calib_config(properties: dict) -> Dict:
     if "tokenizer_max_seq_length" in properties:
         calib_config["tokenizer_max_seq_length"] = int(
             properties.pop("tokenizer_max_seq_length"))
-
-    return calib_config
+    if calib_config:
+        return CalibConfig(**calib_config)
+    return None
 
 
 def parse_llm_kwargs(properties: dict) -> dict:
@@ -236,21 +238,32 @@ def parse_llm_kwargs(properties: dict) -> dict:
     return llm_kwargs
 
 
-def generate_trtllm_build_configs(properties: dict) -> Dict:
+def generate_trtllm_build_configs(properties: dict) -> dict:
     quant_config = parse_quant_config(properties)
     calib_config = parse_calib_config(properties)
-    llm_kwargs = parse_llm_kwargs(properties)
     build_config = parse_build_config(properties)
+
+    llm_kwargs = {}
+    if "dtype" in properties:
+        llm_kwargs["dtype"] = properties.pop("dtype")
+    if "revision" in properties:
+        llm_kwargs["revision"] = properties.pop("revision")
+    if "trust_remote_code" in properties:
+        llm_kwargs["trust_remote_code"] = properties.pop("trust_remote_code")
+
     if quant_config:
-        llm_kwargs["QuantConfig"] = quant_config
-
+        llm_kwargs["quant_config"] = quant_config
     if calib_config:
-        llm_kwargs["CalibConfig"] = calib_config
-
+        llm_kwargs["calib_config"] = calib_config
     if build_config:
-        llm_kwargs["BuildConfig"] = build_config
+        llm_kwargs["build_config"] = build_config
 
-    return llm_kwargs
+    return {
+        "llm_kwargs": llm_kwargs,
+        "dtype": llm_kwargs.get("dtype", "auto"),
+        "revision": llm_kwargs.get("revision", None),
+        "trust_remote_code": llm_kwargs.get("trust_remote_code", False)
+    }
 
 
 def sanitize_serving_properties(model_dir: str) -> dict:
@@ -300,13 +313,11 @@ def main():
     args = parser.parse_args()
     sanitized_properties = sanitize_serving_properties(args.properties_dir)
     trt_build_configs = generate_trtllm_build_configs(sanitized_properties)
-    args.update(trt_build_configs)
     build_engine(
         trt_build_configs,
         args.model_path,
         args.trt_llm_model_repo,
         args.tensor_parallel_degree,
-        args.pipeline_parallel_degree,
     )
     copy_properties_to_compiled_model_dir(args.properties_dir,
                                           args.trt_llm_model_repo)
