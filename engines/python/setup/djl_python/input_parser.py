@@ -36,6 +36,28 @@ def input_formatter(function):
     return function
 
 
+def prediction_handler(function):
+    """
+    Decorator for prediction_handler. User just need to annotate @prediction_handler for their custom defined function.
+    :param function:  Decorator takes in the function and adds an attribute.
+    :return:
+    """
+    # adding an attribute to the function, which is used to find the decorated function.
+    function.is_prediction_handler = True
+    return function
+
+
+def init_handler(function):
+    """
+    Decorator for init_handler. User just need to annotate @init_handler for their custom defined function.
+    :param function:  Decorator takes in the function and adds an attribute.
+    :return:
+    """
+    # adding an attribute to the function, which is used to find the decorated function.
+    function.is_init_handler = True
+    return function
+
+
 @dataclass
 class ParsedInput:
     errors: dict = field(default_factory=lambda: {})

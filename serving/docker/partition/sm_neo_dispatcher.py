@@ -21,7 +21,6 @@ from utils import update_kwargs_with_env_vars, load_properties
 VALID_LOAD_FORMATS = ["sagemaker_fast_model_loader"]
 
 # Paths to each Python executable
-LMI_DIST_VENV_EXEC = "/opt/djl/lmi_dist_venv/bin/python"
 VLLM_VENV_EXEC = "/opt/djl/vllm_venv/bin/python"
 SYSTEM_PY_EXEC = "/usr/bin/python3"
 
@@ -33,8 +32,7 @@ class NeoTask(Enum):
 
     TENSORRT_LLM = ("TensorRT-LLM compilation",
                     "/opt/djl/partition/sm_neo_trt_llm_partition.py")
-    NEURON = ("Neuron compilation",
-              "/opt/djl/partition/sm_neo_neuron_partition.py")
+
     QUANTIZATION = ("Quantization", "/opt/djl/partition/sm_neo_quantize.py")
     SHARDING = ("SageMaker Fast Model Loader sharding",
                 "/opt/djl/partition/sm_neo_shard.py")
@@ -123,28 +121,17 @@ class NeoDispatcher:
         present serving properties.
         """
         match self.serving_features:
-            case "vllm,lmi-dist":
+            case "vllm":
                 if self.is_valid_sharding_config():
-                    if self.properties.get("option.rolling_batch",
-                                           "lmi-dist").lower() == "vllm":
-                        python_exec = VLLM_VENV_EXEC
-                    else:
-                        python_exec = LMI_DIST_VENV_EXEC
+                    python_exec = VLLM_VENV_EXEC
                     print("Sharding Model...")
                     self.run_task(NeoTask.SHARDING, python_exec)
                 else:
-                    if self.properties.get("option.quantize",
-                                           "").lower() == "fp8":
-                        python_exec = VLLM_VENV_EXEC
-                    else:
-                        # run awq quantization with lmi-dist venv b/c AutoAWQ
-                        # is incompatible with newer transformers
-                        python_exec = LMI_DIST_VENV_EXEC
+                    python_exec = VLLM_VENV_EXEC
                     self.run_task(NeoTask.QUANTIZATION, python_exec)
             case "trtllm":
                 self.run_task(NeoTask.TENSORRT_LLM, SYSTEM_PY_EXEC)
-            case "vllm,lmi-dist,tnx":
-                self.run_task(NeoTask.NEURON, SYSTEM_PY_EXEC)
+
             case _:
                 raise ValueError(
                     "Container does not support SageMaker Neo context")

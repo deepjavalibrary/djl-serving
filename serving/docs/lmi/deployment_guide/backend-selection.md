@@ -47,14 +47,14 @@ This does not refer to the variability of request load on the model server, but 
 Even traffic refers to all requests having low variability of input lengths and output lengths.
 An example of relatively even traffic would be if most requests contain ~1000 input tokens and ~500 output tokens.
 Use-cases that may exhibit even traffic patterns are *Summarization* and *Information Extraction*.
-Backends that require model compilation (like TensorRT-LLM and Transformers NeuronX) are excellent choices for such workloads.
+Backends that require model compilation (like TensorRT-LLM) are excellent choices for such workloads.
 The compilation process optimizes the model for a specific input length upper bound and output length upper bound, so if most requests are close to (but don't exceed) these limits, the performance is typically higher compared to non compiled backends.
 
 Uneven traffic refers to high variability of input lengths and output lengths across requests.
 An example of uneven traffic would be if, across requests, you observe an even split of inputs in the range of 100-1000 tokens, and outputs in the range of 1000-100 tokens.
 Use-cases that may exhibit uneven traffic patterns are *Chat bots*, *Conversational AI*, and *Code Generation*.
 
-Unless you have a good understanding of your traffic patterns upfront, it may be hard to fully optimize compiled backends like TensorRT-LLM and Transformers NeuronX.
+Unless you have a good understanding of your traffic patterns upfront, it may be hard to fully optimize compiled backends like TensorRT-LLM.
 We recommend starting with a backend like vLLM that may not be as performant as a compiled backend that has been fully tuned, but still achieves high performance and is more resilient to variable traffic patterns.
 Starting with vLLM allows you to collect data on your traffic patterns, and then use that data to understand whether a backend like TensorRT-LLM could be a better fit to achieve higher performance.
 
@@ -74,7 +74,7 @@ In order to use a cheaper instance type, there are a few options:
 
 * Use a smaller model (e.g. use the llama2-13b model instead of the llama2-70b model)
 * Quantize your model to a lower precision data type (e.g. int8, int4, fp8)
-* Switch to a cheaper instance class like AWS Inferentia2 instances
+* Switch to a cheaper instance class
 
 Using a smaller model is the easiest option, but it may not be practical as larger models tend to produce higher quality results.
 If you are using the Llama2-70b model, you may not find the results from the Llama2-13b model acceptable for your use case.
@@ -86,9 +86,7 @@ Across LMI, we offer GPTQ, AWQ, SmoothQuant, and Int8 quantization.
 Quantization can lead to lower quality outputs, but the quality degradation is usually acceptable and a better option than switching to a smaller model.
 Refer to the backend [user guides](../user_guides/README.md) to learn about the quantization methods available in each backend.
 
-Another option is to switch from GPU based instances to AWS Inferentia instances using Transformers NeuronX.
-These instances are typically cheaper than the equivalent G5/P4 instances, but Transformers NeuronX has less model architecture support than other backends.
-You can see what model architectures are supported by Transformers NeuronX in the [user guide](../user_guides/tnx_user_guide.md).
+Another option is to switch to different instance types that may be more cost-effective for your specific use case.
 
 Next: [Container Configuration](configurations.md)
 

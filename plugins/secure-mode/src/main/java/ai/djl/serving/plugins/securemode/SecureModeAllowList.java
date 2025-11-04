@@ -46,7 +46,6 @@ interface SecureModeAllowList {
                     "option.n_positions",
                     "option.load_in_8bit",
                     "option.unroll",
-                    "option.neuron_optimize_level",
                     "option.context_length_estimate",
                     "option.low_cpu_mem_usage",
                     "option.load_split_model",
@@ -111,8 +110,5 @@ interface SecureModeAllowList {
                     "option.pythonExecutable");
 
     public static final Set<String> PYTHON_EXECUTABLE_ALLOWLIST =
-            Set.of(
-                    "/opt/djl/lmi_dist_venv/bin/python",
-                    "/opt/djl/vllm_venv/bin/python",
-                    "/usr/bin/python3");
+            Set.of("/opt/djl/vllm_venv/bin/python", "/usr/bin/python3");
 }

@@ -19,7 +19,7 @@ on:
         options:
           - action_g6
           - action_graviton
-          - action_inf2
+
       djl-version:
         description: 'The released version of DJL. Can be "nightly", "temp", or a DJL release version like "0.28.0"'
         required: false

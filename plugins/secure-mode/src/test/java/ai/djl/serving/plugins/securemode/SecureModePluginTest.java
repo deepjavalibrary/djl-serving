@@ -292,7 +292,7 @@ public class SecureModePluginTest {
         mockSecurityEnv(
                 "foo",
                 TEST_MODEL_DIR.resolve("serving.properties"),
-                "option.pythonExecutable=/opt/djl/lmi_dist_venv/bin/python");
+                "option.pythonExecutable=/opt/djl/vllm_venv/bin/python");
     }
 
     private void createFileWithContent(Path file, String content) throws IOException {

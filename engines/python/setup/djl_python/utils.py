@@ -13,10 +13,23 @@
 import glob
 import logging
 import os
-from typing import Optional, List
+import inspect
+import importlib.util
+from typing import Optional, List, Callable
 
 from djl_python import Output
 from djl_python.inputs import Input
+from djl_python.service_loader import load_model_service, has_function_in_module
+
+# SageMaker function signatures for validation
+SAGEMAKER_SIGNATURES = {
+    'model_fn': [['model_dir']],
+    'input_fn': [['request_body', 'content_type'],
+                 ['request_body', 'request_content_type']],
+    'predict_fn': [['input_data', 'model']],
+    'output_fn': [['prediction', 'accept'],
+                  ['prediction', 'response_content_type']]
+}
 
 
 class IdCounter:
@@ -87,7 +100,7 @@ def is_beam_search(parameters: dict) -> bool:
 def is_multiple_sequences(parameters: dict) -> bool:
     """
     Returns whether the parameters indicate number of output sequences to return is more than 1.
-    When the user give us n, best_of is automatically applied in vllm and lmi-dist.
+    When the user give us n, best_of is automatically applied in vllm.
     :param parameters: parameters dictionary
     :return: boolean
     """
@@ -188,3 +201,59 @@ def find_model_file(model_dir: str, extensions: List[str]) -> Optional[str]:
         )
 
     return all_matches[0] if all_matches else None
+
+
+def _validate_sagemaker_function(module, func_name: str,
+                                 expected_params) -> Optional[Callable]:
+    """
+    Validate that function exists and has correct signature
+    Returns the function if valid, None otherwise
+    """
+    if not hasattr(module, func_name):
+        return None
+
+    func = getattr(module, func_name)
+    if not callable(func):
+        return None
+
+    try:
+        sig = inspect.signature(func)
+        param_names = list(sig.parameters.keys())
+
+        # Handle multiple signature options
+        for signature_option in expected_params:
+            if param_names == signature_option:
+                return func
+    except (ValueError, TypeError):
+        # Handle cases where signature inspection fails
+        pass
+
+    return None
+
+
+def get_sagemaker_function(model_dir: str,
+                           func_name: str) -> Optional[Callable]:
+    """
+    Load and validate SageMaker-style formatter function from model.py
+    
+    :param model_dir: model directory containing model.py
+    :param func_name: SageMaker function name (model_fn, input_fn, predict_fn, output_fn)
+    :return: Validated function or None if not found/invalid
+    """
+
+    if func_name not in SAGEMAKER_SIGNATURES:
+        return None
+
+    try:
+        service = load_model_service(model_dir, "model.py", -1)
+        if has_function_in_module(service.module, func_name):
+            func = getattr(service.module, func_name)
+            # Optional: validate signature
+            expected_params = SAGEMAKER_SIGNATURES[func_name]
+            if _validate_sagemaker_function(service.module, func_name,
+                                            expected_params):
+                return func
+
+    except Exception as e:
+        logging.debug(f"Failed to load {func_name} from model.py: {e}")
+        return None

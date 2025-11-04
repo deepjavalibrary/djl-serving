@@ -12,7 +12,7 @@ The operating modes for the built-in inference engines are described below.
 - TensorRT-LLM (MPI): Use multiple MPI processes to run the backends
 - vLLM (Python): vLLM internally will use Ray to spin up multiple processes
 - HuggingFace Accelerate (Python): HF Accelerate internally managed the process workflow
-- TransformerNeuronX (Python): The Neuron backend engine, internally it will use multi-threading to run with Neuron cores.
+
 
 In the next section, we will introduce a detailed breakdown on how we run those backends.
 
@@ -21,8 +21,8 @@ In the next section, we will introduce a detailed breakdown on how we run those 
 ![python image](../imgs/python_mode.jpg)
 
 In Python operating mode, LMI launches Python processes based on scanning
-the system environment and number of Accelerators (GPU/Neuron) for each process through `CUDA_VISIBLE_DEVICES`. During auto-scaling mode,
-LMI manages Accelerators allocation and spins up processes with different Accelerators (GPU/Neuron).
+the system environment and number of Accelerators (GPU) for each process through `CUDA_VISIBLE_DEVICES`. During auto-scaling mode,
+LMI manages Accelerators allocation and spins up processes with different Accelerators (GPU).
 Under python Engine mode, LMI will establish socket connection and talk to the python process.
 
 ### Enablement

@@ -19,8 +19,6 @@ from pydantic import BaseModel, field_validator, model_validator, ValidationInfo
 
 class RollingBatchEnum(str, Enum):
     vllm = "vllm"
-    tnx = "tnx"
-    lmidist = "lmi-dist"
     auto = "auto"
     disable = "disable"
     trtllm = "trtllm"

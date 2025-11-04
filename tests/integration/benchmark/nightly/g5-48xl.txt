@@ -1,7 +1,7 @@
 [test_name]
 mixtral-8x7b
 [vars]
-ENGINE={vllm,lmi-dist}
+ENGINE={vllm}
 [container]
 deepjavalibrary/djl-serving:lmi-nightly
 [serving_properties]

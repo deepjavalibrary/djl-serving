@@ -1,7 +1,7 @@
 [test_name]
 llama2
 [vars]
-ENGINE={vllm,lmi-dist}
+ENGINE={vllm}
 [container]
 deepjavalibrary/djl-serving:lmi-nightly
 [serving_properties]
@@ -19,7 +19,7 @@ TOKENIZER=TheBloke/Llama-2-7B-fp16 ./awscurl -c 32 -N 10 \
 [test_name]
 llama3
 [vars]
-ENGINE={vllm,lmi-dist}
+ENGINE={vllm}
 [container]
 deepjavalibrary/djl-serving:lmi-nightly
 [serving_properties]

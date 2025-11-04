@@ -6,14 +6,11 @@ from unittest import mock
 from vllm import EngineArgs
 
 from djl_python.properties_manager.properties import Properties
-from djl_python.properties_manager.tnx_properties import (
-    TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
-    TnXMemoryLayout, TnXDtypeName, TnXModelLoaders)
+
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
-from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
-from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
+
 from djl_python.tests.utils import parameterized, parameters
 
 import torch
@@ -97,230 +94,15 @@ class TestConfigManager(unittest.TestCase):
         with self.assertRaises(ValueError):
             Properties(**other_properties)
 
-    def test_tnx_configs(self):
-        properties = {
-            "n_positions": "256",
-            "load_split_model": "true",
-            "quantize": "static_int8",
-            "compiled_graph_path": "s3://test/bucket/folder"
-        }
-        tnx_configs = TransformerNeuronXProperties(**common_properties,
-                                                   **properties)
-        self.assertFalse(tnx_configs.low_cpu_mem_usage)
-        self.assertTrue(tnx_configs.load_split_model)
-        self.assertEqual(int(properties['n_positions']),
-                         tnx_configs.n_positions)
-        self.assertEqual(tnx_configs.tensor_parallel_degree,
-                         int(min_common_properties['tensor_parallel_degree']))
-        self.assertEqual(tnx_configs.quantize.value, properties['quantize'])
-        self.assertTrue(tnx_configs.load_in_8bit)
-        self.assertEqual(tnx_configs.batch_size, 4)
-        self.assertEqual(tnx_configs.max_rolling_batch_size, 2)
-        self.assertEqual(tnx_configs.enable_streaming.value, 'false')
-        self.assertEqual(tnx_configs.compiled_graph_path,
-                         str(properties['compiled_graph_path']))
-
-    def test_tnx_all_configs(self):
-        properties = {
-            "n_positions": "2048",
-            "load_split_model": "true",
-            "load_in_8bit": "true",
-            "compiled_graph_path": "s3://test/bucket/folder",
-            "low_cpu_mem_usage": "true",
-            'context_length_estimate': '256, 512, 1024',
-            "task": "feature-extraction",
-            "save_mp_checkpoint_path": "/path/to/checkpoint",
-            "neuron_optimize_level": 3,
-            "enable_mixed_precision_accumulation": "true",
-            "group_query_attention": "shard-over-heads",
-            "shard_over_sequence": "true",
-            "fuse_qkv": "true",
-            "fuse_mlp": "true",
-            "fused_rmsnorm_qkv": "true",
-            "qkv_tiling": "true",
-            "weight_tiling": "true",
-            "enable_saturate_infinity": "true",
-            "rolling_batch_strategy": "continuous_batching",
-            "collectives_layout": "HSB",
-            "partition_schema": "safetensors",
-            "attention_layout": "HSB",
-            "cache_layout": "SBH",
-            "all_reduce_dtype": "float32",
-            "cast_logits_dtype": "float32",
-            "on_device_embedding": "true",
-            "on_device_generation": "./sample.json",
-            "draft_model_compiled_path": "s3://test/bucket/folder",
-            "speculative_draft_model": "draft_model_id",
-            "speculative_length": 4,
-            "draft_model_tp_size": 8,
-            "neuron_quant": "true",
-            "sequence_parallel": "false",
-            "multi_node": "false",
-            "neuron_cc_pipeline_factor": 2,
-            "compilation_worker_count": 2
-        }
-
-        generation_config = {"top_k": 25}
-
-        with open("sample.json", "w") as fp:
-            json.dump(generation_config, fp)
-
-        tnx_configs = TransformerNeuronXProperties(**common_properties,
-                                                   **properties)
-        self.assertEqual(tnx_configs.n_positions, 2048)
-        self.assertEqual(tnx_configs.compiled_graph_path,
-                         properties['compiled_graph_path'])
-
-        self.assertTrue(tnx_configs.load_split_model)
-        self.assertTrue(tnx_configs.load_in_8bit)
-        self.assertTrue(tnx_configs.low_cpu_mem_usage)
-
-        self.assertListEqual(tnx_configs.context_length_estimate,
-                             [256, 512, 1024])
-
-        self.assertEqual(tnx_configs.task, properties['task'])
-        self.assertEqual(tnx_configs.save_mp_checkpoint_path,
-                         properties['save_mp_checkpoint_path'])
-        neuron_cc = os.environ["NEURON_CC_FLAGS"]
-        self.assertTrue("-O3" in neuron_cc)
-        self.assertTrue("--enable-mixed-precision-accumulation" in neuron_cc)
-        self.assertTrue("--enable-saturate-infinity" in neuron_cc)
-        self.assertEqual(tnx_configs.group_query_attention,
-                         properties['group_query_attention'])
-        self.assertTrue(tnx_configs.shard_over_sequence)
-        self.assertTrue(tnx_configs.fuse_qkv)
-        self.assertTrue(tnx_configs.fuse_mlp)
-        self.assertTrue(tnx_configs.fused_rmsnorm_qkv)
-        self.assertTrue(tnx_configs.qkv_tiling)
-        self.assertTrue(tnx_configs.weight_tiling)
-        self.assertEqual(tnx_configs.rolling_batch_strategy,
-                         TnXGenerationStrategy.continuous_batching)
-        self.assertEqual(tnx_configs.collectives_layout,
-                         TnXMemoryLayout.LAYOUT_HSB)
-        self.assertEqual(tnx_configs.partition_schema,
-                         TnXModelSchema.safetensors)
-        self.assertEqual(tnx_configs.draft_model_compiled_path,
-                         properties['draft_model_compiled_path'])
-        self.assertEqual(tnx_configs.attention_layout,
-                         TnXMemoryLayout.LAYOUT_HSB)
-        self.assertEqual(tnx_configs.cache_layout, TnXMemoryLayout.LAYOUT_SBH)
-        self.assertEqual(tnx_configs.all_reduce_dtype, TnXDtypeName.float32)
-        self.assertEqual(tnx_configs.cast_logits_dtype, TnXDtypeName.float32)
-        self.assertEqual(tnx_configs.model_loader, TnXModelLoaders.tnx)
-        self.assertTrue(tnx_configs.on_device_embedding)
-        self.assertDictEqual(tnx_configs.on_device_generation,
-                             generation_config)
-        self.assertTrue(tnx_configs.neuron_quant)
-        self.assertFalse(tnx_configs.sequence_parallel)
-        self.assertFalse(tnx_configs.multi_node)
-        self.assertEqual(tnx_configs.neuron_cc_pipeline_factor, 2)
-        self.assertEqual(tnx_configs.compilation_worker_count, 2)
-        self.assertEqual(tnx_configs.speculative_draft_model,
-                         properties['speculative_draft_model'])
-        self.assertEqual(tnx_configs.speculative_length,
-                         properties['speculative_length'])
-        self.assertEqual(tnx_configs.draft_model_tp_size,
-                         properties['draft_model_tp_size'])
-
-        # tests context length estimate as integer
-        def test_tnx_cle_int(context_length_estimate):
-            properties['context_length_estimate'] = context_length_estimate
-            configs = TransformerNeuronXProperties(**common_properties,
-                                                   **properties)
-            self.assertEqual(configs.context_length_estimate, [256])
-            del properties['context_length_estimate']
-
-        test_tnx_cle_int('256')
-        os.remove("sample.json")
-
-    @parameters([{
-        "is_env":
-        True,
-        "NEURON_ON_DEVICE_EMBEDDING":
-        "true",
-        "NEURON_ON_DEV_GENERATION":
-        "true",
-        "NEURON_SHARD_OVER_SEQUENCE":
-        "true",
-        "NEURON_QUANT":
-        "true",
-        "NEURON_SEQUENCE_PARALLEL":
-        "false",
-        "NEURON_MULTI_NODE":
-        "false",
-        "NEURON_COMPILATION_WORKER_COUNT":
-        "2",
-        "NEURON_CC_PIPELINE_FACTOR":
-        "2",
-        "NEURON_CONTEXT_LENGTH_ESTIMATE":
-        "[1024, 2048, 4096, 8192, 16384]"
-    }])
-    def test_neuron_env_configs(self, params):
-        is_env = params.pop("is_env", False)
-        if is_env:
-            properties = min_common_properties
-            for param in params:
-                os.environ[param] = params[param]
-        else:
-            properties = {**min_common_properties, **params}
-
-        tnx_configs = TransformerNeuronXProperties(**properties)
-        self.assertTrue(tnx_configs.neuron_quant)
-        self.assertTrue(tnx_configs.on_device_embedding)
-        self.assertTrue(tnx_configs.on_device_generation)
-        self.assertTrue(tnx_configs.shard_over_sequence)
-        self.assertFalse(tnx_configs.multi_node)
-        self.assertFalse(tnx_configs.sequence_parallel)
-        self.assertEqual(tnx_configs.compilation_worker_count, 2)
-        self.assertEqual(tnx_configs.neuron_cc_pipeline_factor, 2)
-        self.assertEqual(tnx_configs.context_length_estimate,
-                         [1024, 2048, 4096, 8192, 16384])
-
-        if is_env:
-            for param in params:
-                del os.environ[param]
-
-    @parameters([{
-        "compiled_graph_path": "https://random.url.address/"
-    }, {
-        "compiled_graph_path": "not_a_directory"
-    }, {
-        "context_length_estimate": "invalid"
-    }, {
-        'group_query_attention': "invalid"
-    }, {
-        'rolling_batch': 'auto'
-    }, {
-        'model_loader': 'tnx',
-        'partition_schema': 'optimum',
-        'load_split_model': 'true'
-    }, {
-        'model_loader': 'optimum'
-    }])
-    def test_tnx_configs_error_case(self, params):
-        # To remove the duplicate properties
-        properties = {**common_properties, **params}
-        with self.assertRaises(ValueError):
-            TransformerNeuronXProperties(**properties)
-
     @parameters([{
         "rolling_batch": "auto",
-    }, {
-        "rolling_batch": "lmi-dist",
-        "is_error_case": True
     }])
     def test_trt_llm_configs(self, params):
-        is_error_case = params.pop("is_error_case", False)
         properties = {**model_min_properties, **params}
-        if is_error_case:
-            with self.assertRaises(ValueError):
-                TensorRtLlmProperties(**properties)
-        else:
-            trt_configs = TensorRtLlmProperties(**properties)
-            self.assertEqual(trt_configs.model_id_or_path,
-                             properties['model_id'])
-            self.assertEqual(trt_configs.rolling_batch.value,
-                             properties['rolling_batch'])
+        trt_configs = TensorRtLlmProperties(**properties)
+        self.assertEqual(trt_configs.model_id_or_path, properties['model_id'])
+        self.assertEqual(trt_configs.rolling_batch.value,
+                         properties['rolling_batch'])
 
     def test_hf_configs(self):
         properties = {
@@ -400,15 +182,6 @@ class TestConfigManager(unittest.TestCase):
         hf_configs = HuggingFaceProperties(**properties,
                                            rolling_batch="disable")
         self.assertIsNone(hf_configs.kwargs.get("device_map"))
-
-    def test_hf_quantize(self):
-        properties = {
-            'model_id': 'model_id',
-            'quantize': 'bitsandbytes8',
-            'rolling_batch': 'lmi-dist'
-        }
-        hf_configs = HuggingFaceProperties(**properties)
-        self.assertEqual(hf_configs.quantize, "bitsandbytes")
 
     @parameters([{
         "model_id": "model_id",
@@ -660,7 +433,6 @@ class TestConfigManager(unittest.TestCase):
                 "otlp_traces_endpoint": "endpoint",
                 "collect_detailed_traces": "yes",
                 "disable_async_output_proc": "true",
-                "override_neuron_config": '{"a": "b"}',
                 "mm_processor_kwargs": '{"a": "b"}',
                 "scheduling_policy": "priority",
             }
@@ -675,117 +447,6 @@ class TestConfigManager(unittest.TestCase):
         # test_invalid_long_lora_scaling_factors()
         # test_conflicting_djl_vllm_conflicts()
         # test_all_vllm_engine_args()
-
-    def test_sd_inf2_properties(self):
-        properties = {
-            'height': 128,
-            'width': 128,
-            'dtype': "bf16",
-            'num_images_per_prompt': 2,
-            'use_auth_token': 'auth_token',
-            'save_mp_checkpoint_path': 'path'
-        }
-        properties = {**common_properties, **properties}
-        neuron_sd_config = StableDiffusionNeuronXProperties(**properties)
-        self.assertEqual(properties['height'], neuron_sd_config.height)
-        self.assertEqual(properties['width'], neuron_sd_config.width)
-        self.assertEqual(properties['use_auth_token'],
-                         neuron_sd_config.use_auth_token)
-        self.assertEqual(properties['save_mp_checkpoint_path'],
-                         neuron_sd_config.save_mp_checkpoint_path)
-
-    @parameters([{'height': 128, 'width': 128, "dtype": 'fp16'}])
-    def test_sd_inf2_properties_errors(self, params):
-        test_properties = {**common_properties, **params}
-        with self.assertRaises(ValueError):
-            StableDiffusionNeuronXProperties(**test_properties)
-
-    def test_lmi_dist_properties(self):
-
-        def test_with_min_properties():
-            lmi_configs = LmiDistRbProperties(**min_properties)
-            self.assertEqual(lmi_configs.model_id_or_path,
-                             min_properties['model_id'])
-            self.assertEqual(lmi_configs.load_format, 'auto')
-            self.assertEqual(lmi_configs.dtype, 'auto')
-            self.assertEqual(lmi_configs.gpu_memory_utilization, 0.9)
-            self.assertTrue(lmi_configs.mpi_mode)
-            self.assertFalse(lmi_configs.enable_lora)
-
-        def test_with_most_properties():
-            properties = {
-                'trust_remote_code': 'TRUE',
-                'tensor_parallel_degree': '2',
-                'revision': 'somerevisionstr',
-                'max_rolling_batch_size': '64',
-                'max_rolling_batch_prefill_tokens': '12500',
-                'dtype': 'fp32',
-                'enable_lora': "true",
-            }
-
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.engine, min_properties['engine'])
-            self.assertEqual(lmi_configs.model_id_or_path,
-                             min_properties['model_id'])
-            self.assertEqual(lmi_configs.tensor_parallel_degree,
-                             int(properties['tensor_parallel_degree']))
-            self.assertEqual(lmi_configs.revision, properties['revision'])
-            self.assertEqual(lmi_configs.max_rolling_batch_size,
-                             int(properties['max_rolling_batch_size']))
-            self.assertEqual(
-                lmi_configs.max_rolling_batch_prefill_tokens,
-                int(properties['max_rolling_batch_prefill_tokens']))
-            self.assertEqual(lmi_configs.dtype, 'fp32')
-            self.assertTrue(lmi_configs.mpi_mode)
-            self.assertTrue(lmi_configs.trust_remote_code)
-            self.assertEqual(lmi_configs.enable_lora,
-                             bool(properties['enable_lora']))
-
-        def test_quantization_squeezellm():
-            properties = {'quantize': 'squeezellm'}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.quantize, "squeezellm")
-
-        def test_long_lora_scaling_factors():
-            properties = {"long_lora_scaling_factors": "3.0"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
-
-            properties = {"long_lora_scaling_factors": "3"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
-
-            properties = {"long_lora_scaling_factors": "3.0,4.0"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
-
-            properties = {"long_lora_scaling_factors": "3.0, 4.0 "}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
-
-            properties = {"long_lora_scaling_factors": "(3.0,)"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, ))
-
-            properties = {"long_lora_scaling_factors": "(3.0,4.0)"}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.long_lora_scaling_factors, (3.0, 4.0))
-
-        def test_invalid_long_lora_scaling_factors():
-            properties = {'long_lora_scaling_factors': "(a,b)"}
-            with self.assertRaises(ValueError):
-                LmiDistRbProperties(**properties, **min_properties)
-
-        min_properties = {
-            'engine': 'MPI',
-            'mpi_mode': 'true',
-            'model_id': 'sample_model_id',
-        }
-        test_with_min_properties()
-        test_with_most_properties()
-        test_quantization_squeezellm()
-        test_long_lora_scaling_factors()
-        test_invalid_long_lora_scaling_factors()
 
 
 if __name__ == '__main__':

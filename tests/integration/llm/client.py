@@ -71,375 +71,12 @@ hf_model_spec = {
     }
 }
 
-neuron_sd_model_spec = {
-    "stable-diffusion-1.5-neuron": {
-        "num_inference_steps": [50, 100]
-    },
-    "stable-diffusion-2.1-neuron": {
-        "num_inference_steps": [50, 100]
-    },
-    "stable-diffusion-xl-neuron": {
-        "num_inference_steps": [50, 100]
-    }
-}
-
-transformers_neuronx_model_spec = {
-    "gpt2": {
-        "worker": 1,
-        "seq_length": [128, 256],
-        "batch_size": [4]
-    },
-    "gpt2-quantize": {
-        "worker": 1,
-        "seq_length": [128, 256],
-        "batch_size": [4]
-    },
-    "opt-1.3b": {
-        "worker": 3,
-        "seq_length": [128, 256],
-        "batch_size": [4]
-    },
-    "pythia-2.8b": {
-        "worker": 1,
-        "seq_length": [128, 256],
-        "batch_size": [4],
-        "use_sample": True
-    },
-    "open-llama-7b": {
-        "worker": 1,
-        "seq_length": [128, 256],
-        "batch_size": [4],
-        "use_sample": True
-    },
-    "llama-7b-split": {
-        "worker": 1,
-        "seq_length": [128, 256],
-        "batch_size": [1],
-    },
-    "bloom-7b1": {
-        "worker": 1,
-        "seq_length": [128],
-        "batch_size": [4]
-    },
-    "gpt-j-6b": {
-        "worker": 1,
-        "seq_length": [128, 256, 512],
-        "batch_size": [4]
-    },
-    "opt-1.3b-streaming": {
-        "worker": 3,
-        "seq_length": [128, 256],
-        "batch_size": [2],
-        "stream_output": True,
-    },
-    "mixtral-8x7b": {
-        "batch_size": [4],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
-    },
-    "mistral-7b-rb": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "llama-7b-rb": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "llama-3-8b-rb-vllm": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "tiny-llama-rb-vllm": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama-speculative-rb": {
-        "batch_size": [1],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "llama-speculative-compiled-rb": {
-        "batch_size": [1],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "tiny-llama-rb": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama-3-1-8b-instruct-vllm-nxdi": {
-        "batch_size": [1],
-        "seq_length": [256],
-    },
-    "llama-3-2-1b-instruct-vllm-nxdi-aot": {
-        "batch_size": [1],
-        "seq_length": [128],
-    }
-}
-
-transformers_neuronx_neo_model_spec = {
-    "llama-3.1-8b-rb": {
-        "seq_length": [1024],
-        "batch_size": [1, 4],
-        "tokenizer": "NousResearch/Meta-Llama-3.1-8B"
-    },
-    "mixtral-random-tiny": {
-        "workers": 1,
-        "seq_length": [512],
-        "batch_size": [2]
-    },
-    "codellama-7b-instruct": {
-        "workers": 1,
-        "seq_length": [256],
-        "batch_size": [4]
-    },
-    "mistral-7b": {
-        "workers": 1,
-        "seq_length": [512],
-        "batch_size": [2]
-    },
-    "llama-3.1-8b": {
-        "workers": 1,
-        "seq_length": [128],
-        "batch_size": [1]
-    },
-    "llama-2-tiny-speculative": {
-        "workers": 1,
-        "seq_length": [128],
-        "batch_size": [1]
-    }
-}
-
 custom_formatter_spec = {
     "gpt-neox-20b": {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "EleutherAI/gpt-neox-20b"
     },
-}
-
-lmi_dist_model_spec = {
-    "gpt-neox-20b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "EleutherAI/gpt-neox-20b"
-    },
-    "falcon-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-7b"
-    },
-    "falcon-11b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-11B"
-    },
-    "flan-t5-xxl": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "google/flan-t5-xxl"
-    },
-    "gpt2": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "gpt2"
-    },
-    "mpt-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "mosaicml/mpt-7b"
-    },
-    "octocoder": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "bigcode/octocoder"
-    },
-    "speculative-llama-13b": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "starcoder2-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "bigcode/starcoder2-7b"
-    },
-    "gemma-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256]
-    },
-    "gemma-2b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama2-13b-gptq": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16",
-        "parameters": {
-            "decoder_input_details": True
-        },
-        "stream": [False],
-    },
-    "mistral-7b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "llama3-8b-chunked-prefill": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
-    },
-    "falcon-11b-chunked-prefill": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-11B"
-    },
-    "llama2-7b-32k": {
-        "batch_size": [1, 4],
-        "seq_length": [1024],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16",
-        "parameters": {
-            "decoder_input_details": True
-        },
-        "stream": [False],
-    },
-    "mistral-7b-128k-awq": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "mistral-7b-marlin": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "llama-2-13b-flashinfer": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16",
-    },
-    "llama-7b-unmerged-lora": {
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
-        "tokenizer": "TheBloke/Llama-2-7B-fp16"
-    },
-    "llama-7b-unmerged-lora-overflow": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": [f"english-alpaca-{i}" for i in range(20)],
-        "tokenizer": "TheBloke/Llama-2-7B-fp16"
-    },
-    "llama2-13b-awq-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["french", "spanish"],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "mistral-7b-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "unsloth/mistral-7b-instruct-v0.2"
-    },
-    "mistral-7b-awq-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
-    },
-    "mistral-7b-gptq-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["spanish", "german"],
-        "tokenizer": "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
-    },
-    "llama3-8b-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["french", "spanish"],
-        "tokenizer": "unsloth/llama-3-8b-Instruct"
-    },
-    "gemma-7b-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["alpaca", "dante"],
-        "tokenizer": "unsloth/gemma-7b"
-    },
-    "phi2-unmerged-lora": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["sql", "bunny"],
-        "tokenizer": "microsoft/phi-2"
-    },
-    "llama-2-tiny": {
-        "batch_size": [1, 4],
-        "seq_length": [256]
-    },
-    "llama3-8b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-3-8B-fp16"
-    },
-    "llama-3.1-8b": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-3-Llama-3.1-8B"
-    },
-    "llama32-3b-multi-worker-tp1-pp1": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama32-3b-multi-worker-tp2-pp1": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama32-3b-multi-worker-tp1-pp2": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama31-8b-pp-only": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama31-8b-tp2-pp2": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "llama31-8b-tp2-pp2-spec-dec": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "flan-t5-xl": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-    },
-    "tinyllama-input-len-exceeded": {
-        "batch_size": [1],
-        "seq_length": [25],
-        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    },
-}
-
-lmi_dist_chat_model_spec = {
-    "llama2-7b-chat": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
-    }
 }
 
 vllm_model_spec = {
@@ -506,10 +143,10 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "JackFram/llama-68m"
     },
-    "llama-68m-speculative-eagle": {
+    "llama3-1-8b-speculative-eagle": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "JackFram/llama-68m"
+        "tokenizer": "unsloth/Meta-Llama-3.1-8B"
     },
     "llama-7b-unmerged-lora": {
         "batch_size": [3],
@@ -652,29 +289,6 @@ vllm_tool_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "unsloth/mistral-7b-instruct-v0.3"
-    },
-}
-
-lmi_dist_aiccl_model_spec = {
-    "llama-2-70b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "codellama-34b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "codellama/CodeLlama-34b-hf"
-    },
-    "falcon-40b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-40b"
-    },
-    "mixtral-8x7b-aiccl": {
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
 }
 
@@ -856,25 +470,6 @@ correctness_model_spec = {
             "return_full_text": True
         }
     },
-    "lmi-dist-codestral-22b": {
-        "batch_size": [41],
-        "seq_length": [512],
-        "num_run": 4,
-        "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
-        "dataset": "humaneval",
-        "score": 0.5,
-        "parameters": {
-            "return_full_text": True
-        }
-    },
-    "neuronx-codestral-22b": {
-        "batch_size": [41],
-        "seq_length": [512],
-        "num_run": 4,
-        "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
-        "dataset": "humaneval",
-        "score": 0.01
-    },
     "trtllm-llama3-8b": {
         "batch_size": [213],
         "seq_length": [1],
@@ -882,22 +477,6 @@ correctness_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
-    },
-    "lmi-dist-llama3-1-8b": {
-        "batch_size": [213],
-        "seq_length": [1],
-        "num_run": 66,
-        "tokenizer": "TheBloke/Llama-2-7B-fp16",
-        "dataset": "mmlu",
-        "score": 0.6
-    },
-    "neuronx-llama3-2-1b": {
-        "batch_size": [32],
-        "seq_length": [1],
-        "num_run": 66,
-        "tokenizer": "NousResearch/Llama-3.2-1B",
-        "dataset": "mmlu",
-        "score": 0.45
     },
     "trtllm-meta-llama3-8b-fp8": {
         "batch_size": [213],
@@ -2078,51 +1657,6 @@ def test_performance():
     log_metrics(response_times)
 
 
-def test_neuron_sd_handler(model, model_spec):
-    from PIL import Image
-    modelspec_checker(model, model_spec)
-    spec = neuron_sd_model_spec[model]
-    for step in spec["num_inference_steps"]:
-        req = {"prompt": "A bird and cat flying through space"}
-        params = {"num_inference_steps": step}
-        req["parameters"] = params
-        LOGGER.info(f"req: {req}")
-        res = send_json(req)
-        try:
-            Image.open(BytesIO(res.content)).convert("RGB")
-        except Exception as e:
-            raise IOError("failed to deserialize image from response", e)
-
-
-def test_transformers_neuronx_handler(model, model_spec):
-    modelspec_checker(model, model_spec)
-    spec = model_spec[args.model]
-    if "worker" in spec:
-        check_worker_number(spec["worker"])
-    for batch_size in spec["batch_size"]:
-        inputs = batch_generation(batch_size)
-        if batch_size == 1:
-            # for rolling batch, inputs should be a str not list.
-            # i.e, client side batching is not enabled when rolling batch is enabled.
-            # if batch_size is just 1, then we assume it is for rolling batch here.
-            inputs = inputs[0]
-        for seq_length in spec["seq_length"]:
-            req = {"inputs": inputs}
-            params = {"max_length": seq_length}
-            if "use_sample" in spec:
-                params["use_sample"] = True
-            req["parameters"] = params
-            LOGGER.info(f"req {req}")
-            res = send_json(req)
-            if spec.get("stream_output", False):
-                LOGGER.info(f"res: {res.content}")
-            else:
-                res = res.json()
-                LOGGER.info(f"res {res}")
-                result = res
-                assert len(result) == batch_size
-
-
 def test_correctness(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -2335,23 +1869,7 @@ def run(raw_args):
 
     if args.handler == "huggingface":
         test_handler(args.model, hf_model_spec)
-    elif args.handler == "neuron-stable-diffusion":
-        test_neuron_sd_handler(args.model, neuron_sd_model_spec)
-    elif args.handler == "transformers_neuronx":
-        test_transformers_neuronx_handler(args.model,
-                                          transformers_neuronx_model_spec)
-    elif args.handler == "transformers_neuronx_rolling_batch":
-        test_handler_rolling_batch(args.model, transformers_neuronx_model_spec)
-    elif args.handler == "transformers_neuronx_neo":
-        test_transformers_neuronx_handler(args.model,
-                                          transformers_neuronx_neo_model_spec)
-    elif args.handler == "transformers_neuronx_neo_rolling_batch":
-        test_handler_rolling_batch(args.model,
-                                   transformers_neuronx_neo_model_spec)
-    elif args.handler == "lmi_dist":
-        test_handler_rolling_batch(args.model, lmi_dist_model_spec)
-    elif args.handler == "lmi_dist_adapters":
-        test_handler_adapters(args.model, lmi_dist_model_spec)
+
     elif args.handler == "vllm":
         test_handler_rolling_batch(args.model, vllm_model_spec)
     elif args.handler == "custom":
@@ -2362,8 +1880,7 @@ def run(raw_args):
         test_handler_adapters(args.model, vllm_model_spec)
     elif args.handler == "vllm_async_adapters":
         test_handler_adapters(args.model, vllm_model_spec)
-    elif args.handler == "lmi_dist_chat":
-        test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
+
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
     elif args.handler == "vllm_tool":
@@ -2374,8 +1891,7 @@ def run(raw_args):
         test_handler_performance(args.model, handler_performance_model_spec)
     elif args.handler == "performance":
         test_performance()
-    elif args.handler == "lmi_dist_aiccl":
-        test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
+
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm_chat":

@@ -19,18 +19,17 @@ from typing import Optional
 from djl_python import Input, Output
 from djl_python.encode_decode import decode
 from djl_python.utils import find_model_file
-from djl_python.service_loader import get_annotated_function
+from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 from djl_python.import_utils import joblib, cloudpickle, skops_io as sio
 
 
-class SklearnHandler:
+class SklearnHandler(CustomFormatterHandler):
 
     def __init__(self):
+        super().__init__()
         self.model = None
         self.initialized = False
-        self.custom_input_formatter = None
-        self.custom_output_formatter = None
-        self.custom_predict_formatter = None
+        self.init_properties = None
 
     def _get_trusted_types(self, properties: dict):
         trusted_types_str = properties.get("skops_trusted_types", "")
@@ -46,6 +45,8 @@ class SklearnHandler:
         return trusted_types
 
     def initialize(self, properties: dict):
+        # Store initialization properties for use during inference
+        self.init_properties = properties.copy()
         model_dir = properties.get("model_dir")
         model_format = properties.get("model_format", "skops")
 
@@ -62,64 +63,74 @@ class SklearnHandler:
                 f"Unsupported model format: {model_format}. Supported formats: skops, joblib, pickle, cloudpickle"
             )
 
-        model_file = find_model_file(model_dir, extensions)
-        if not model_file:
-            raise FileNotFoundError(
-                f"No model file found with format '{model_format}' in {model_dir}"
-            )
+        # Load custom code
+        try:
+            self.load_formatters(model_dir)
+        except CustomFormatterError as e:
+            raise
 
-        if model_format == "skops":
-            trusted_types = self._get_trusted_types(properties)
-            self.model = sio.load(model_file, trusted=trusted_types)
+        # Load model
+        init_result = self.apply_init_handler(model_dir)
+        if init_result is not None:
+            self.model = init_result
         else:
-            if properties.get("trust_insecure_model_files",
-                              "false").lower() != "true":
-                raise ValueError(
-                    f"option.trust_insecure_model_files must be set to 'true' to use {model_format} format (only skops is secure by default)"
+            model_file = find_model_file(model_dir, extensions)
+            if not model_file:
+                raise FileNotFoundError(
+                    f"No model file found with format '{model_format}' in {model_dir}"
                 )
 
-            if model_format == "joblib":
-                self.model = joblib.load(model_file)
-            elif model_format == "pickle":
-                with open(model_file, 'rb') as f:
-                    self.model = pickle.load(f)
-            elif model_format == "cloudpickle":
-                with open(model_file, 'rb') as f:
-                    self.model = cloudpickle.load(f)
+            if model_format == "skops":
+                trusted_types = self._get_trusted_types(properties)
+                self.model = sio.load(model_file, trusted=trusted_types)
+            else:
+                if properties.get("trust_insecure_model_files",
+                                  "false").lower() != "true":
+                    raise ValueError(
+                        f"option.trust_insecure_model_files must be set to 'true' to use {model_format} format (only skops is secure by default)"
+                    )
 
-        self.custom_input_formatter = get_annotated_function(
-            model_dir, "is_input_formatter")
-        self.custom_output_formatter = get_annotated_function(
-            model_dir, "is_output_formatter")
-        self.custom_predict_formatter = get_annotated_function(
-            model_dir, "is_predict_formatter")
+                if model_format == "joblib":
+                    self.model = joblib.load(model_file)
+                elif model_format == "pickle":
+                    with open(model_file, 'rb') as f:
+                        self.model = pickle.load(f)
+                elif model_format == "cloudpickle":
+                    with open(model_file, 'rb') as f:
+                        self.model = cloudpickle.load(f)
 
         self.initialized = True
 
     def inference(self, inputs: Input) -> Output:
         content_type = inputs.get_property("Content-Type")
-        accept = inputs.get_property("Accept") or "application/json"
+        properties = inputs.get_properties()
+        default_accept = self.init_properties.get("default_accept",
+                                                  "application/json")
+
+        accept = inputs.get_property("Accept")
+
+        # If no accept type is specified in the request, use default
+        if accept == "*/*":
+            accept = default_accept
 
         # Validate accept type (skip validation if custom output formatter is provided)
-        if not self.custom_output_formatter:
-            supported_accept_types = ["application/json", "text/csv"]
+        if self.output_formatter is None:  # No formatter available
             if not any(supported_type in accept
-                       for supported_type in supported_accept_types):
+                       for supported_type in ["application/json", "text/csv"]):
                 raise ValueError(
-                    f"Unsupported Accept type: {accept}. Supported types: {supported_accept_types}"
+                    f"Unsupported Accept type: {accept}. Supported types: application/json, text/csv"
                 )
 
         # Input processing
-        X = None
-        if self.custom_input_formatter:
-            X = self.custom_input_formatter(inputs)
-        elif "text/csv" in content_type:
-            X = decode(inputs, content_type, require_csv_headers=False)
-        else:
-            input_map = decode(inputs, content_type)
-            data = input_map.get("inputs") if isinstance(input_map,
-                                                         dict) else input_map
-            X = np.array(data)
+        X = self.apply_input_formatter(inputs, content_type=content_type)
+        if X is inputs:  # No formatter applied
+            if "text/csv" in content_type:
+                X = decode(inputs, content_type, require_csv_headers=False)
+            else:
+                input_map = decode(inputs, content_type)
+                data = input_map.get("inputs") if isinstance(
+                    input_map, dict) else input_map
+                X = np.array(data)
 
         if X is None or not hasattr(X, 'ndim'):
             raise ValueError(
@@ -128,18 +139,19 @@ class SklearnHandler:
         if X.ndim == 1:
             X = X.reshape(1, -1)
 
-        if self.custom_predict_formatter:
-            predictions = self.custom_predict_formatter(self.model, X)
-        else:
+        predictions = self.apply_prediction_handler(X, self.model)
+        if predictions is None:
             predictions = self.model.predict(X)
 
         # Output processing
-        if self.custom_output_formatter:
-            return self.custom_output_formatter(predictions)
-
-        # Supports CSV/JSON outputs by default
         outputs = Output()
-        if "text/csv" in accept:
+        formatted_output = self.apply_output_formatter(predictions,
+                                                       accept=accept)
+        if formatted_output is not predictions:  # Formatter was applied
+            if self.is_sagemaker_script:
+                outputs.add_property("Content-Type", accept)
+            outputs.add(formatted_output)
+        elif "text/csv" in accept:
             csv_buffer = StringIO()
             np.savetxt(csv_buffer, predictions, fmt='%s', delimiter=',')
             outputs.add(csv_buffer.getvalue().rstrip())

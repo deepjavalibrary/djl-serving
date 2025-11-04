@@ -13,7 +13,7 @@
 import sys
 from types import FunctionType
 
-WILDCARD_CLASS_MOCKS = ["optimum.exporters.neuron.model_configs"]
+WILDCARD_CLASS_MOCKS = []
 
 
 def parameters(params_list, naming=None):
@@ -66,20 +66,17 @@ def parameterized(test_case):
 
 
 def mock_import_modules(modules):
-    try:
-        import torch_neuronx
-    except ModuleNotFoundError:
-        from unittest.mock import MagicMock
+    from unittest.mock import MagicMock
 
-        class Mock(MagicMock):
+    class Mock(MagicMock):
 
-            @classmethod
-            def __getattr__(cls, name):
-                return MagicMock()
+        @classmethod
+        def __getattr__(cls, name):
+            return MagicMock()
 
-        for mock_module in modules:
-            mock = Mock()
-            mock.__name__ = mock_module
-            if mock.__name__ in WILDCARD_CLASS_MOCKS:
-                mock.__all__ = "none"
-            sys.modules[mock_module] = mock
+    for mock_module in modules:
+        mock = Mock()
+        mock.__name__ = mock_module
+        if mock.__name__ in WILDCARD_CLASS_MOCKS:
+            mock.__all__ = "none"
+        sys.modules[mock_module] = mock

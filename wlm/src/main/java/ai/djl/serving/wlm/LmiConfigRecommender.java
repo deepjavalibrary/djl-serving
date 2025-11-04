@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
@@ -37,7 +36,6 @@ public final class LmiConfigRecommender {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         setRollingBatch(lmiProperties, modelConfig, features);
         setMpiMode(lmiProperties);
-        setHeuristicDefaults(lmiProperties, modelConfig);
         setPipelineParallelDegree(lmiProperties);
         setTensorParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
@@ -69,12 +67,6 @@ public final class LmiConfigRecommender {
         } else if (!isTextGenerationModel(modelConfig)) {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
-        } else if (isTnxEnabled(features)) {
-            if (Integer.parseInt(lmiProperties.getProperty("option.max_rolling_batch_size", "1")) >= 12) {
-                rollingBatch = "vllm";
-            } else {
-                rollingBatch = "tnx";
-            }
         } else if (isVllmEnabled(features)) {
             rollingBatch = "disable";
             lmiProperties.setProperty("option.async_mode", "true");
@@ -104,11 +96,7 @@ public final class LmiConfigRecommender {
             int numGpus = CudaUtils.getGpuCount();
             if (numGpus > 0) {
                 tpDegree = String.valueOf(numGpus / ppDegree);
-            } else if (NeuronUtils.hasNeuron()) {
-                int numAccelerators = NeuronUtils.getNeuronCores();
-                if (numAccelerators > 0) {
-                    tpDegree = String.valueOf(numAccelerators);
-                }
+
             } else {
                 tpDegree = null;
             }
@@ -192,19 +180,6 @@ public final class LmiConfigRecommender {
 
     private static boolean isTrtLlmEnabled(String features) {
         return features != null && features.contains("trtllm");
-    }
-
-    private static boolean isTnxEnabled(String features) {
-        return features != null && features.contains("tnx");
-    }
-
-    private static void setHeuristicDefaults(
-            Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
-        if (NeuronUtils.hasNeuron() && isTextGenerationModel(modelConfig)) {
-            // Set default values for Neuron text generation models
-            NeuronSmartDefaultUtils smartDefaultUtils = new NeuronSmartDefaultUtils();
-            smartDefaultUtils.applySmartDefaults(lmiProperties, modelConfig);
-        }
     }
 
     private static boolean isTextGenerationModel(LmiUtils.HuggingFaceModelConfig modelConfig) {

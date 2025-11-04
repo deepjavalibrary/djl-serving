@@ -182,9 +182,6 @@ public class PyModel extends BaseModel {
                 if (hasModelFile(
                         modelDir, prefix, ".skops", ".joblib", ".pkl", ".pickle", ".cloudpkl")) {
                     recommendedEntryPoint = "djl_python.sklearn_handler";
-                } else if ("nc".equals(manager.getDevice().getDeviceType())
-                        && pyEnv.getTensorParallelDegree() > 0) {
-                    recommendedEntryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
                     recommendedEntryPoint = "djl_python.lmi_trtllm.trtllm_async_service";
                 } else if ("vllm".equals(features)) {
