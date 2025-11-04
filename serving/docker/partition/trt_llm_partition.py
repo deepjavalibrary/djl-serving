@@ -38,14 +38,13 @@ def build_engine(
 ):
 
     tik = time.time()
-    llm_model = LLM(
-        model=model_id,
-        tensor_parallel_size=tensor_parallel_degree,
-        trust_remote_code=trtllm_engine_configs.get("trust_remote_code", False),
-        dtype=trtllm_engine_configs.get("dtype", "auto"),
-        revision=trtllm_engine_configs.get("revision", None),
-        **trtllm_engine_configs.llm_kwargs
-    )
+    llm_model = LLM(model=model_id,
+                    tensor_parallel_size=tensor_parallel_degree,
+                    trust_remote_code=trtllm_engine_configs.get(
+                        "trust_remote_code", False),
+                    dtype=trtllm_engine_configs.get("dtype", "auto"),
+                    revision=trtllm_engine_configs.get("revision", None),
+                    **trtllm_engine_configs.llm_kwargs)
 
     logger.info(f"[LMI] Model Compiled successfully, saving to {output_dir}")
     llm_model.save(output_dir)
@@ -199,7 +198,7 @@ def parse_quant_config(properties: dict) -> Dict:
     if "exclude_modules" in properties:
         quant_config["exclude_modules"] = json.loads(
             properties.pop("exclude_modules"))
-    
+
     return quant_config
 
 
@@ -250,8 +249,9 @@ def generate_trtllm_build_configs(properties: dict) -> Dict:
 
     if build_config:
         llm_kwargs["BuildConfig"] = build_config
-    
+
     return llm_kwargs
+
 
 def sanitize_serving_properties(model_dir: str) -> dict:
     properties = update_kwargs_with_env_vars({})

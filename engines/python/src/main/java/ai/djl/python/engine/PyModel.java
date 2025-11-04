@@ -55,7 +55,7 @@ public class PyModel extends BaseModel {
     /**
      * Constructs a new Model on a given device.
      *
-     * @param name    the model name
+     * @param name the model name
      * @param manager the {@link NDManager} to holds the NDArray
      */
     PyModel(String name, NDManager manager) {
@@ -159,7 +159,8 @@ public class PyModel extends BaseModel {
             }
 
             if (setTensorParallelDegreeToMax) {
-                int tpDegree = PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
+                int tpDegree =
+                        PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
                 pyEnv.setTensorParallelDegree(tpDegree);
             }
         }
