@@ -442,6 +442,32 @@ vllm_model_list = {
         "option.max_rolling_batch_size": "1",
         "option.enforce_eager": True,
     },
+    "qwen3-vl-32b-instruct": {
+        "option.model_id": "s3://djl-llm/Qwen3-VL-32B-Instruct/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 8,
+        "option.max_rolling_batch_size": 4,
+        "option.trust_remote_code": True,
+        "option.limit_mm_per_prompt": '{"image": 4, "video": 0}',
+    },
+    "minimax-m2": {
+        "option.model_id": "s3://djl-llm/MiniMax-M2/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 8,
+        "option.max_rolling_batch_size": 4,
+        "option.trust_remote_code": True,
+        "option.max_model_len": 16384,
+        "option.gpu_memory_utilization": "0.9",
+    },
+    "llama-4-scout-17b-16e-instruct": {
+        "option.model_id": "s3://djl-llm/Llama-4-Scout-17B-16E-Instruct/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 8,
+        "option.max_rolling_batch_size": 4,
+        "option.trust_remote_code": True,
+        "option.max_model_len": 16384,
+        "option.gpu_memory_utilization": "0.9",
+    },
 }
 
 vllm_neo_model_list = {

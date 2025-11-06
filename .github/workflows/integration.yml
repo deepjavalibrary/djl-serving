@@ -56,7 +56,7 @@ jobs:
     runs-on: [self-hosted, scheduler]
     steps:
       - name: Create new G6 instance
-        id: create_gpu
+        id: create_g6_1
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -65,7 +65,7 @@ jobs:
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
       - name: Create new G6 instance
-        id: create_gpu2
+        id: create_g6_2
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -74,7 +74,7 @@ jobs:
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
       - name: Create new G6 instance
-        id: create_gpu3
+        id: create_g6_3
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -83,7 +83,7 @@ jobs:
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
       - name: Create new G6 instance
-        id: create_gpu4
+        id: create_g6_4
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
@@ -110,14 +110,33 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new P4D instance
+        id: create_p4d_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
+      # - name: Create new P4DE instance
+      #   id: create_p4de_1
+      #   run: |
+      #     cd /home/ubuntu/djl_benchmark_script/scripts
+      #     token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+      #     https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+      #     --fail \
+      #     | jq '.token' | tr -d '"' )
+      #     ./start_instance.sh action_lmic_p4de $token djl-serving
     outputs:
-      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
-      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
-      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g6_instance_id }}
-      gpu_instance_id_4: ${{ steps.create_gpu4.outputs.action_g6_instance_id }}
+      g6_instance_id_1: ${{ steps.create_g6_1.outputs.action_g6_instance_id }}
+      g6_instance_id_2: ${{ steps.create_g6_2.outputs.action_g6_instance_id }}
+      g6_instance_id_3: ${{ steps.create_g6_3.outputs.action_g6_instance_id }}
+      g6_instance_id_4: ${{ steps.create_g6_4.outputs.action_g6_instance_id }}
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
-
       cpu_instance_id: ${{ steps.create_cpu.outputs.action_cpu_instance_id }}
+      p4d_instance_id_1: ${{ steps.create_p4d_1.outputs.action_lmic_p4d_instance_id }}
+      # p4de_instance_id_1: ${{ steps.create_p4de_1.outputs.action_lmic_p4de_instance_id }}
 
   test:
     runs-on:
@@ -139,51 +158,59 @@ jobs:
           - test: TestCpuBoth
             instance: cpu
             failure-prefix: cpu
-          - test: TestGpu
+          - test: TestGpu_g6
             instance: g6
             failure-prefix: gpu
           - test: TestAarch64
             instance: aarch64
             failure-prefix: aarch64
-          # - test: TestHfHandler
+          # - test: TestHfHandler_g6
           #   instance: g6
           #   failure-prefix: lmi
-          # - test: TestTrtLlmHandler1
+          # - test: TestTrtLlmHandler1_g6
           #   instance: g6
           #   failure-prefix: trtllm
-          # - test: TestTrtLlmHandler2
+          # - test: TestTrtLlmHandler2_g6
           #   instance: g6
           #   failure-prefix: trtllm
-          - test: TestVllm1
+          - test: TestVllm1_g6
             instance: g6
             failure-prefix: lmi
-          - test: TestVllm2
+          - test: TestVllm2_g6
             instance: g6
             failure-prefix: lmi
-          - test: TestVllmCustomHandlers
+          - test: TestVllmCustomHandlers_g6
             instance: g6
             failure-prefix: lmi
-          - test: TestVllmCustomFormatters
+          - test: TestVllmCustomFormatters_g6
             instance: g6
             failure-prefix: lmi
-          - test: TestVllmLora
+          - test: TestVllmLora_g6
             instance: g6
             failure-prefix: lmi
-          - test: TestVllmAsyncLora
+          - test: TestVllmAsyncLora_g6
             instance: g6
             failure-prefix: lmi
-          - test: TestMultiModalVllm
+          - test: TestMultiModalVllm_g6
             instance: g6
             failure-prefix: lmi
-          # - test: TestTextEmbedding
+          # - test: TestTextEmbedding_g6
           #   instance: g6
           #   failure-prefix: lmi
-          # - test: TestCorrectnessTrtLlm
+          # - test: TestCorrectnessTrtLlm_g6
           #   instance: g6
           #   failure-prefix: trtllm
-          - test: TestStatefulModel
+          - test: TestStatefulModel_g6
             instance: g6
             failure-prefix: lmi
+          # P4D instance tests
+          - test: TestVllm_p4d
+            instance: p4d
+            failure-prefix: lmi
+          # P4DE instance tests
+          # - test: TestVllm_p4de
+          #   instance: p4de
+          #   failure-prefix: lmi
     outputs:
       failure_cpu: ${{ steps.test-failure.outputs.failure_cpu }}
       failure_gpu: ${{ steps.test-failure.outputs.failure_gpu }}
@@ -269,16 +296,19 @@ jobs:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          instance_id=${{ needs.create-runners.outputs.g6_instance_id_1 }}
           ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
+          instance_id=${{ needs.create-runners.outputs.g6_instance_id_2 }}
           ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
+          instance_id=${{ needs.create-runners.outputs.g6_instance_id_3 }}
           ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_4 }}
+          instance_id=${{ needs.create-runners.outputs.g6_instance_id_4 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
           ./stop_instance.sh $instance_id
-
           instance_id=${{ needs.create-runners.outputs.cpu_instance_id }}
           ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.p4d_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          # instance_id=${{ needs.create-runners.outputs.p4de_instance_id_1 }}
+          # ./stop_instance.sh $instance_id
