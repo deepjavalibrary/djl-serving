@@ -442,6 +442,27 @@ vllm_model_list = {
         "option.max_rolling_batch_size": "1",
         "option.enforce_eager": True,
     },
+    "llama3-8b-lmcache-cpu": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "lmcache_config_file": "lmcache_cpu.yaml",
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "llama3-8b-lmcache-local-storage": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "lmcache_config_file": "lmcache_local_storage.yaml",
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "llama3-8b-lmcache-missing-role": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1"}',
+    },
+    "llama3-8b-no-lmcache": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+    },
 }
 
 vllm_neo_model_list = {
@@ -773,18 +794,27 @@ stateful_model_list = {
 def write_model_artifacts(properties,
                           requirements=None,
                           adapter_ids=[],
-                          adapter_names=[]):
+                          adapter_names=[],
+                          lmcache_config_file=None):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
     os.makedirs(model_path, exist_ok=True)
+    
+    if lmcache_config_file:
+        source_config = os.path.join("lmcache_configs", lmcache_config_file)
+        dest_config = os.path.join(model_path, lmcache_config_file)
+        if os.path.exists(source_config):
+            shutil.copy2(source_config, dest_config)
+            properties["env"] = f"LMCACHE_CONFIG_FILE=/opt/ml/model/test/{lmcache_config_file}"
+    
     with open(os.path.join(model_path, "serving.properties"), "w") as f:
         for key, value in properties.items():
             f.write(f"{key}={value}\n")
+    
     if requirements:
         with open(os.path.join(model_path, "requirements.txt"), "w") as f:
             f.write('\n'.join(requirements) + '\n')
-
     adapters_path = os.path.abspath(os.path.join(model_path, "adapters"))
     # Download adapters if any
     if adapter_ids:
@@ -909,9 +939,14 @@ def build_vllm_async_model(model):
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])
 
+    lmcache_config_file = options.pop("lmcache_config_file", None)
+    if lmcache_config_file:
+        options["option.lmcache_config_file"] = lmcache_config_file
+
     write_model_artifacts(options,
                           adapter_ids=adapter_ids,
-                          adapter_names=adapter_names)
+                          adapter_names=adapter_names,
+                          lmcache_config_file=lmcache_config_file)
 
 
 def build_vllm_async_model_with_custom_handler(model, handler_type="success"):

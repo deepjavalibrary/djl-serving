@@ -454,6 +454,47 @@ class TestVllm2:
 
 
 @pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcache:
+
+    def test_lmcache_cpu(self):
+        with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
+            r.launch()
+            client.run("vllm_lmcache llama3-8b-lmcache-cpu".split())
+
+    def test_lmcache_local_storage(self):
+        with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
+            r.launch()
+            client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
+
+    def test_lmcache_missing_role(self):
+        with Runner('lmi', 'llama3-8b-lmcache-missing-role') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-missing-role")
+            with pytest.raises(Exception):
+                r.launch()
+
+    def test_lmcache_performance_baseline(self):
+        with Runner('lmi', 'llama3-8b-no-lmcache') as r:
+            prepare.build_vllm_async_model("llama3-8b-no-lmcache")
+            r.launch()
+            client.run("vllm_lmcache_performance llama3-8b-no-lmcache".split())
+
+    def test_lmcache_performance_cpu(self):
+        with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
+            r.launch()
+            client.run("vllm_lmcache_performance llama3-8b-lmcache-cpu".split())
+
+    def test_lmcache_performance_local_storage(self):
+        with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
+            r.launch()
+            client.run("vllm_lmcache_performance llama3-8b-lmcache-local-storage".split())
+
+
+@pytest.mark.vllm
 @pytest.mark.lora
 @pytest.mark.gpu_4
 class TestVllmLora:
