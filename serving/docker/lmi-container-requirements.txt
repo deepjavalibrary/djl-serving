@@ -3,7 +3,7 @@ autoawq
 torchvision
 peft==0.15.1
 protobuf==4.25.1
-transformers==4.56.0
+transformers==4.57.1
 hf-transfer
 zstandard
 datasets==3.0.1
