@@ -644,13 +644,13 @@ class TestVllmLmcache_g6:
     def test_lmcache_cpu(self):
         with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch()
+            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"])
             client.run("vllm_lmcache llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_local_storage(self):
         with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch()
+            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"])
             client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
 
     def test_lmcache_missing_role(self):
@@ -658,6 +658,11 @@ class TestVllmLmcache_g6:
             prepare.build_vllm_async_model("llama3-8b-lmcache-missing-role")
             with pytest.raises(Exception):
                 r.launch()
+
+
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcachePerformance_g6:
 
     def test_lmcache_performance_baseline(self):
         with Runner('lmi', 'llama3-8b-no-lmcache') as r:
@@ -668,13 +673,13 @@ class TestVllmLmcache_g6:
     def test_lmcache_performance_cpu(self):
         with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch()
+            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"])
             client.run("vllm_lmcache_performance llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_performance_local_storage(self):
         with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch()
+            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"])
             client.run("vllm_lmcache_performance llama3-8b-lmcache-local-storage".split())
 
 

@@ -832,7 +832,6 @@ def write_model_artifacts(properties,
         dest_config = os.path.join(model_path, lmcache_config_file)
         if os.path.exists(source_config):
             shutil.copy2(source_config, dest_config)
-            properties["env"] = f"LMCACHE_CONFIG_FILE=/opt/ml/model/test/{lmcache_config_file}"
     
     with open(os.path.join(model_path, "serving.properties"), "w") as f:
         for key, value in properties.items():
