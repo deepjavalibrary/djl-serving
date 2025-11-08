@@ -487,6 +487,26 @@ vllm_model_list = {
         "option.trust_remote_code": True,
         "option.max_model_len": 16384,
         "option.gpu_memory_utilization": "0.9",
+    "llama3-8b-lmcache-cpu": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "lmcache_config_file": "lmcache_cpu.yaml",
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "llama3-8b-lmcache-local-storage": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "lmcache_config_file": "lmcache_local_storage.yaml",
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "llama3-8b-lmcache-missing-role": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1"}',
+    },
+    "llama3-8b-no-lmcache": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
     },
 }
 

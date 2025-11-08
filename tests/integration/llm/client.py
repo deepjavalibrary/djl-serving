@@ -259,6 +259,25 @@ vllm_model_spec = {
         "batch_size": [1, 2],
         "seq_length": [256],
         "tokenizer": "MiniMaxAI/MiniMax-M2",
+    "llama3-8b-lmcache-cpu": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
+    "llama3-8b-lmcache-local-storage": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
+    "llama3-8b-lmcache-s3": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
+    "llama3-8b-no-lmcache": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
 }
 
