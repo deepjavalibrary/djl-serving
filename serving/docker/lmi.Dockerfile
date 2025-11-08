@@ -69,6 +69,7 @@ RUN mkdir -p /opt/djl/conf \
     && mkdir -p /opt/djl/partition \
     && mkdir -p /opt/ml/model \
     && mkdir -p /opt/djl/bin \
+    && mkdir -p /opt/ml/model/cache/ \
     && echo "${djl_serving_version} lmi" > /opt/djl/bin/telemetry
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition

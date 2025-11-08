@@ -35,3 +35,4 @@ llmcompressor
 https://vllm-wheels.s3.us-west-2.amazonaws.com/d3ab240f39219df0175ec662416f630d7bf273d8/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl
 xgrammar
 flashinfer-python==0.4.1
+lmcache
