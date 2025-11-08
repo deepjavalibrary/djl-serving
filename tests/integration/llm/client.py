@@ -229,6 +229,16 @@ vllm_model_spec = {
         "seq_length": [25],
         "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
     },
+    "llama-4-scout-17b-16e-instruct": {
+        "batch_size": [1, 2],
+        "seq_length": [256],
+        "tokenizer": "unsloth/Llama-4-Scout-17B-16E-Instruct",
+    },
+    "minimax-m2": {
+        "batch_size": [1, 2],
+        "seq_length": [256],
+        "tokenizer": "MiniMaxAI/MiniMax-M2",
+    },
 }
 
 vllm_neo_model_spec = {
@@ -521,6 +531,10 @@ multi_modal_spec = {
     },
     "llama32-11b-multimodal": {
         "batch_size": [1],
+    },
+    "qwen3-vl-32b-instruct": {
+        "batch_size": [1, 2],
+        "tokenizer": "Qwen/Qwen2-VL-72B-Instruct"
     },
 }
 
