@@ -203,6 +203,9 @@ jobs:
           - test: TestStatefulModel_g6
             instance: g6
             failure-prefix: lmi
+          - test: TestVllmLmcache_g6
+            instance: g6
+            failure-prefix: lmi
           # P4D instance tests
           - test: TestVllm_p4d
             instance: p4d
