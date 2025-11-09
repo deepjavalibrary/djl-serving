@@ -469,16 +469,24 @@ vllm_model_list = {
         "option.gpu_memory_utilization": "0.9",
     },
     "llama3-8b-lmcache-cpu": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
-        "option.tensor_parallel_degree": 4,
-        "lmcache_config_file": "lmcache_cpu.yaml",
-        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "option.model_id":
+        "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree":
+        4,
+        "lmcache_config_file":
+        "lmcache_cpu.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },
     "llama3-8b-lmcache-local-storage": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
-        "option.tensor_parallel_degree": 4,
-        "lmcache_config_file": "lmcache_local_storage.yaml",
-        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "option.model_id":
+        "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree":
+        4,
+        "lmcache_config_file":
+        "lmcache_local_storage.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },
     "llama3-8b-lmcache-missing-role": {
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
@@ -826,13 +834,13 @@ def write_model_artifacts(properties,
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
     os.makedirs(model_path, exist_ok=True)
-    
+
     if lmcache_config_file:
         source_config = os.path.join("lmcache_configs", lmcache_config_file)
         dest_config = os.path.join(model_path, lmcache_config_file)
         if os.path.exists(source_config):
             shutil.copy2(source_config, dest_config)
-    
+
     with open(os.path.join(model_path, "serving.properties"), "w") as f:
         for key, value in properties.items():
             f.write(f"{key}={value}\n")

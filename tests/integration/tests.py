@@ -644,13 +644,17 @@ class TestVllmLmcache_g6:
     def test_lmcache_cpu(self):
         with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"])
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"
+            ])
             client.run("vllm_lmcache llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_local_storage(self):
         with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"])
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"
+            ])
             client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
 
     def test_lmcache_missing_role(self):
@@ -673,14 +677,21 @@ class TestVllmLmcachePerformance_g6:
     def test_lmcache_performance_cpu(self):
         with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"])
-            client.run("vllm_lmcache_performance llama3-8b-lmcache-cpu".split())
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"
+            ])
+            client.run(
+                "vllm_lmcache_performance llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_performance_local_storage(self):
         with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch(env_vars=["LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"])
-            client.run("vllm_lmcache_performance llama3-8b-lmcache-local-storage".split())
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"
+            ])
+            client.run(
+                "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
+                split())
 
 
 @pytest.mark.gpu_4

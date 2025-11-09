@@ -240,7 +240,7 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "MiniMaxAI/MiniMax-M2",
     },
-        "llama3-8b-lmcache-cpu": {
+    "llama3-8b-lmcache-cpu": {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-3-8B-fp16"
@@ -1819,22 +1819,24 @@ def test_handler_lmcache(model, model_spec, is_baseline):
     share common prefixes or context, as the cached states can be reused across different queries."""
     shared_prefix = " ".join([paragraph] * 40)
     params = {"max_new_tokens": 50, "temperature": 0, "seed": 42}
-    
+
     warmup_req = {"inputs": shared_prefix + " Warmup?", "parameters": params}
     LOGGER.info("Warmup: Populating cache with shared prefix")
     start = time.time()
     send_json(warmup_req)
     warmup_time = time.time() - start
     time.sleep(1)
-    
+
     test_req = {"inputs": shared_prefix + " Test query?", "parameters": params}
     LOGGER.info("Test: Sending request with shared prefix")
     start = time.time()
     send_json(test_req)
     test_time = time.time() - start
-    
+
     speedup = warmup_time / test_time if test_time > 0 else 0
-    LOGGER.info(f"Warmup time: {warmup_time:.2f}s, Test time: {test_time:.2f}s, Speedup: {speedup:.2f}x")
+    LOGGER.info(
+        f"Warmup time: {warmup_time:.2f}s, Test time: {test_time:.2f}s, Speedup: {speedup:.2f}x"
+    )
 
 
 def test_handler_lmcache_performance(model, model_spec):
@@ -1859,18 +1861,30 @@ def test_handler_lmcache_performance(model, model_spec):
     LOGGER.info("Warmup: Populating LMCache with shared prefix")
     send_json(warmup_req)
     time.sleep(2)
-    
-    shared_reqs = [{"inputs": shared_prefix + f" Query {i}?", "parameters": params} for i in range(concurrency)]
-    
-    LOGGER.info(f"Performance test: {concurrency} concurrent requests with shared prefix")
-    awscurl_run(shared_reqs, spec.get("tokenizer"), concurrency=concurrency, num_run=1, json_results=True, dataset=True)
-    
+
+    shared_reqs = [{
+        "inputs": shared_prefix + f" Query {i}?",
+        "parameters": params
+    } for i in range(concurrency)]
+
+    LOGGER.info(
+        f"Performance test: {concurrency} concurrent requests with shared prefix"
+    )
+    awscurl_run(shared_reqs,
+                spec.get("tokenizer"),
+                concurrency=concurrency,
+                num_run=1,
+                json_results=True,
+                dataset=True)
+
     with open("benchmark.json") as f:
         metrics = json.load(f)
         p50_ttft = metrics["p50TimeToFirstByte"]
         p90_ttft = metrics["p90TimeToFirstByte"]
         tps = metrics["tps"]
-        LOGGER.info(f"Results: P50 TTFT={p50_ttft:.2f}ms, P90 TTFT={p90_ttft:.2f}ms, TPS={tps:.2f}")
+        LOGGER.info(
+            f"Results: P50 TTFT={p50_ttft:.2f}ms, P90 TTFT={p90_ttft:.2f}ms, TPS={tps:.2f}"
+        )
 
 
 def test_handler_stateful(model, model_spec):
