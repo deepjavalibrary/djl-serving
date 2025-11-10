@@ -8,6 +8,7 @@ import os
 import math
 import json
 import shutil
+import time
 from random import randrange
 import numpy as np
 from datetime import datetime
@@ -228,6 +229,31 @@ vllm_model_spec = {
         "batch_size": [1],
         "seq_length": [25],
         "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    },
+    "llama-4-scout-17b-16e-instruct": {
+        "batch_size": [1, 2],
+        "seq_length": [256],
+        "tokenizer": "unsloth/Llama-4-Scout-17B-16E-Instruct",
+    },
+    "minimax-m2": {
+        "batch_size": [1, 2],
+        "seq_length": [256],
+        "tokenizer": "MiniMaxAI/MiniMax-M2",
+    },
+    "llama3-8b-lmcache-cpu": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
+    "llama3-8b-lmcache-local-storage": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
+    "llama3-8b-no-lmcache": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
 }
 
@@ -521,6 +547,10 @@ multi_modal_spec = {
     },
     "llama32-11b-multimodal": {
         "batch_size": [1],
+    },
+    "qwen3-vl-32b-instruct": {
+        "batch_size": [1, 2],
+        "tokenizer": "Qwen/Qwen2-VL-72B-Instruct"
     },
 }
 
@@ -1772,6 +1802,91 @@ def test_text_embedding_model(model, model_spec):
         awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
+def test_handler_lmcache(model, model_spec, is_baseline):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+
+    paragraph = """In the realm of artificial intelligence and machine learning, large language models have revolutionized 
+    the way we process and understand natural language. These sophisticated neural networks, trained on vast amounts of text data, 
+    can generate coherent responses, answer questions, and even engage in creative tasks. The architecture underlying these models 
+    typically involves transformer networks with attention mechanisms that allow the model to focus on relevant parts of the input. 
+    As these models scale to billions of parameters, they demonstrate emergent capabilities that weren't explicitly programmed. 
+    However, this scaling comes with significant computational costs, particularly in terms of memory and processing power required 
+    for inference. Key-value caching mechanisms have become essential for optimizing the performance of these models during generation, 
+    storing intermediate computations to avoid redundant calculations. This is especially important in scenarios where multiple requests 
+    share common prefixes or context, as the cached states can be reused across different queries."""
+    shared_prefix = " ".join([paragraph] * 40)
+    params = {"max_new_tokens": 50, "temperature": 0, "seed": 42}
+
+    warmup_req = {"inputs": shared_prefix + " Warmup?", "parameters": params}
+    LOGGER.info("Warmup: Populating cache with shared prefix")
+    start = time.time()
+    send_json(warmup_req)
+    warmup_time = time.time() - start
+    time.sleep(1)
+
+    test_req = {"inputs": shared_prefix + " Test query?", "parameters": params}
+    LOGGER.info("Test: Sending request with shared prefix")
+    start = time.time()
+    send_json(test_req)
+    test_time = time.time() - start
+
+    speedup = warmup_time / test_time if test_time > 0 else 0
+    LOGGER.info(
+        f"Warmup time: {warmup_time:.2f}s, Test time: {test_time:.2f}s, Speedup: {speedup:.2f}x"
+    )
+
+
+def test_handler_lmcache_performance(model, model_spec):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+
+    paragraph = """In the realm of artificial intelligence and machine learning, large language models have revolutionized 
+    the way we process and understand natural language. These sophisticated neural networks, trained on vast amounts of text data, 
+    can generate coherent responses, answer questions, and even engage in creative tasks. The architecture underlying these models 
+    typically involves transformer networks with attention mechanisms that allow the model to focus on relevant parts of the input. 
+    As these models scale to billions of parameters, they demonstrate emergent capabilities that weren't explicitly programmed. 
+    However, this scaling comes with significant computational costs, particularly in terms of memory and processing power required 
+    for inference. Key-value caching mechanisms have become essential for optimizing the performance of these models during generation, 
+    storing intermediate computations to avoid redundant calculations. This is especially important in scenarios where multiple requests 
+    share common prefixes or context, as the cached states can be reused across different queries."""
+    shared_prefix = " ".join([paragraph] * 40)
+    params = {"max_new_tokens": 50, "temperature": 0, "seed": 42}
+    concurrency = 100
+    warmup_req = {"inputs": shared_prefix + " Warmup?", "parameters": params}
+    LOGGER.info("Warmup: Populating LMCache with shared prefix")
+    send_json(warmup_req)
+    time.sleep(2)
+
+    shared_reqs = [{
+        "inputs": shared_prefix + f" Query {i}?",
+        "parameters": params
+    } for i in range(concurrency)]
+
+    LOGGER.info(
+        f"Performance test: {concurrency} concurrent requests with shared prefix"
+    )
+    awscurl_run(shared_reqs,
+                spec.get("tokenizer"),
+                concurrency=concurrency,
+                num_run=1,
+                json_results=True,
+                dataset=True)
+
+    with open("benchmark.json") as f:
+        metrics = json.load(f)
+        p50_ttft = metrics["p50TimeToFirstByte"]
+        p90_ttft = metrics["p90TimeToFirstByte"]
+        tps = metrics["tps"]
+        LOGGER.info(
+            f"Results: P50 TTFT={p50_ttft:.2f}ms, P90 TTFT={p90_ttft:.2f}ms, TPS={tps:.2f}"
+        )
+
+
 def test_handler_stateful(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -1885,6 +2000,10 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
     elif args.handler == "vllm_tool":
         test_handler_rolling_batch_tool(args.model, vllm_tool_model_spec)
+    elif args.handler == "vllm_lmcache":
+        test_handler_lmcache(args.model, vllm_model_spec, False)
+    elif args.handler == "vllm_lmcache_performance":
+        test_handler_lmcache_performance(args.model, vllm_model_spec)
     elif args.handler == "vllm_neo":
         test_handler_rolling_batch(args.model, vllm_neo_model_spec)
     elif args.handler == "handler_performance":

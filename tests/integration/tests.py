@@ -198,7 +198,7 @@ class TestCpuBoth:
 
 @pytest.mark.gpu
 @pytest.mark.gpu_4
-class TestGpu:
+class TestGpu_g6:
 
     def test_python_model(self):
         with Runner('pytorch-gpu', 'python_model', download=True) as r:
@@ -239,7 +239,7 @@ class TestAarch64:
 
 @pytest.mark.hf
 @pytest.mark.gpu_4
-class TestHfHandler:
+class TestHfHandler_g6:
 
     def test_gpt_neo(self):
         with Runner('lmi', 'test_gpt_neo_2.7b') as r:
@@ -286,7 +286,7 @@ class TestHfHandler:
 
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
-class TestTrtLlmHandler1:
+class TestTrtLlmHandler1_g6:
 
     def test_llama2_13b_tp4(self):
         with Runner('tensorrt-llm', 'llama2-13b') as r:
@@ -321,7 +321,7 @@ class TestTrtLlmHandler1:
 
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
-class TestTrtLlmHandler2:
+class TestTrtLlmHandler2_g6:
 
     def test_llama2_7b_hf_smoothquant(self):
         with Runner('tensorrt-llm', 'llama2-7b-smoothquant') as r:
@@ -362,7 +362,7 @@ class TestTrtLlmHandler2:
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
-class TestVllm1:
+class TestVllm1_g6:
 
     def test_gemma_2b(self):
         with Runner('lmi', 'gemma-2b') as r:
@@ -407,7 +407,7 @@ class TestVllm1:
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
-class TestVllm2:
+class TestVllm2_g6:
 
     def test_llama3_1_8b_speculative_eagle(self):
         with Runner('lmi', 'llama3-1-8b-speculative-eagle') as r:
@@ -456,7 +456,7 @@ class TestVllm2:
 @pytest.mark.vllm
 @pytest.mark.lora
 @pytest.mark.gpu_4
-class TestVllmLora:
+class TestVllmLora_g6:
 
     def test_lora_llama3_8b(self):
         with Runner('lmi', 'llama3-8b-unmerged-lora') as r:
@@ -480,7 +480,7 @@ class TestVllmLora:
 @pytest.mark.vllm
 @pytest.mark.lora
 @pytest.mark.gpu_4
-class TestVllmAsyncLora:
+class TestVllmAsyncLora_g6:
 
     def test_lora_llama3_8b_async(self):
         with Runner('lmi', 'llama3-8b-unmerged-lora-async') as r:
@@ -504,7 +504,7 @@ class TestVllmAsyncLora:
 @pytest.mark.correctness
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
-class TestCorrectnessTrtLlm:
+class TestCorrectnessTrtLlm_g6:
 
     def test_llama3_8b(self):
         with Runner('tensorrt-llm', 'llama3-8b') as r:
@@ -533,7 +533,7 @@ class TestCorrectnessTrtLlm:
                 "correctness trtllm-mistral-7b-instruct-v0.3-fp8".split())
 
 
-class TestMultiModalVllm:
+class TestMultiModalVllm_g6:
 
     def test_llava_next(self):
         with Runner('lmi', 'llava_v1.6-mistral') as r:
@@ -563,7 +563,7 @@ class TestMultiModalVllm:
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
-class TestVllmCustomHandlers:
+class TestVllmCustomHandlers_g6:
 
     def test_custom_handler_success(self):
         with Runner('lmi', 'gpt-neox-20b-custom-handler') as r:
@@ -604,7 +604,7 @@ class TestVllmCustomHandlers:
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
-class TestVllmCustomFormatters:
+class TestVllmCustomFormatters_g6:
 
     def test_gpt_neox_20b_custom(self):
         with Runner('lmi', 'gpt-neox-20b') as r:
@@ -637,8 +637,65 @@ class TestVllmCustomFormatters:
                 r.launch()
 
 
-@pytest.mark.gpu
-class TestTextEmbedding:
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcache_g6:
+
+    def test_lmcache_cpu(self):
+        with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"
+            ])
+            client.run("vllm_lmcache llama3-8b-lmcache-cpu".split())
+
+    def test_lmcache_local_storage(self):
+        with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"
+            ])
+            client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
+
+    def test_lmcache_missing_role(self):
+        with Runner('lmi', 'llama3-8b-lmcache-missing-role') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-missing-role")
+            with pytest.raises(Exception):
+                r.launch()
+
+
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcachePerformance_g6:
+
+    def test_lmcache_performance_baseline(self):
+        with Runner('lmi', 'llama3-8b-no-lmcache') as r:
+            prepare.build_vllm_async_model("llama3-8b-no-lmcache")
+            r.launch()
+            client.run("vllm_lmcache_performance llama3-8b-no-lmcache".split())
+
+    def test_lmcache_performance_cpu(self):
+        with Runner('lmi', 'llama3-8b-lmcache-cpu') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"
+            ])
+            client.run(
+                "vllm_lmcache_performance llama3-8b-lmcache-cpu".split())
+
+    def test_lmcache_performance_local_storage(self):
+        with Runner('lmi', 'llama3-8b-lmcache-local-storage') as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"
+            ])
+            client.run(
+                "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
+                split())
+
+
+@pytest.mark.gpu_4
+class TestTextEmbedding_g6:
 
     def test_bge_base_rust(self):
         with Runner('lmi', 'bge-base-rust') as r:
@@ -709,8 +766,9 @@ class TestTextEmbedding:
             client.run("text_embedding bge-base-onnx".split())
 
 
-@pytest.mark.gpu
-class TestStatefulModel:
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestStatefulModel_g6:
 
     def test_llama3_8b(self):
         with Runner('lmi', 'llama3-8b') as r:
@@ -723,3 +781,32 @@ class TestStatefulModel:
             prepare.build_stateful_model("gemma-2b")
             r.launch()
             client.run("stateful gemma-2b".split())
+
+
+@pytest.mark.vllm
+@pytest.mark.gpu_8
+class TestVllm_p4d:
+
+    def test_qwen3_vl_32b_instruct(self):
+        with Runner('lmi', 'qwen3-vl-32b-instruct') as r:
+            prepare.build_vllm_async_model("qwen3-vl-32b-instruct")
+            env = ["VLLM_ATTENTION_BACKEND=TORCH_SDPA"]
+            r.launch(env_vars=env)
+            client.run("multimodal qwen3-vl-32b-instruct".split())
+
+    def test_llama_4_scout_17b_16e_instruct(self):
+        with Runner('lmi', 'llama-4-scout-17b-16e-instruct') as r:
+            prepare.build_vllm_async_model("llama-4-scout-17b-16e-instruct")
+            r.launch()
+            client.run("vllm llama-4-scout-17b-16e-instruct".split())
+
+
+# @pytest.mark.vllm
+# @pytest.mark.gpu_8
+# class TestVllm_p4de:
+
+#     def test_minimax_m2(self):
+#         with Runner('lmi', 'minimax-m2') as r:
+#             prepare.build_vllm_async_model("minimax-m2")
+#             r.launch()
+#             client.run("vllm minimax-m2".split())
