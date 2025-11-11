@@ -79,7 +79,8 @@ public class PyModel extends BaseModel {
         String entryPoint = null;
         String recommendedEntryPoint = null;
         if (options != null) {
-            // If tp_degree set to "max", we defer and set it at the end to ensure we take pp degree
+            // If tp_degree set to "max", we defer and set it at the end to ensure we take
+            // pp degree
             // into account.
             boolean setTensorParallelDegreeToMax = false;
             logger.debug("options in serving.properties for model: {}", modelName);
@@ -183,7 +184,7 @@ public class PyModel extends BaseModel {
                         modelDir, prefix, ".skops", ".joblib", ".pkl", ".pickle", ".cloudpkl")) {
                     recommendedEntryPoint = "djl_python.sklearn_handler";
                 } else if ("trtllm".equals(features)) {
-                    recommendedEntryPoint = "djl_python.tensorrt_llm";
+                    recommendedEntryPoint = "djl_python.lmi_trtllm.trtllm_async_service";
                 } else if ("vllm".equals(features)) {
                     if (pyEnv.isAsyncMode()) {
                         recommendedEntryPoint = "djl_python.lmi_vllm.vllm_async_service";
