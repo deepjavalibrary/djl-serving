@@ -40,7 +40,6 @@ jobs:
             djl-version: ${{ needs.build.outputs.djl_version }}
             tag-suffix: ${{ inputs.mode == 'release' && github.sha || format('{0}-{1}', 'nightly', github.sha) }}
 
-
     determine_images_to_publish:
         if: always()
         needs: [ integration-test ]
@@ -71,14 +70,15 @@ jobs:
                   json_images=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${images[@]}")
                   echo "images are ${json_images}"
                   echo "images=${json_images}" >> "$GITHUB_OUTPUT"
+
     ecr-scan:
         if: always()
-        needs: [determine_images_to_publish, build]
+        needs: [build]
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                arch: ${{ fromJson(needs.determine_images_to_publish.outputs.images) }}
+                arch: ['cpu', 'cpu-full', 'pytorch-gpu', 'aarch64', 'lmi', 'tensorrt-llm']
         steps:
             - name: Configure AWS Credentials
               uses: aws-actions/configure-aws-credentials@v4
@@ -133,7 +133,7 @@ jobs:
                   
                   echo "No HIGH or CRITICAL vulnerabilities found"
     publish:
-        if: always()
+        if: always() && needs.determine_images_to_publish.result == 'success'
         needs: [determine_images_to_publish, ecr-scan]
         uses: ./.github/workflows/docker_publish.yml
         secrets: inherit
