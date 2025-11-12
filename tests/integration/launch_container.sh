@@ -311,13 +311,17 @@ while true; do
   if [[ "$(docker ps | wc -l)" == "1" ]]; then
     echo "Docker container shut down"
     echo "Container logs:"
-    docker logs "$container_id" 2>&1 | tail -50
+    docker logs "$container_id" 2>&1 | tail -100
+    echo "Saving full logs to logs/container_failure.log"
+    docker logs "$container_id" > logs/container_failure.log 2>&1 || true
     exit 1
   fi
   if [[ "$retry" -ge "$total_retries" ]]; then
     echo "Max retry exceeded."
     echo "Container logs:"
-    docker logs "$container_id" 2>&1 | tail -50
+    docker logs "$container_id" 2>&1 | tail -100
+    echo "Saving full logs to logs/container_timeout.log"
+    docker logs "$container_id" > logs/container_timeout.log 2>&1 || true
     exit 1
   fi
 

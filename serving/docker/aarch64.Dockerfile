@@ -44,6 +44,12 @@ RUN mv *.deb djl-serving_all.deb || true
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     scripts/install_s5cmd.sh aarch64 && \
+    apt-get update && apt-get install -y --no-install-recommends \
+        libstdc++6 \
+        libgcc-s1 \
+        libgomp1 \
+        libopenblas0 \
+        ca-certificates && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_serving_version} aarch" > /opt/djl/bin/telemetry && \
