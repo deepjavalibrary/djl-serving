@@ -790,8 +790,7 @@ class TestVllm_p4d:
     def test_qwen3_vl_32b_instruct(self):
         with Runner('lmi', 'qwen3-vl-32b-instruct') as r:
             prepare.build_vllm_async_model("qwen3-vl-32b-instruct")
-            env = ["VLLM_ATTENTION_BACKEND=TORCH_SDPA"]
-            r.launch(env_vars=env)
+            r.launch()
             client.run("multimodal qwen3-vl-32b-instruct".split())
 
     def test_llama_4_scout_17b_16e_instruct(self):
