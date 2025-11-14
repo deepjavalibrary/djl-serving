@@ -41,4 +41,17 @@ if [[ "$image" == "cpu" ]]; then
     docker tag "$from_repo:$base_tag-$commit_sha" "$to_repo:$version-nightly"
     docker push "$to_repo:$version-nightly"
   fi
+elif [[ "$image" == "cpu-full" ]]; then
+  # Extract library versions from Dockerfile for new CPU container naming convention
+  PYTHON_VER=$(grep '^ARG python_version=' ../Dockerfile | cut -d'=' -f2 | tr -d '.')
+  TORCH_VER=$(grep '^ARG torch_version=' ../Dockerfile | cut -d'=' -f2)
+  SKLEARN_VER=$(grep '^ARG sklearn_version=' ../Dockerfile | cut -d'=' -f2)
+  XGBOOST_VER=$(grep '^ARG xgboost_version=' ../Dockerfile | cut -d'=' -f2)
+  
+  version_tag="$version-xgb$XGBOOST_VER-skl$SKLEARN_VER-torch$TORCH_VER-py$PYTHON_VER-cpu"
+  if [[ "$mode" == "nightly" ]]; then
+    version_tag="$version_tag-nightly"
+  fi
+  docker tag "$from_repo:$base_tag-$commit_sha" "$to_repo:$version_tag"
+  docker push "$to_repo:$version_tag"
 fi
