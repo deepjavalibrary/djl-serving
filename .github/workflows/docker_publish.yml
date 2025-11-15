@@ -78,15 +78,25 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new Graviton instance
+        id: create_aarch64
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token djl-serving
     outputs:
       cpu_instance_id1: ${{ steps.create_cpu_1.outputs.action_cpu_instance_id }}
       cpu_instance_id2: ${{ steps.create_cpu_2.outputs.action_cpu_instance_id }}
       cpu_instance_id3: ${{ steps.create_cpu_3.outputs.action_cpu_instance_id }}
+      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
 
   docker-sync:
     runs-on:
       - self-hosted
-      - cpu
+      - ${{ matrix.arch != 'aarch64' && 'cpu' || 'aarch64' }}
       - RUN_ID-${{ github.run_id }}
       - RUN_NUMBER-${{ github.run_number }}
       - SHA-${{ github.sha }}
@@ -153,4 +163,6 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.cpu_instance_id2 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.cpu_instance_id3 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
           ./stop_instance.sh $instance_id
