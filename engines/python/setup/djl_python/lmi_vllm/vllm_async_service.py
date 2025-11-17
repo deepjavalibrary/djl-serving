@@ -32,7 +32,6 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
 from djl_python.async_utils import handle_streaming_response, create_non_stream_output, _extract_lora_adapter
-from djl_python.async_utils import register_adapter as _register_adapter, update_adapter as _update_adapter, unregister_adapter as _unregister_adapter
 from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 from djl_python.custom_handler_service import CustomHandlerService
 from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
@@ -51,13 +50,14 @@ from djl_python.session_manager import SessionManager
 from djl_python.session_utils import (create_session, close_session,
                                       get_session,
                                       session_non_stream_output_formatter)
+from djl_python.adapter_formatter_mixin import AdapterFormatterMixin
 
 logger = logging.getLogger(__name__)
 
 SESSION_REQUESTS = {"NEW_SESSION": create_session, "CLOSE": close_session}
 
 
-class VLLMHandler(CustomFormatterHandler):
+class VLLMHandler(AdapterFormatterMixin):
 
     def __init__(self):
         super().__init__()
@@ -72,7 +72,6 @@ class VLLMHandler(CustomFormatterHandler):
         self.vllm_properties = None
         self.model_name = None
         self.initialized = False
-        self.adapter_registry = {}
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
 
@@ -142,9 +141,12 @@ class VLLMHandler(CustomFormatterHandler):
 
         adapter_name = _extract_lora_adapter(raw_request, decoded_payload)
 
-        # Apply input formatter
-        decoded_payload = self.apply_input_formatter(decoded_payload,
-                                                     tokenizer=self.tokenizer)
+        # Apply input formatter (adapter-specific or base model)
+        decoded_payload = self.apply_input_formatter(
+            decoded_payload,
+            adapter_name=adapter_name,
+            tokenizer=self.tokenizer
+        )
 
         # For TGI streaming responses, the last chunk requires the full generated text to be provided.
         # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
@@ -212,6 +214,7 @@ class VLLMHandler(CustomFormatterHandler):
             include_prompt,
         )
         processed_request.lora_request = lora_request
+        processed_request.adapter_name = adapter_name
         return processed_request
 
     async def check_health(self):
@@ -256,8 +259,11 @@ class VLLMHandler(CustomFormatterHandler):
                 processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
-            # Apply custom formatter to streaming response
-            response = self.apply_output_formatter_streaming_raw(response)
+            # Apply streaming output formatter (adapter-specific or base model)
+            response = self.apply_output_formatter_streaming_raw(
+                response,
+                adapter_name=processed_request.adapter_name
+            )
 
             return handle_streaming_response(
                 response,
@@ -268,8 +274,11 @@ class VLLMHandler(CustomFormatterHandler):
                 tokenizer=self.tokenizer,
             )
 
-        # Apply custom output formatter to non-streaming response
-        response = self.apply_output_formatter(response)
+        # Apply output formatter (adapter-specific or base model)
+        response = self.apply_output_formatter(
+            response,
+            adapter_name=processed_request.adapter_name
+        )
 
         return processed_request.non_stream_output_formatter(
             response,
@@ -332,14 +341,14 @@ async def handle(
     return outputs
 
 
-# Wrapper functions to maintain compatibility
+# Adapter management functions
 async def register_adapter(inputs: Input):
-    return await _register_adapter(inputs, service)
+    return await service.register_adapter(inputs)
 
 
 async def update_adapter(inputs: Input):
-    return await _update_adapter(inputs, service)
+    return await service.update_adapter(inputs)
 
 
 async def unregister_adapter(inputs: Input):
-    return await _unregister_adapter(inputs, service)
+    return await service.unregister_adapter(inputs)
