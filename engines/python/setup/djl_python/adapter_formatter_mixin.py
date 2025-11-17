@@ -12,11 +12,11 @@
 # the specific language governing permissions and limitations under the License.
 
 import logging
-from typing import Optional, AsyncGenerator, Any
+import os
+from typing import Optional, AsyncGenerator, Any, Dict
 
 from djl_python.custom_formatter_handling import CustomFormatterHandler
 from djl_python.adapter_manager_mixin import AdapterManagerMixin
-from djl_python.adapter_custom_code_manager import AdapterCustomCodeManager
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 
@@ -40,7 +40,19 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
     def __init__(self):
         CustomFormatterHandler.__init__(self)
         AdapterManagerMixin.__init__(self)
-        self.adapter_code_manager = None
+        self.adapter_code_registry: Dict[str, CustomFormatterHandler] = {}
+
+    def get_adapter_formatter_handler(self, adapter_name: str) -> Optional[CustomFormatterHandler]:
+        """
+        Retrieves the formatter handler for a specific adapter.
+        
+        Args:
+            adapter_name: Unique identifier for the adapter
+            
+        Returns:
+            CustomFormatterHandler if adapter has custom code, None otherwise
+        """
+        return self.adapter_code_registry.get(adapter_name)
 
     def apply_input_formatter(self, decoded_payload: Any, adapter_name: Optional[str] = None, **kwargs) -> Any:
         """
@@ -55,8 +67,8 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
             Formatted input
         """
         # Check if adapter has custom formatter
-        if adapter_name and self.adapter_code_manager is not None:
-            adapter_formatter = self.adapter_code_manager.get_formatter_handler(adapter_name)
+        if adapter_name:
+            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
             if adapter_formatter and adapter_formatter.input_formatter:
                 logger.debug(f"Using adapter-specific input formatter for adapter '{adapter_name}'")
                 return adapter_formatter.apply_input_formatter(decoded_payload, **kwargs)
@@ -78,8 +90,8 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
             Formatted output
         """
         # Check if adapter has custom formatter
-        if adapter_name and self.adapter_code_manager is not None:
-            adapter_formatter = self.adapter_code_manager.get_formatter_handler(adapter_name)
+        if adapter_name:
+            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
             if adapter_formatter and adapter_formatter.output_formatter:
                 logger.debug(f"Using adapter-specific output formatter for adapter '{adapter_name}'")
                 return adapter_formatter.apply_output_formatter(output, **kwargs)
@@ -106,8 +118,8 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
             Async generator with formatted outputs
         """
         # Check if adapter has custom formatter
-        if adapter_name and self.adapter_code_manager is not None:
-            adapter_formatter = self.adapter_code_manager.get_formatter_handler(adapter_name)
+        if adapter_name:
+            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
             if adapter_formatter and adapter_formatter.output_formatter:
                 logger.debug(f"Using adapter-specific streaming output formatter for adapter '{adapter_name}'")
                 async for item in adapter_formatter.apply_output_formatter_streaming_raw(response, **kwargs):
@@ -119,7 +131,7 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         async for item in super().apply_output_formatter_streaming_raw(response, **kwargs):
             yield item
 
-    def load_adapter_custom_code(self, adapter_name: str, adapter_path: str) -> None:
+    def load_adapter_custom_code(self, adapter_name: str, adapter_path: str) -> CustomFormatterHandler:
         """
         Load custom code (model.py) for an adapter.
         
@@ -127,17 +139,34 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
             adapter_name: Unique identifier for the adapter
             adapter_path: Path to adapter directory containing model.py
             
+        Returns:
+            CustomFormatterHandler instance with loaded formatters
+            
         Raises:
+            FileNotFoundError: If model.py doesn't exist
             ValueError: If custom code loading fails
         """
-        # Initialize adapter_code_manager if needed
-        if self.adapter_code_manager is None:
-            self.adapter_code_manager = AdapterCustomCodeManager()
+        model_py_path = os.path.join(adapter_path, "model.py")
+        
+        if not os.path.isfile(model_py_path):
+            raise FileNotFoundError(f"model.py not found in adapter directory: {adapter_path}")
+        
+        logger.info(f"Loading custom code for adapter '{adapter_name}' from {model_py_path}")
         
         try:
-            self.adapter_code_manager.load_adapter_code(adapter_name, adapter_path)
-            logger.info(f"Loaded custom code for adapter {adapter_name}")
+            # Create a new CustomFormatterHandler and load formatters from model.py
+            # Pass adapter_name as namespace for unique module naming
+            formatter_handler = CustomFormatterHandler()
+            formatter_handler.load_formatters(adapter_path, namespace=adapter_name)
+            
+            # Store in registry
+            self.adapter_code_registry[adapter_name] = formatter_handler
+            
+            logger.info(f"Successfully loaded custom code for adapter '{adapter_name}'")
+            return formatter_handler
+            
         except Exception as e:
+            logger.exception(f"Failed to load custom code for adapter '{adapter_name}'")
             raise ValueError(f"Failed to load custom code for adapter {adapter_name}: {str(e)}")
 
     def unload_adapter_custom_code(self, adapter_name: str) -> bool:
@@ -150,11 +179,14 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         Returns:
             True if custom code was unloaded, False if no custom code was loaded
         """
-        if self.adapter_code_manager is not None:
-            if self.adapter_code_manager.unload_adapter_code(adapter_name):
-                logger.info(f"Unloaded custom code for adapter {adapter_name}")
-                return True
-        return False
+        if adapter_name not in self.adapter_code_registry:
+            logger.debug(f"Adapter '{adapter_name}' not found in code registry")
+            return False
+        
+        logger.info(f"Unloading custom code for adapter '{adapter_name}'")
+        del self.adapter_code_registry[adapter_name]
+        
+        return True
 
     async def register_adapter(self, inputs: Input) -> Output:
         """
@@ -163,8 +195,6 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         This method extends the base AdapterManagerMixin.register_adapter to add
         custom code management before adapter weight loading.
         """
-        import os
-        
         adapter_name = inputs.get_property("name")
         adapter_alias = inputs.get_property("alias") or adapter_name
         adapter_path = inputs.get_property("src")
@@ -176,7 +206,6 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
                 self.load_adapter_custom_code(adapter_name, adapter_path)
             except Exception as e:
                 # Fail fast - don't load adapter weights if custom code fails
-                logger.debug(f"Failed to load custom code: {e}", exc_info=True)
                 outputs = Output()
                 err = {"data": "", "last": True, "code": 424, "error": str(e)}
                 outputs.add(Output.binary_encode(err), key="data")
