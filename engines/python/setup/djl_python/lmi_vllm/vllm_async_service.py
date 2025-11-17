@@ -142,11 +142,9 @@ class VLLMHandler(AdapterFormatterMixin):
         adapter_name = _extract_lora_adapter(raw_request, decoded_payload)
 
         # Apply input formatter (adapter-specific or base model)
-        decoded_payload = self.apply_input_formatter(
-            decoded_payload,
-            adapter_name=adapter_name,
-            tokenizer=self.tokenizer
-        )
+        decoded_payload = self.apply_input_formatter(decoded_payload,
+                                                     adapter_name=adapter_name,
+                                                     tokenizer=self.tokenizer)
 
         # For TGI streaming responses, the last chunk requires the full generated text to be provided.
         # Streaming completion responses only return deltas, so we need to accumulate chunks and construct
@@ -261,9 +259,7 @@ class VLLMHandler(AdapterFormatterMixin):
         if isinstance(response, types.AsyncGeneratorType):
             # Apply streaming output formatter (adapter-specific or base model)
             response = self.apply_output_formatter_streaming_raw(
-                response,
-                adapter_name=processed_request.adapter_name
-            )
+                response, adapter_name=processed_request.adapter_name)
 
             return handle_streaming_response(
                 response,
@@ -276,9 +272,7 @@ class VLLMHandler(AdapterFormatterMixin):
 
         # Apply output formatter (adapter-specific or base model)
         response = self.apply_output_formatter(
-            response,
-            adapter_name=processed_request.adapter_name
-        )
+            response, adapter_name=processed_request.adapter_name)
 
         return processed_request.non_stream_output_formatter(
             response,

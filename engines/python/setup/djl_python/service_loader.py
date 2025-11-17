@@ -58,7 +58,8 @@ def load_model_service(model_dir, entry_point, device_id, namespace=None):
                 # Fall back to hash-based naming
                 import hashlib
                 module_name = f"model_{hashlib.md5(entry_point.encode()).hexdigest()[:8]}"
-            spec = importlib.util.spec_from_file_location(module_name, entry_point)
+            spec = importlib.util.spec_from_file_location(
+                module_name, entry_point)
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
             spec.loader.exec_module(module)
@@ -68,7 +69,7 @@ def load_model_service(model_dir, entry_point, device_id, namespace=None):
                 if not os.path.exists(entry_point_file):
                     raise ValueError(
                         f"entry-point file not found {entry_point_file}.")
-                
+
                 # Use namespace for unique module naming to avoid conflicts
                 if namespace:
                     module_name = f"ns_{namespace.replace('-', '_').replace('.', '_')}"
@@ -76,7 +77,8 @@ def load_model_service(model_dir, entry_point, device_id, namespace=None):
                     # Fall back to hash-based naming
                     import hashlib
                     module_name = f"model_{hashlib.md5(entry_point_file.encode()).hexdigest()[:8]}"
-                spec = importlib.util.spec_from_file_location(module_name, entry_point_file)
+                spec = importlib.util.spec_from_file_location(
+                    module_name, entry_point_file)
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[module_name] = module
                 spec.loader.exec_module(module)
@@ -142,7 +144,10 @@ def get_annotated_function(model_dir: str,
     :return: Callable function with the specified decorator
     """
     try:
-        service = load_model_service(model_dir, "model.py", -1, namespace=namespace)
+        service = load_model_service(model_dir,
+                                     "model.py",
+                                     -1,
+                                     namespace=namespace)
         annotated_function = find_decorated_function(service.module,
                                                      decorator_attribute)
         if annotated_function:

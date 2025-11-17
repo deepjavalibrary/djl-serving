@@ -36,13 +36,14 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
     - Custom code management (loading/unloading adapter-specific formatters)
     - Adapter-aware formatter application (methods in this class)
     """
-    
+
     def __init__(self):
         CustomFormatterHandler.__init__(self)
         AdapterManagerMixin.__init__(self)
         self.adapter_code_registry: Dict[str, CustomFormatterHandler] = {}
 
-    def get_adapter_formatter_handler(self, adapter_name: str) -> Optional[CustomFormatterHandler]:
+    def get_adapter_formatter_handler(
+            self, adapter_name: str) -> Optional[CustomFormatterHandler]:
         """
         Retrieves the formatter handler for a specific adapter.
         
@@ -54,7 +55,10 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         """
         return self.adapter_code_registry.get(adapter_name)
 
-    def apply_input_formatter(self, decoded_payload: Any, adapter_name: Optional[str] = None, **kwargs) -> Any:
+    def apply_input_formatter(self,
+                              decoded_payload: Any,
+                              adapter_name: Optional[str] = None,
+                              **kwargs) -> Any:
         """
         Override to apply input formatter, using adapter-specific formatter if available.
         
@@ -68,16 +72,23 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         """
         # Check if adapter has custom formatter
         if adapter_name:
-            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
+            adapter_formatter = self.get_adapter_formatter_handler(
+                adapter_name)
             if adapter_formatter and adapter_formatter.input_formatter:
-                logger.debug(f"Using adapter-specific input formatter for adapter '{adapter_name}'")
-                return adapter_formatter.apply_input_formatter(decoded_payload, **kwargs)
-        
+                logger.debug(
+                    f"Using adapter-specific input formatter for adapter '{adapter_name}'"
+                )
+                return adapter_formatter.apply_input_formatter(
+                    decoded_payload, **kwargs)
+
         # Use base model formatter
         logger.debug("Using base model input formatter")
         return super().apply_input_formatter(decoded_payload, **kwargs)
 
-    def apply_output_formatter(self, output: Any, adapter_name: Optional[str] = None, **kwargs) -> Any:
+    def apply_output_formatter(self,
+                               output: Any,
+                               adapter_name: Optional[str] = None,
+                               **kwargs) -> Any:
         """
         Override to apply output formatter, using adapter-specific formatter if available.
         
@@ -91,21 +102,24 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         """
         # Check if adapter has custom formatter
         if adapter_name:
-            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
+            adapter_formatter = self.get_adapter_formatter_handler(
+                adapter_name)
             if adapter_formatter and adapter_formatter.output_formatter:
-                logger.debug(f"Using adapter-specific output formatter for adapter '{adapter_name}'")
-                return adapter_formatter.apply_output_formatter(output, **kwargs)
-        
+                logger.debug(
+                    f"Using adapter-specific output formatter for adapter '{adapter_name}'"
+                )
+                return adapter_formatter.apply_output_formatter(
+                    output, **kwargs)
+
         # Use base model formatter
         logger.debug("Using base model output formatter")
         return super().apply_output_formatter(output, **kwargs)
 
     async def apply_output_formatter_streaming_raw(
-        self,
-        response: AsyncGenerator,
-        adapter_name: Optional[str] = None,
-        **kwargs
-    ) -> AsyncGenerator:
+            self,
+            response: AsyncGenerator,
+            adapter_name: Optional[str] = None,
+            **kwargs) -> AsyncGenerator:
         """
         Override to apply streaming output formatter, using adapter-specific formatter if available.
         
@@ -119,19 +133,25 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         """
         # Check if adapter has custom formatter
         if adapter_name:
-            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
+            adapter_formatter = self.get_adapter_formatter_handler(
+                adapter_name)
             if adapter_formatter and adapter_formatter.output_formatter:
-                logger.debug(f"Using adapter-specific streaming output formatter for adapter '{adapter_name}'")
-                async for item in adapter_formatter.apply_output_formatter_streaming_raw(response, **kwargs):
+                logger.debug(
+                    f"Using adapter-specific streaming output formatter for adapter '{adapter_name}'"
+                )
+                async for item in adapter_formatter.apply_output_formatter_streaming_raw(
+                        response, **kwargs):
                     yield item
                 return
-        
+
         # Use base model formatter
         logger.debug("Using base model streaming output formatter")
-        async for item in super().apply_output_formatter_streaming_raw(response, **kwargs):
+        async for item in super().apply_output_formatter_streaming_raw(
+                response, **kwargs):
             yield item
 
-    def load_adapter_custom_code(self, adapter_name: str, adapter_path: str) -> CustomFormatterHandler:
+    def load_adapter_custom_code(self, adapter_name: str,
+                                 adapter_path: str) -> CustomFormatterHandler:
         """
         Load custom code (model.py) for an adapter.
         
@@ -147,27 +167,36 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
             ValueError: If custom code loading fails
         """
         model_py_path = os.path.join(adapter_path, "model.py")
-        
+
         if not os.path.isfile(model_py_path):
-            raise FileNotFoundError(f"model.py not found in adapter directory: {adapter_path}")
-        
-        logger.info(f"Loading custom code for adapter '{adapter_name}' from {model_py_path}")
-        
+            raise FileNotFoundError(
+                f"model.py not found in adapter directory: {adapter_path}")
+
+        logger.info(
+            f"Loading custom code for adapter '{adapter_name}' from {model_py_path}"
+        )
+
         try:
             # Create a new CustomFormatterHandler and load formatters from model.py
             # Pass adapter_name as namespace for unique module naming
             formatter_handler = CustomFormatterHandler()
-            formatter_handler.load_formatters(adapter_path, namespace=adapter_name)
-            
+            formatter_handler.load_formatters(adapter_path,
+                                              namespace=adapter_name)
+
             # Store in registry
             self.adapter_code_registry[adapter_name] = formatter_handler
-            
-            logger.info(f"Successfully loaded custom code for adapter '{adapter_name}'")
+
+            logger.info(
+                f"Successfully loaded custom code for adapter '{adapter_name}'"
+            )
             return formatter_handler
-            
+
         except Exception as e:
-            logger.exception(f"Failed to load custom code for adapter '{adapter_name}'")
-            raise ValueError(f"Failed to load custom code for adapter {adapter_name}: {str(e)}")
+            logger.exception(
+                f"Failed to load custom code for adapter '{adapter_name}'")
+            raise ValueError(
+                f"Failed to load custom code for adapter {adapter_name}: {str(e)}"
+            )
 
     def unload_adapter_custom_code(self, adapter_name: str) -> bool:
         """
@@ -180,12 +209,13 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
             True if custom code was unloaded, False if no custom code was loaded
         """
         if adapter_name not in self.adapter_code_registry:
-            logger.debug(f"Adapter '{adapter_name}' not found in code registry")
+            logger.debug(
+                f"Adapter '{adapter_name}' not found in code registry")
             return False
-        
+
         logger.info(f"Unloading custom code for adapter '{adapter_name}'")
         del self.adapter_code_registry[adapter_name]
-        
+
         return True
 
     async def register_adapter(self, inputs: Input) -> Output:
@@ -198,7 +228,7 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         adapter_name = inputs.get_property("name")
         adapter_alias = inputs.get_property("alias") or adapter_name
         adapter_path = inputs.get_property("src")
-        
+
         # Check for custom code and load it BEFORE registering adapter weights
         model_py_path = os.path.join(adapter_path, "model.py")
         if os.path.isfile(model_py_path):
@@ -210,7 +240,7 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
                 err = {"data": "", "last": True, "code": 424, "error": str(e)}
                 outputs.add(Output.binary_encode(err), key="data")
                 return outputs
-        
+
         # Now register adapter weights using parent implementation
         return await super().register_adapter(inputs)
 
@@ -222,11 +252,11 @@ class AdapterFormatterMixin(CustomFormatterHandler, AdapterManagerMixin):
         custom code cleanup after adapter weight unloading.
         """
         adapter_name = inputs.get_property("name")
-        
+
         # First unregister adapter weights using parent implementation
         result = await super().unregister_adapter(inputs)
-        
+
         # Then unload custom code if present
         self.unload_adapter_custom_code(adapter_name)
-        
+
         return result

@@ -49,8 +49,9 @@ class CustomFormatterHandler:
                          when loading multiple custom code modules)
         """
         try:
-            self.input_formatter = get_annotated_function(
-                model_dir, "is_input_formatter", namespace=namespace)
+            self.input_formatter = get_annotated_function(model_dir,
+                                                          "is_input_formatter",
+                                                          namespace=namespace)
             self.output_formatter = get_annotated_function(
                 model_dir, "is_output_formatter", namespace=namespace)
             self.prediction_handler = get_annotated_function(

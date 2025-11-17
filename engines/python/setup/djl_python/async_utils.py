@@ -132,6 +132,3 @@ def _extract_lora_adapter(raw_request, decoded_payload):
         logging.debug(f"Found adapter in payload: {adapter_name}")
 
     return adapter_name
-
-
-

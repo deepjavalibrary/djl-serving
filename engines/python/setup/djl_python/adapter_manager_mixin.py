@@ -85,21 +85,24 @@ class AdapterManagerMixin(ABC):
                 )
 
             if not adapter_preload and adapter_pin:
-                raise ValueError("Can not set preload to false and pin to true")
+                raise ValueError(
+                    "Can not set preload to false and pin to true")
 
             # Check if adapter has custom code and mark it
             model_py_path = os.path.join(adapter_path, "model.py")
-            inputs.properties["has_custom_code"] = "true" if os.path.isfile(model_py_path) else "false"
-            
+            inputs.properties["has_custom_code"] = "true" if os.path.isfile(
+                model_py_path) else "false"
+
             # Load adapter weights
             if adapter_preload:
-                loaded = await self.add_lora(adapter_name, adapter_alias, adapter_path)
+                loaded = await self.add_lora(adapter_name, adapter_alias,
+                                             adapter_path)
 
             if adapter_pin:
                 await self.pin_lora(adapter_name, adapter_alias)
-            
+
             self.adapter_registry[adapter_name] = inputs
-            
+
         except Exception as e:
             logger.debug(f"Failed to register adapter: {e}", exc_info=True)
             if loaded:
@@ -116,7 +119,8 @@ class AdapterManagerMixin(ABC):
             return outputs
 
         logger.info(
-            f"Registered adapter {adapter_alias} from {adapter_path} successfully")
+            f"Registered adapter {adapter_alias} from {adapter_path} successfully"
+        )
         result = {"data": f"Adapter {adapter_alias} registered"}
         outputs.add(Output.binary_encode(result), key="data")
         return outputs
@@ -157,7 +161,8 @@ class AdapterManagerMixin(ABC):
             ) == "true" if old_adapter.contains_key("preload") else True
             if adapter_preload != old_adapter_preload:
                 if adapter_preload:
-                    await self.add_lora(adapter_name, adapter_alias, adapter_path)
+                    await self.add_lora(adapter_name, adapter_alias,
+                                        adapter_path)
                 else:
                     await self.remove_lora(adapter_name, adapter_alias)
 
@@ -170,9 +175,9 @@ class AdapterManagerMixin(ABC):
                     raise ValueError(
                         f"Unpinning adapter is not supported. To unpin adapter '{adapter_alias}', please delete the adapter and re-register it without pinning."
                     )
-            
+
             self.adapter_registry[adapter_name] = inputs
-            
+
         except Exception as e:
             logger.debug(f"Failed to update adapter: {e}", exc_info=True)
             if any(msg in str(e)
@@ -208,10 +213,10 @@ class AdapterManagerMixin(ABC):
         try:
             # Remove adapter weights
             await self.remove_lora(adapter_name, adapter_alias)
-            
+
             # Remove from registry
             del self.adapter_registry[adapter_name]
-            
+
         except Exception as e:
             logger.debug(f"Failed to unregister adapter: {e}", exc_info=True)
             err = {"data": "", "last": True, "code": 424, "error": str(e)}
