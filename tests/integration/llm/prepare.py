@@ -359,6 +359,31 @@ vllm_model_list = {
         "option.gpu_memory_utilization":
         "0.8",
     },
+    "phi2-unmerged-lora-with-custom-code": {
+        "option.model_id":
+        "s3://djl-llm/phi-2/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        1,
+        "option.max_lora_rank":
+        128,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "isotr0py/phi-2-test-sql-lora",
+            "BAAI/bunny-phi-2-siglip-lora",
+        ],
+        "adapter_names": ["sql", "bunny"],
+        "add_output_formatter":
+        True,
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
     "starcoder2-7b": {
         "option.model_id": "s3://djl-llm/bigcode-starcoder2",
         "option.task": "text-generation",
@@ -822,11 +847,39 @@ stateful_model_list = {
 }
 
 
+def create_model_py_with_output_formatter(target_dir, identifier_field,
+                                          identifier_value):
+    """
+    Create a model.py file with a custom output formatter.
+    
+    Args:
+        target_dir: Directory where model.py will be created
+        identifier_field: Field name to add to output (e.g., "_model_name", "_adapter_name")
+        identifier_value: Value for the identifier field
+        description: Description for the docstring
+    """
+    model_py_content = f'''"""Custom output formatter"""
+
+from djl_python.output_formatter import output_formatter
+
+@output_formatter
+def custom_output_formatter(output, **kwargs):
+    """Add {identifier_field} identifier to output"""
+    if isinstance(output, dict):
+        output["{identifier_field}"] = "{identifier_value}"
+    return output
+'''
+    model_py_path = os.path.join(target_dir, "model.py")
+    with open(model_py_path, "w") as f:
+        f.write(model_py_content)
+
+
 def write_model_artifacts(properties,
                           requirements=None,
                           adapter_ids=[],
                           adapter_names=[],
-                          lmcache_config_file=None):
+                          lmcache_config_file=None,
+                          add_output_formatter=False):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
@@ -845,6 +898,12 @@ def write_model_artifacts(properties,
         with open(os.path.join(model_path, "requirements.txt"), "w") as f:
             f.write('\n'.join(requirements) + '\n')
 
+    # Add base model output formatter if requested
+    if add_output_formatter:
+        model_id = properties.get("option.model_id", "unknown_model")
+        create_model_py_with_output_formatter(model_path, "processed_by",
+                                              model_id)
+
     adapters_path = os.path.abspath(os.path.join(model_path, "adapters"))
     # Download adapters if any
     if adapter_ids:
@@ -862,6 +921,11 @@ def write_model_artifacts(properties,
                                   local_dir_use_symlinks=False,
                                   local_dir=dir)
                 adapter_cache[adapter_id] = dir
+
+                # Add adapter-specific output formatter if requested
+                if add_output_formatter:
+                    create_model_py_with_output_formatter(
+                        dir, "processed_by", adapter_name)
 
 
 def create_neo_input_model(properties):
@@ -976,7 +1040,9 @@ def build_vllm_async_model(model):
     write_model_artifacts(options,
                           adapter_ids=adapter_ids,
                           adapter_names=adapter_names,
-                          lmcache_config_file=lmcache_config_file)
+                          lmcache_config_file=lmcache_config_file,
+                          add_output_formatter=options.pop(
+                              "add_output_formatter", False))
 
 
 def build_vllm_async_model_with_custom_handler(model, handler_type="success"):
