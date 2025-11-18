@@ -100,6 +100,24 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
+        id: create_g6_6
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
+        id: create_g6_7
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g6 $token djl-serving
       - name: Create new Graviton instance
         id: create_aarch64
         run: |
@@ -143,6 +161,8 @@ jobs:
       g6_instance_id_3: ${{ steps.create_g6_3.outputs.action_g6_instance_id }}
       g6_instance_id_4: ${{ steps.create_g6_4.outputs.action_g6_instance_id }}
       g6_instance_id_5: ${{ steps.create_g6_5.outputs.action_g6_instance_id }}
+      g6_instance_id_6: ${{ steps.create_g6_6.outputs.action_g6_instance_id }}
+      g6_instance_id_7: ${{ steps.create_g6_7.outputs.action_g6_instance_id }}
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
       cpu_instance_id: ${{ steps.create_cpu.outputs.action_cpu_instance_id }}
       p4d_instance_id_1: ${{ steps.create_p4d_1.outputs.action_lmic_p4d_instance_id }}
@@ -321,6 +341,10 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.g6_instance_id_4 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.g6_instance_id_5 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.g6_instance_id_6 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.g6_instance_id_7 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
           ./stop_instance.sh $instance_id
