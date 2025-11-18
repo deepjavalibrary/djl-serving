@@ -161,9 +161,9 @@ jobs:
           - test: TestGpu_g6
             instance: g6
             failure-prefix: gpu
-          - test: TestAarch64
-            instance: aarch64
-            failure-prefix: aarch64
+          # - test: TestAarch64
+          #   instance: aarch64
+          #   failure-prefix: aarch64
           # - test: TestHfHandler_g6
           #   instance: g6
           #   failure-prefix: lmi

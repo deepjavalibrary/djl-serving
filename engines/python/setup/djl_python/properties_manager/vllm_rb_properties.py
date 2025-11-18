@@ -122,7 +122,7 @@ class VllmRbProperties(Properties):
     def validate_tool_call_parser(self):
         if self.enable_auto_tool_choice:
             from vllm.entrypoints.openai.tool_parsers import ToolParserManager
-            valid_tool_parses = ToolParserManager.tool_parsers.keys()
+            valid_tool_parses = ToolParserManager.list_registered()
             if self.tool_call_parser not in valid_tool_parses:
                 raise ValueError(
                     f"Invalid tool call parser: {self.tool_call_parser} "
@@ -133,8 +133,7 @@ class VllmRbProperties(Properties):
     def validate_reasoning_parser(self):
         if self.enable_reasoning:
             from vllm.reasoning.abs_reasoning_parsers import ReasoningParserManager
-            valid_reasoning_parses = ReasoningParserManager.reasoning_parsers.keys(
-            )
+            valid_reasoning_parses = ReasoningParserManager.list_registered()
             if self.reasoning_parser not in valid_reasoning_parses:
                 raise ValueError(
                     f"Invalid reasoning parser: {self.reasoning_parser} "
