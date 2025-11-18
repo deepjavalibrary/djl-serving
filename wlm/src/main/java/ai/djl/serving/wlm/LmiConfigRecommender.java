@@ -66,12 +66,12 @@ public final class LmiConfigRecommender {
         } else if (!isTextGenerationModel(modelConfig)) {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
-
         } else if (isVllmEnabled(features)) {
             rollingBatch = "disable";
             lmiProperties.setProperty("option.async_mode", "true");
         } else if (isTrtLlmEnabled(features)) {
-            rollingBatch = "trtllm";
+            rollingBatch = "disable";
+            lmiProperties.setProperty("option.async_mode", "true");
         } else {
             rollingBatch = "disable";
         }
@@ -143,7 +143,8 @@ public final class LmiConfigRecommender {
     }
 
     private static void setPropertiesForLora(Properties lmiProperties) {
-        // If option.enable_lora=true, set load_on_devices=0 and maxWorkers=1 because we only
+        // If option.enable_lora=true, set load_on_devices=0 and maxWorkers=1 because we
+        // only
         // support one worker thread
         // for LoRA.
         // TODO: Support multiple worker threads for LoRA.
@@ -158,7 +159,8 @@ public final class LmiConfigRecommender {
     }
 
     private static void setPropertiesForStatefulSessions(Properties lmiProperties) {
-        // If option.enable_stateful_sessions=true, set load_on_devices=0 and maxWorkers=1 because
+        // If option.enable_stateful_sessions=true, set load_on_devices=0 and
+        // maxWorkers=1 because
         // we
         // only support one worker thread for stateful sessions.
         boolean enableStatefulSessions =

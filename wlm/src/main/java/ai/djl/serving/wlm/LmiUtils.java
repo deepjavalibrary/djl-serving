@@ -21,6 +21,7 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 
@@ -42,8 +43,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
 
 /** A utility class to detect optimal engine for LMI model. */
 public final class LmiUtils {
@@ -111,8 +110,10 @@ public final class LmiUtils {
     }
 
     static boolean needConvertTrtLLM(ModelInfo<?, ?> info) {
-        Properties properties = info.getProperties();
-        return isTrtLlmRollingBatch(properties);
+        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
+        // Pytorch backend cannot be saved as engine currently in TRTLLM...
+        String backend = info.prop.getProperty("option.backend");
+        return features != null && features.contains("trtllm") && !"pytorch".equals(backend);
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
@@ -393,7 +394,7 @@ public final class LmiUtils {
     private static Path buildTrtLlmArtifacts(
             Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
-        String hash = Utils.hash(modelId + tpDegree);
+        String hash = Utils.hash(modelId + tpDegree + ppDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
         Path trtLlmRepoDir = parent.resolve("trtllm").resolve(hash);
@@ -467,23 +468,13 @@ public final class LmiUtils {
     }
 
     static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
-        // TODO: match model name
-        AtomicBoolean isValid = new AtomicBoolean();
-        try (Stream<Path> walk = Files.list(modelPath)) {
-            walk.filter(Files::isDirectory)
-                    .forEach(
-                            p -> {
-                                Path confFile = p.resolve("config.pbtxt");
-                                // TODO: add stricter check for tokenizer
-                                Path tokenizer = p.resolve("tokenizer_config.json");
-                                if (Files.isRegularFile(confFile)
-                                        && Files.isRegularFile(tokenizer)) {
-                                    logger.info("Found triton model: {}", p);
-                                    isValid.set(true);
-                                }
-                            });
+        Path configFile = modelPath.resolve("config.json");
+        if (Files.exists(configFile) && Files.isRegularFile(configFile)) {
+            String config = Files.readString(configFile);
+            JsonObject json = JsonUtils.GSON.fromJson(config, JsonObject.class);
+            return json.has("build_config");
         }
-        return isValid.get();
+        return false;
     }
 
     /**
@@ -663,9 +654,11 @@ public final class LmiUtils {
          */
         public boolean isPeftModel() {
             // TODO: refactor and make this better
-            // Peft Configs are very different than regular configs and ideally shouldn't be clubbed
+            // Peft Configs are very different than regular configs and ideally shouldn't be
+            // clubbed
             // into this class.
-            // This method works now, as the only info we need for the peft model is whether it is
+            // This method works now, as the only info we need for the peft model is whether
+            // it is
             // peft
             return peftType != null;
         }
