@@ -860,13 +860,43 @@ def create_model_py_with_output_formatter(target_dir, identifier_field,
     """
     model_py_content = f'''"""Custom output formatter"""
 
+import logging
 from djl_python.output_formatter import output_formatter
+
+logger = logging.getLogger(__name__)
 
 @output_formatter
 def custom_output_formatter(output, **kwargs):
-    """Add {identifier_field} identifier to output"""
-    if isinstance(output, dict):
+    """
+    Add custom fields by converting response to dict.
+    This works with existing code without modifications.
+    """
+    logger.info(f"Base model formatter called with type: {type(output)}")
+    logger.info(f"Base model formatter called with type: {{type(output)}}")
+    
+    # For vLLM CompletionResponse objects - convert to dict
+    if hasattr(output, "model_dump"):
+        try:
+            output_dict = output.model_dump()
+            output_dict["processed_by"] = "base_model"
+            output_dict["{identifier_field}"] = "{identifier_value}"
+            logger.info("Converted to dict and added custom fields")
+            return output_dict
+        except Exception as e:
+            logger.error(f"Failed to convert to dict: {e}")
+            logger.error(f"Failed to convert to dict: {{e}}")
+            return output
+    
+    # If already a dict, modify directly
+    elif isinstance(output, dict):
+        output["processed_by"] = "base_model"
         output["{identifier_field}"] = "{identifier_value}"
+        output["custom_formatter_applied"] = True
+        logger.info("Added custom fields to existing dict")
+        return output
+    
+    logger.warning(f"Cannot handle output type: {type(output)}")
+    logger.warning(f"Cannot handle output type: {{type(output)}}")
     return output
 '''
     model_py_path = os.path.join(target_dir, "model.py")
