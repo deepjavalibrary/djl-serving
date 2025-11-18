@@ -502,9 +502,12 @@ class TestVllmAsyncLora_g6:
 
     def test_lora_phi2_async_with_custom_code(self):
         with Runner('lmi', 'phi2-unmerged-lora-async-with-custom-code') as r:
-            prepare.build_vllm_async_model("phi2-unmerged-lora-with-custom-code")
+            prepare.build_vllm_async_model(
+                "phi2-unmerged-lora-with-custom-code")
             r.launch()
-            client.run("vllm_async_adapters phi2-unmerged-lora-with-custom-code".split())
+            client.run(
+                "vllm_async_adapters phi2-unmerged-lora-with-custom-code".
+                split())
 
 
 @pytest.mark.correctness
