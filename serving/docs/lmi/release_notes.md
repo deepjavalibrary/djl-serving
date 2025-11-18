@@ -3,9 +3,23 @@
 Below are the release notes for recent Large Model Inference (LMI) images for use on SageMaker.
 For details on historical releases, refer to the [Github Releases page](https://github.com/deepjavalibrary/djl-serving/releases).
 
-## LMI V16 (DJL-Serving 0.34.0)
+## LMI V17 (DJL-Serving 0.35.0)
 
 Meet your brand new image! 💿
+
+#### LMI (vLLM) Image – 11-18-2025
+```
+763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.34.0-lmi16.0.0-cu128
+```
+* vLLM version upgraded to `0.11.1rc7`
+* LMI v17 container supports LoRA for DeepSeek V3.2 and Qwen 3 VL models, Llama4 Scout models, Minimax-M2 Model, EAGLE 3 for GPT-OSS Models
+* Going forward, [async mode](https://github.com/deepjavalibrary/djl-serving/blob/0.34.0-dlc/serving/docs/lmi/user_guides/vllm_user_guide.md#async-mode-configurations) is the default configuration for the vLLM handler
+* LMI v17 containers adds support for on-host KV Cache transfer with [LMCache](https://github.com/deepjavalibrary/djl-serving/blob/0.34.0-dlc/serving/docs/lmi/user_guides/lmcache_user_guide.md) in the experimental phase.
+
+##### Considerations
+* Performance regression was seen in throughput and latency for Qwen3 Coder 30B A3b Instruct model at higher concurrencies. We are working with vLLM community to understand the root cause and potential fixes. 
+
+## LMI V16 (DJL-Serving 0.34.0)
 
 #### LMI (vLLM) Image – 9-30-2025
 ```
