@@ -165,8 +165,6 @@ class VLLMHandler(CustomFormatterHandler):
             logging.info(
                 f"Using LoRA request: {lora_request.lora_name} (ID: {lora_request.lora_int_id})"
             )
-            # Register the LoRA request with the model registry so vLLM can find it
-            self.model_registry.lora_requests[adapter_name] = lora_request
             # Set the model field to the adapter name so vLLM's _maybe_get_adapters() can extract it
             decoded_payload["model"] = adapter_name
 
@@ -272,6 +270,8 @@ class VLLMHandler(CustomFormatterHandler):
         logging.info(f"Adding LoRA {lora_name} from {lora_path}")
         lora_id = self.lora_id_counter.inc(1)
         lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
+        # Register the LoRA request with the model registry so vLLM can find it
+        self.model_registry.lora_requests[adapter_name] = lora_request
         self.lora_requests[lora_request.lora_name] = lora_request
         result = await self.vllm_engine.add_lora(lora_request)
         logging.info(f"LoRA {lora_name} added to engine: {result}")
@@ -284,6 +284,7 @@ class VLLMHandler(CustomFormatterHandler):
         lora_request = get_lora_request(lora_name, self.lora_requests)
         result = await self.vllm_engine.remove_lora(lora_request.lora_int_id)
         del self.lora_requests[lora_name]
+        del self.model_registry.lora_requests[lora_name]
         return result
 
     async def pin_lora(self, lora_name: str, lora_alias: str):
