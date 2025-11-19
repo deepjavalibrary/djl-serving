@@ -55,7 +55,7 @@ def convert_lmi_schema_to_completion_request(
     parameters = payload.get("parameters", {})
 
     completion_dict = {
-        "model": payload.pop("model"), None,
+        "model": payload.pop("model", None),
         "prompt": payload.pop("inputs"),
         "max_tokens": parameters.pop("max_new_tokens", 30),
         "echo": parameters.pop("return_full_text", False),
