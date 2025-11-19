@@ -32,7 +32,7 @@ uvloop
 ninja
 peft
 llmcompressor
-https://vllm-wheels.s3.us-west-2.amazonaws.com/93103575ce0480f36fc1a3603eb51d9a89f38a00/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl
+vllm==0.11.1
 xgrammar
 flashinfer-python==0.5.2
 lmcache
