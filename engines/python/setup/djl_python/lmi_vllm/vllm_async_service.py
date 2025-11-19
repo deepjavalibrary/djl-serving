@@ -165,6 +165,8 @@ class VLLMHandler(CustomFormatterHandler):
             logging.info(
                 f"Using LoRA request: {lora_request.lora_name} (ID: {lora_request.lora_int_id})"
             )
+            # Register the LoRA request with the model registry so vLLM can find it
+            self.model_registry.lora_requests[adapter_name] = lora_request
             # Set the model field to the adapter name so vLLM's _maybe_get_adapters() can extract it
             decoded_payload["model"] = adapter_name
 
