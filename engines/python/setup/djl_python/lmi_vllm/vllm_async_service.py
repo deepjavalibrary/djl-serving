@@ -165,6 +165,10 @@ class VLLMHandler(CustomFormatterHandler):
             logging.info(
                 f"Using LoRA request: {lora_request.lora_name} (ID: {lora_request.lora_int_id})"
             )
+            # Register the LoRA request with the model registry so vLLM can find it
+            self.model_registry.lora_requests[adapter_name] = lora_request
+            # Set the model field to the adapter name so vLLM's _maybe_get_adapters() can extract it
+            decoded_payload["model"] = adapter_name
 
         # completions request
         if "prompt" in decoded_payload:
@@ -238,13 +242,9 @@ class VLLMHandler(CustomFormatterHandler):
                 "", error=f"Input parsing failed: {str(e)}", code=424)
             return output
 
-        if processed_request.lora_request:
-            response = await processed_request.inference_invoker(
-                processed_request.vllm_request,
-                lora_request=processed_request.lora_request)
-        else:
-            response = await processed_request.inference_invoker(
-                processed_request.vllm_request)
+        # vLLM will extract the adapter from the request object via _maybe_get_adapters()
+        response = await processed_request.inference_invoker(
+            processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply custom formatter to streaming response
