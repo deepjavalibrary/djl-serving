@@ -32,7 +32,7 @@ uvloop
 ninja
 peft
 llmcompressor
-vllm@git+https://github.com/vllm-project/vllm.git@v0.11.1
+vllm==0.11.1
 xgrammar
 flashinfer-python==0.5.2
 lmcache
