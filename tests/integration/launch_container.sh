@@ -84,7 +84,7 @@ if [[ "$(support_nvme)" == *"true"* ]]; then
 fi
 
 is_llm=false
-elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
+if [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   is_llm=true
   if [[ "$(is_p4d_or_p5)" == *"true"* || $is_multi_node ]]; then
     shm="20gb"
