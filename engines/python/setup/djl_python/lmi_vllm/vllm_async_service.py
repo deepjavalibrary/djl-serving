@@ -271,7 +271,7 @@ class VLLMHandler(CustomFormatterHandler):
         lora_id = self.lora_id_counter.inc(1)
         lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
         # Register the LoRA request with the model registry so vLLM can find it
-        self.model_registry.lora_requests[adapter_name] = lora_request
+        self.model_registry.lora_requests[lora_name] = lora_request
         self.lora_requests[lora_request.lora_name] = lora_request
         result = await self.vllm_engine.add_lora(lora_request)
         logging.info(f"LoRA {lora_name} added to engine: {result}")
