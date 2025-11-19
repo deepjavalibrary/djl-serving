@@ -239,18 +239,9 @@ class VLLMHandler(CustomFormatterHandler):
             return output
 
         if processed_request.lora_request:
-            original_add_request = self.vllm_engine.add_request
-
-            async def add_request_with_lora(*args, **kwargs):
-                kwargs['lora_request'] = processed_request.lora_request
-                return await original_add_request(*args, **kwargs)
-
-            self.vllm_engine.add_request = add_request_with_lora
-            try:
-                response = await processed_request.inference_invoker(
-                    processed_request.vllm_request)
-            finally:
-                self.vllm_engine.add_request = original_add_request
+            response = await processed_request.inference_invoker(
+                processed_request.vllm_request,
+                lora_request=processed_request.lora_request)
         else:
             response = await processed_request.inference_invoker(
                 processed_request.vllm_request)
