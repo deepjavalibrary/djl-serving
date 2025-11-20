@@ -23,7 +23,7 @@ scipy==1.16.0
 onnx==1.19.0
 sentence_transformers
 onnxruntime-gpu==1.20.0
-autoawq
+autoawq==0.2.9
 tokenizers
 pydantic==2.11.7
 optimum==1.23.2
