@@ -14,8 +14,8 @@ Meet your brand new image! 💿
 * vLLM has been upgraded to `0.11.1`
 * Going forward, [async mode](https://github.com/deepjavalibrary/djl-serving/blob/0.35.0-dlc/serving/docs/lmi/user_guides/vllm_user_guide.md#async-mode-configurations) is the default configuration for the vLLM handler
 * New models supported - DeepSeek V3.2, Qwen 3 VL, Minimax-M2
-* LoRA supported in Async mode for MoE models -  Llama4 Scout, Qwen3, DeepSeek
-* EAGLE 3.0 support added for GPT-OSS Models
+* LoRA supported in Async mode for MoE models -  Llama4 Scout, Qwen3, DeepSeek, GPT-OSS
+* EAGLE 3 support added for GPT-OSS Models
 * Support for on-host KV Cache offloading with [LMCache](https://github.com/deepjavalibrary/djl-serving/blob/0.35.0-dlc/serving/docs/lmi/user_guides/lmcache_user_guide.md) (LMCache v1 is in experimental phase).
 
 ##### Considerations
