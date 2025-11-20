@@ -8,11 +8,11 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 **Text Generation Models**
 
-Here is the list of text generation models supported in [vLLM 0.10.2](https://docs.vllm.ai/en/v0.10.2/models/supported_models.html#decoder-only-language-models).
+Here is the list of text generation models supported in [vLLM 0.11.1](https://docs.vllm.ai/en/v0.11.1/models/supported_models.html#decoder-only-language-models).
 
 **Multi Modal Models**
 
-Here is the list of multi-modal models supported in [vLLM 0.10.2](https://docs.vllm.ai/en/v0.10.2/models/supported_models.html#decoder-only-language-models).
+Here is the list of multi-modal models supported in [vLLM 0.11.1](https://docs.vllm.ai/en/v0.11.1/models/supported_models.html#decoder-only-language-models).
 
 ### Model Coverage in CI
 
@@ -34,7 +34,7 @@ The following set of models are tested in our nightly tests
 
 ## Quantization Support
 
-The quantization techniques supported in vLLM 0.10.2 are listed [here](https://docs.vllm.ai/en/v0.10.2/quantization/supported_hardware.html).
+The quantization techniques supported in vLLM 0.11.1 are listed [here](https://docs.vllm.ai/en/latest/features/quantization/).
 
 We recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time.
@@ -68,7 +68,7 @@ If you omit the `option.quantize` configuration, then the engine will determine 
 
 ## Quick Start Configurations 
 
-Starting with LMI v15, the recommended mode for running vLLM is async mode.
+Starting with LMI v17, the default mode for running vLLM is async mode.
 Async mode integrates with the vLLM Async Engine via the OpenAI modules. 
 This ensures that LMI's vLLM support is always in parity with upstream vLLM with respect to both engine-configurations and API schemas.
 Async mode will become the default, and only supported mode, in an upcoming release.
@@ -79,9 +79,6 @@ Async mode will become the default, and only supported mode, in an upcoming rele
 
 ```
 engine=Python
-option.async_mode=true
-option.rolling_batch=disable
-option.entryPoint=djl_python.lmi_vllm.vllm_async_service
 option.tensor_parallel_degree=max
 ```
 
@@ -89,9 +86,6 @@ option.tensor_parallel_degree=max
 
 ```
 HF_MODEL_ID=<model id or model path>
-OPTION_ASYNC_MODE=true
-OPTION_ROLLING_BATCH=disable
-OPTION_ENTRYPOINT=djl_python.lmi_vllm.vllm_async_service
 TENSOR_PARALLEL_DEGREE=max
 ```
 
