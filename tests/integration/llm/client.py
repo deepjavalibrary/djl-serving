@@ -2219,6 +2219,8 @@ def run(raw_args):
         test_custom_handler_async(args.model, custom_formatter_spec)
     elif args.handler == "vllm_adapters":
         test_handler_adapters(args.model, vllm_model_spec)
+    elif args.handler == "vllm_async_adapters":
+        test_handler_adapters(args.model, vllm_model_spec)
     elif args.handler == "vllm_async_adapters_chat":
         test_handler_adapters_chat(args.model, vllm_model_spec)
 

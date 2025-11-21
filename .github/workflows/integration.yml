@@ -221,6 +221,9 @@ jobs:
           - test: TestVllmAsyncLora_g6
             instance: g6
             failure-prefix: lmi
+          - test: TestVllmAsyncLoraWithCustomCode_g6
+            instance: g6
+            failure-prefix: lmi
           - test: TestMultiModalVllm_g6
             instance: g6
             failure-prefix: lmi
