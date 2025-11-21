@@ -313,6 +313,30 @@ vllm_model_list = {
         "option.gpu_memory_utilization":
         "0.8",
     },
+    "llama3-8b-unmerged-lora-with-custom-code": {
+        "option.model_id":
+        "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "UnderstandLing/Llama-3-8B-Instruct-fr",
+            "UnderstandLing/Llama-3-8B-Instruct-es",
+        ],
+        "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization":
+        "0.8",
+        "add_output_formatter": True,
+    },
     "gemma-7b-unmerged-lora": {
         "option.model_id":
         "s3://djl-llm/gemma-7b/",
@@ -356,31 +380,6 @@ vllm_model_list = {
             "BAAI/bunny-phi-2-siglip-lora",
         ],
         "adapter_names": ["sql", "bunny"],
-        "option.gpu_memory_utilization":
-        "0.8",
-    },
-    "phi2-unmerged-lora-with-custom-code": {
-        "option.model_id":
-        "s3://djl-llm/phi-2/",
-        "option.tensor_parallel_degree":
-        "max",
-        "option.enable_lora":
-        "true",
-        "option.max_loras":
-        1,
-        "option.max_lora_rank":
-        128,
-        "option.long_lora_scaling_factors":
-        "4.0",
-        "option.adapters":
-        "adapters",
-        "adapter_ids": [
-            "isotr0py/phi-2-test-sql-lora",
-            "BAAI/bunny-phi-2-siglip-lora",
-        ],
-        "adapter_names": ["sql", "bunny"],
-        "add_output_formatter":
-        True,
         "option.gpu_memory_utilization":
         "0.8",
     },
@@ -860,47 +859,28 @@ def create_model_py_with_output_formatter(target_dir, identifier_field,
     # Use triple quotes and avoid f-string for the generated code
     model_py_content = '''"""Custom output formatter"""
 
-import logging
 from djl_python.output_formatter import output_formatter
-
-logger = logging.getLogger(__name__)
+import json
 
 @output_formatter
 def custom_output_formatter(output, **kwargs):
     """
-    Add custom fields by converting response to dict.
-    This works with existing code without modifications.
+    Add custom fields
     """
-    logger.info(f"Base model formatter called with type: {{type(output)}}")
-    
-    # For vLLM CompletionResponse objects - convert to dict
-    if hasattr(output, "model_dump"):
-        try:
-            output_dict = output.model_dump()
-            output_dict["processed_by"] = "base_model"
-            output_dict["{field}"] = "{value}"
-            logger.info("Converted to dict and added custom fields")
-            return output_dict
-        except Exception as e:
-            logger.error(f"Failed to convert to dict: {{e}}")
-            return output
-    
-    # If already a dict, modify directly
-    elif isinstance(output, dict):
-        output["processed_by"] = "base_model"
-        output["{field}"] = "{value}"
-        output["custom_formatter_applied"] = True
-        logger.info("Added custom fields to existing dict")
+    if hasattr(output, 'model_dump'): # Sync Pydantic Object
+        output.{field} = "{value}"
         return output
-    
-    logger.warning(f"Cannot handle output type: {{type(output)}}")
+    elif isinstance(output, str) and output.startswith("data: "): # Streaming SSE String
+        if output.strip() != "data: [DONE]":
+            data = json.loads(output[6:]) # Parse the JSON data after "data: "
+            data["{field}"] = "{value}"
+            return f"data: {{json.dumps(data)}}"
     return output
 '''.format(field=identifier_field, value=identifier_value)
 
     model_py_path = os.path.join(target_dir, "model.py")
     with open(model_py_path, "w") as f:
         f.write(model_py_content)
-
 
 def write_model_artifacts(properties,
                           requirements=None,

@@ -198,6 +198,15 @@ vllm_model_spec = {
         "adapters": ["french", "spanish"],
         "tokenizer": "unsloth/llama-3-8b-Instruct"
     },
+    "llama3-8b-unmerged-lora-with-custom-code": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "batch_size": [4],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
+        "tokenizer": "unsloth/llama-3-8b-Instruct",
+        "add_output_formatter": True,
+    },
     "gemma-7b-unmerged-lora": {
         "batch_size": [4],
         "seq_length": [16, 32],
@@ -211,14 +220,6 @@ vllm_model_spec = {
         "worker": 1,
         "adapters": ["sql", "bunny"],
         "tokenizer": "microsoft/phi-2"
-    },
-    "phi2-unmerged-lora-with-custom-code": {
-        "batch_size": [4],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["sql", "bunny"],
-        "tokenizer": "microsoft/phi-2",
-        "add_output_formatter": True
     },
     "starcoder2-7b": {
         "batch_size": [1, 4],
@@ -1424,12 +1425,20 @@ def check_output_formatter_applied(response_text, expected_identifier):
             continue
         try:
             parsed_json = json.loads(line)
-            # Look for the final response with generated_text or details
-            if parsed_json.get(
-                    "generated_text") is not None or parsed_json.get(
-                        "details") is not None:
+            # Check for text completion format
+            if parsed_json.get("generated_text") is not None or parsed_json.get("details") is not None:
                 final_json = parsed_json
                 break
+            # Check for chat completion format (non-streaming)
+            elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion":
+                final_json = parsed_json
+                break
+            # Check for chat completion streaming format - look for final chunk
+            elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion.chunk":
+                # For streaming, we need to find a chunk with finish_reason
+                if parsed_json.get("choices", [{}])[0].get("finish_reason") is not None:
+                    final_json = parsed_json
+                    break
         except json.JSONDecodeError:
             continue
 
@@ -1468,7 +1477,6 @@ def test_handler_adapters(model, model_spec):
     if "worker" in spec:
         check_worker_number(spec["worker"])
     stream_values = spec.get("stream", [False, True])
-    check_formatter = spec.get("add_output_formatter", False)
 
     # dryrun phase
     reqs = []
@@ -1493,9 +1501,6 @@ def test_handler_adapters(model, model_spec):
             LOGGER.info(f"res: {message}")
             response_checker(res, message)
 
-            # Check if output formatter was applied correctly
-            if check_formatter:
-                check_output_formatter_applied(message, req["adapters"])
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
@@ -1555,6 +1560,121 @@ def test_handler_adapters(model, model_spec):
 
         if final_json.get("details", {}).get("finish_reason",
                                              "error") == "error":
+            msg = f"Deleting adapter should not break inference for remaining adapters"
+            LOGGER.error(msg)
+            raise RuntimeError(msg)
+
+        # Check if base model inference is working
+        del reqs[0]["adapters"]
+        res = requests.post(endpoint, headers=headers,
+                            json=reqs[0]).content.decode("utf-8")
+
+
+def test_handler_adapters_chat(model, model_spec):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
+    check_formatter = spec.get("add_output_formatter", False)
+
+    # dryrun phase
+    reqs = []
+    messages = batch_generation_chat(len(spec.get("adapters")))
+    for i, adapter in enumerate(spec.get("adapters")):
+        req = {"messages": messages[i]}
+        seq_length = spec["seq_length"][0]
+        req["max_tokens"] = seq_length
+        req["adapters"] = adapter
+        reqs.append(req)
+    for req in reqs:
+        for stream in stream_values:
+            req["stream"] = stream
+            LOGGER.info(f"req: {req}")
+            res = send_json(req)
+            message = res.content.decode("utf-8")
+            LOGGER.info(f"res: {message}")
+            response_checker(res, message)
+
+            # Check if output formatter was applied correctly
+            if check_formatter:
+                check_output_formatter_applied(message, req["adapters"])
+    # awscurl little benchmark phase
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            for stream in stream_values:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                for req in reqs:
+                    req["max_tokens"] = seq_length
+                    req["stream"] = stream
+                awscurl_run(reqs,
+                            spec.get("tokenizer", None),
+                            batch_size,
+                            dataset=True)
+    # Test removing and querying invalid/removed adapter
+    del_adapter = spec.get("adapters")[0]
+    res = requests.delete(
+        f"http://127.0.0.1:8080/models/test/adapters/{del_adapter}")
+    LOGGER.info(f"del adapter {res}")
+    headers = {'content-type': 'application/json'}
+    endpoint = f"http://127.0.0.1:8080/invocations"
+    res = requests.post(endpoint, headers=headers,
+                        json=reqs[0]).content.decode("utf-8")
+    LOGGER.info(f"call deleted adapter {res}")
+
+    if len(reqs) > 1:
+        res = requests.post(endpoint, headers=headers,
+                            json=reqs[1]).content.decode("utf-8")
+        LOGGER.info(f"call valid adapter after deletion {res}")
+        if not res or res.strip() == "":
+            LOGGER.error(f"Empty response received from model API: {res}")
+            raise RuntimeError("Empty response received from model API")
+
+        lines = res.splitlines()
+        if not lines:
+            LOGGER.error(f"No lines found in response: {res}")
+            raise RuntimeError("No lines found in response")
+
+        final_json = None
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                parsed_json = json.loads(line)
+                # Check for text completion format
+                if parsed_json.get("generated_text") is not None or parsed_json.get("details") is not None:
+                    final_json = parsed_json
+                    break
+                # Check for chat completion format (non-streaming)
+                elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion":
+                    final_json = parsed_json
+                    break
+                # Check for chat completion streaming format - look for final chunk
+                elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion.chunk":
+                    # For streaming, we need to find a chunk with finish_reason
+                    if parsed_json.get("choices", [{}])[0].get("finish_reason") is not None:
+                        final_json = parsed_json
+                        break
+            except json.JSONDecodeError:
+                continue
+
+        if final_json is None:
+            LOGGER.error(f"No valid JSON found in response: {res}")
+            raise RuntimeError("No valid JSON found in response")
+
+        # Check finish_reason for different response formats
+        finish_reason = None
+        if final_json.get("details"):
+            # Text completion format
+            finish_reason = final_json.get("details", {}).get("finish_reason", "error")
+        elif final_json.get("choices"):
+            # Chat completion format
+            finish_reason = final_json.get("choices", [{}])[0].get("finish_reason", "error")
+        
+        if finish_reason == "error":
             msg = f"Deleting adapter should not break inference for remaining adapters"
             LOGGER.error(msg)
             raise RuntimeError(msg)
@@ -2084,8 +2204,8 @@ def run(raw_args):
         test_custom_handler_async(args.model, custom_formatter_spec)
     elif args.handler == "vllm_adapters":
         test_handler_adapters(args.model, vllm_model_spec)
-    elif args.handler == "vllm_async_adapters":
-        test_handler_adapters(args.model, vllm_model_spec)
+    elif args.handler == "vllm_async_adapters_chat":
+        test_handler_adapters_chat(args.model, vllm_model_spec)
 
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)

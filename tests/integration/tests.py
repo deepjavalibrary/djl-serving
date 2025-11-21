@@ -500,13 +500,13 @@ class TestVllmAsyncLora_g6:
             r.launch()
             client.run("vllm_async_adapters phi2-unmerged-lora".split())
 
-    def test_lora_phi2_async_with_custom_code(self):
-        with Runner('lmi', 'phi2-unmerged-lora-async-with-custom-code') as r:
+    def test_lora_llama3_8b_async_with_custom_code(self):
+        with Runner('lmi', 'llama3-8b-unmerged-lora-with-custom-code') as r:
             prepare.build_vllm_async_model(
-                "phi2-unmerged-lora-with-custom-code")
+                "llama3-8b-unmerged-lora-with-custom-code")
             r.launch()
             client.run(
-                "vllm_async_adapters phi2-unmerged-lora-with-custom-code".
+                "vllm_async_adapters_chat llama3-8b-unmerged-lora-with-custom-code".
                 split())
 
 
