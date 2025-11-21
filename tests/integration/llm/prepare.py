@@ -335,7 +335,8 @@ vllm_model_list = {
         "adapter_names": ["french", "spanish"],
         "option.gpu_memory_utilization":
         "0.8",
-        "add_output_formatter": True,
+        "add_output_formatter":
+        True,
     },
     "gemma-7b-unmerged-lora": {
         "option.model_id":
@@ -881,6 +882,7 @@ def custom_output_formatter(output, **kwargs):
     model_py_path = os.path.join(target_dir, "model.py")
     with open(model_py_path, "w") as f:
         f.write(model_py_content)
+
 
 def write_model_artifacts(properties,
                           requirements=None,

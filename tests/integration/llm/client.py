@@ -1426,17 +1426,22 @@ def check_output_formatter_applied(response_text, expected_identifier):
         try:
             parsed_json = json.loads(line)
             # Check for text completion format
-            if parsed_json.get("generated_text") is not None or parsed_json.get("details") is not None:
+            if parsed_json.get(
+                    "generated_text") is not None or parsed_json.get(
+                        "details") is not None:
                 final_json = parsed_json
                 break
             # Check for chat completion format (non-streaming)
-            elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion":
+            elif parsed_json.get("choices") is not None and parsed_json.get(
+                    "object") == "chat.completion":
                 final_json = parsed_json
                 break
             # Check for chat completion streaming format - look for final chunk
-            elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion.chunk":
+            elif parsed_json.get("choices") is not None and parsed_json.get(
+                    "object") == "chat.completion.chunk":
                 # For streaming, we need to find a chunk with finish_reason
-                if parsed_json.get("choices", [{}])[0].get("finish_reason") is not None:
+                if parsed_json.get("choices",
+                                   [{}])[0].get("finish_reason") is not None:
                     final_json = parsed_json
                     break
         except json.JSONDecodeError:
@@ -1645,17 +1650,25 @@ def test_handler_adapters_chat(model, model_spec):
             try:
                 parsed_json = json.loads(line)
                 # Check for text completion format
-                if parsed_json.get("generated_text") is not None or parsed_json.get("details") is not None:
+                if parsed_json.get(
+                        "generated_text") is not None or parsed_json.get(
+                            "details") is not None:
                     final_json = parsed_json
                     break
                 # Check for chat completion format (non-streaming)
-                elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion":
+                elif parsed_json.get(
+                        "choices") is not None and parsed_json.get(
+                            "object") == "chat.completion":
                     final_json = parsed_json
                     break
                 # Check for chat completion streaming format - look for final chunk
-                elif parsed_json.get("choices") is not None and parsed_json.get("object") == "chat.completion.chunk":
+                elif parsed_json.get(
+                        "choices") is not None and parsed_json.get(
+                            "object") == "chat.completion.chunk":
                     # For streaming, we need to find a chunk with finish_reason
-                    if parsed_json.get("choices", [{}])[0].get("finish_reason") is not None:
+                    if parsed_json.get(
+                            "choices",
+                        [{}])[0].get("finish_reason") is not None:
                         final_json = parsed_json
                         break
             except json.JSONDecodeError:
@@ -1669,11 +1682,13 @@ def test_handler_adapters_chat(model, model_spec):
         finish_reason = None
         if final_json.get("details"):
             # Text completion format
-            finish_reason = final_json.get("details", {}).get("finish_reason", "error")
+            finish_reason = final_json.get("details",
+                                           {}).get("finish_reason", "error")
         elif final_json.get("choices"):
             # Chat completion format
-            finish_reason = final_json.get("choices", [{}])[0].get("finish_reason", "error")
-        
+            finish_reason = final_json.get("choices", [{}])[0].get(
+                "finish_reason", "error")
+
         if finish_reason == "error":
             msg = f"Deleting adapter should not break inference for remaining adapters"
             LOGGER.error(msg)

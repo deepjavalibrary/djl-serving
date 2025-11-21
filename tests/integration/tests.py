@@ -506,8 +506,8 @@ class TestVllmAsyncLora_g6:
                 "llama3-8b-unmerged-lora-with-custom-code")
             r.launch()
             client.run(
-                "vllm_async_adapters_chat llama3-8b-unmerged-lora-with-custom-code".
-                split())
+                "vllm_async_adapters_chat llama3-8b-unmerged-lora-with-custom-code"
+                .split())
 
 
 @pytest.mark.correctness
