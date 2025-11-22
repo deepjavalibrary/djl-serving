@@ -162,6 +162,7 @@ vllm_model_list = {
         '{"method":"eagle","model":"yuhuili/EAGLE-LLaMA3.1-Instruct-8B","num_speculative_tokens":4}',
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
+        "option.enforce_eager": True,
     },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",

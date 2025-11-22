@@ -165,6 +165,8 @@ class VLLMHandler(AdapterFormatterMixin):
             logging.info(
                 f"Using LoRA request: {lora_request.lora_name} (ID: {lora_request.lora_int_id})"
             )
+            # Set the model field to the adapter name so vLLM's _maybe_get_adapters() can extract it
+            decoded_payload["model"] = adapter_name
 
         # completions request
         if "prompt" in decoded_payload:
@@ -239,22 +241,9 @@ class VLLMHandler(AdapterFormatterMixin):
                 "", error=f"Input parsing failed: {str(e)}", code=424)
             return output
 
-        if processed_request.lora_request:
-            original_add_request = self.vllm_engine.add_request
-
-            async def add_request_with_lora(*args, **kwargs):
-                kwargs['lora_request'] = processed_request.lora_request
-                return await original_add_request(*args, **kwargs)
-
-            self.vllm_engine.add_request = add_request_with_lora
-            try:
-                response = await processed_request.inference_invoker(
-                    processed_request.vllm_request)
-            finally:
-                self.vllm_engine.add_request = original_add_request
-        else:
-            response = await processed_request.inference_invoker(
-                processed_request.vllm_request)
+        # vLLM will extract the adapter from the request object via _maybe_get_adapters()
+        response = await processed_request.inference_invoker(
+            processed_request.vllm_request)
 
         if isinstance(response, types.AsyncGeneratorType):
             # Apply streaming output formatter (adapter-specific or base model)
@@ -284,6 +273,8 @@ class VLLMHandler(AdapterFormatterMixin):
         logging.info(f"Adding LoRA {lora_name} from {lora_path}")
         lora_id = self.lora_id_counter.inc(1)
         lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
+        # Register the LoRA request with the model registry so vLLM can find it
+        self.model_registry.lora_requests[lora_name] = lora_request
         self.lora_requests[lora_request.lora_name] = lora_request
         result = await self.vllm_engine.add_lora(lora_request)
         logging.info(f"LoRA {lora_name} added to engine: {result}")
@@ -296,6 +287,7 @@ class VLLMHandler(AdapterFormatterMixin):
         lora_request = get_lora_request(lora_name, self.lora_requests)
         result = await self.vllm_engine.remove_lora(lora_request.lora_int_id)
         del self.lora_requests[lora_name]
+        del self.model_registry.lora_requests[lora_name]
         return result
 
     async def pin_lora(self, lora_name: str, lora_alias: str):
