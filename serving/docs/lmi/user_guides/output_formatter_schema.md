@@ -1,6 +1,12 @@
 # Custom output formatter schema
 
-This document provides the schema of the output formatter, with which you can write your own custom output formatter. 
+This document provides the schema of the output formatter, with which you can write your own custom output formatter.
+
+Custom output formatters can be defined at two levels:
+- **Base Model Level**: Place `model.py` in the base model directory. These formatters apply to all responses by default.
+- **Adapter Level**: Place `model.py` in an adapter directory (e.g., `adapters/my_adapter/model.py`). These formatters apply only when that specific adapter is used, overriding the base model formatter.
+
+When a request specifies an adapter, DJL Serving will use the adapter's custom formatter if available, otherwise falling back to the base model's formatter. 
 
 
 ## Signature of your own output formatter
@@ -110,17 +116,16 @@ It's crucial to understand how your custom output formatter will be called befor
 
 ## Examples
 
-### Example for vLLM and TensorRT-LLM backends:
+### Example 1: Base Model Formatter (vLLM/TensorRT-LLM)
 ```python
+# model.py (in base model directory)
 from djl_python.output_formatter import output_formatter
-import json
 import time
 
 @output_formatter
 def custom_output_formatter(response_data: dict) -> dict:
     """
-    Custom output formatter for vLLM/TensorRT-LLM backends.
-    Adds custom fields to the final response.
+    Base model output formatter - applies to all responses by default.
 
     Args:
         response_data (dict): The final response data containing 'generated_text', 'details', etc.
@@ -136,13 +141,50 @@ def custom_output_formatter(response_data: dict) -> dict:
         # Example: Transform the generated text
         generated_text = response_data['generated_text']
         response_data['original_length'] = len(generated_text)
-        response_data['generated_text'] = f"[CUSTOM] {generated_text}"
+        response_data['generated_text'] = f"[BASE] {generated_text}"
     
     return response_data
 ```
 
-### Example for other backends:
+### Example 2: Adapter-Specific Formatter (vLLM/TensorRT-LLM)
 ```python
+# adapters/my_adapter/model.py
+from djl_python.output_formatter import output_formatter
+import json
+
+@output_formatter
+def custom_output_formatter(response_data: dict) -> dict:
+    """
+    Adapter-specific output formatter - only applies when this adapter is used.
+    Overrides the base model formatter for this adapter.
+
+    Args:
+        response_data (dict): The final response data containing 'generated_text', 'details', etc.
+
+    Returns:
+        (dict): Modified response data with custom fields
+    """
+    if 'generated_text' in response_data:
+        # Add adapter-specific metadata
+        response_data['adapter_name'] = 'my_adapter'
+        response_data['adapter_version'] = '1.0'
+        
+        # Adapter-specific text transformation
+        generated_text = response_data['generated_text']
+        response_data['generated_text'] = f"[ADAPTER] {generated_text}"
+        
+        # Add custom metrics
+        response_data['custom_metrics'] = {
+            'text_length': len(generated_text),
+            'word_count': len(generated_text.split())
+        }
+    
+    return response_data
+```
+
+### Example 3: Base Model Formatter (Other Backends)
+```python
+# model.py (in base model directory)
 from djl_python.request_io import TextGenerationOutput
 from djl_python.output_formatter import output_formatter
 import json
@@ -150,14 +192,13 @@ import json
 @output_formatter
 def custom_output_formatter(request_output: TextGenerationOutput) -> str:
     """
-    Replace this function with your custom output formatter.
+    Base model output formatter for other backends.
 
     Args:
         request_output (TextGenerationOutput): The request output
 
     Returns:
         (str): Response string
-
     """
     best_sequence = request_output.sequences[request_output.best_sequence_index]
     next_token, is_first_token, is_last_token = best_sequence.get_next_token()
@@ -168,3 +209,30 @@ def custom_output_formatter(request_output: TextGenerationOutput) -> str:
         result["finish_reason"] = best_sequence.finish_reason
     return json.dumps(result) + "\n"
 ```
+
+## Adapter-Specific Formatters
+
+When using adapters, you can place a `model.py` file in the adapter directory with the same decorator-based formatters. The adapter's formatter will be used when that adapter is specified in the request, otherwise the base model's formatter is used.
+
+**Directory Structure:**
+```
+/opt/ml/model/
+  model.py                    # Base model formatter (optional)
+  adapters/
+    adapter1/
+      adapter_model.safetensors
+      adapter_config.json
+      model.py                # Adapter-specific formatter (optional)
+    adapter2/
+      adapter_model.safetensors
+      adapter_config.json
+      # No model.py - uses base model formatter
+```
+
+**Formatter Resolution:**
+1. Request with `adapter1` → Uses `adapters/adapter1/model.py` formatter
+2. Request with `adapter2` → Uses base model `/opt/ml/model/model.py` formatter
+3. Request without adapter → Uses base model `/opt/ml/model/model.py` formatter
+
+**Streaming Support:**
+Both base model and adapter-specific formatters work with streaming responses. The formatter is applied to each chunk as it's generated.

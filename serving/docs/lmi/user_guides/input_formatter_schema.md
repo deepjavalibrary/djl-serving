@@ -2,6 +2,12 @@
 
 This document provides the schema for the input formatter, allowing you to create your own custom input formatter.
 
+Custom input formatters can be defined at two levels:
+- **Base Model Level**: Place `model.py` in the base model directory. These formatters apply to all requests by default.
+- **Adapter Level**: Place `model.py` in an adapter directory (e.g., `adapters/my_adapter/model.py`). These formatters apply only when that specific adapter is used, overriding the base model formatter.
+
+When a request specifies an adapter, DJL Serving will use the adapter's custom formatter if available, otherwise falling back to the base model's formatter.
+
 ## Signature of your own input formatter
 
 To write your custom input formatter, follow the annotation and signature below:
@@ -47,17 +53,15 @@ You can write this function in your model.py. You don't need to write the handle
 
 ## Examples
 
-### Example for vLLM and TensorRT-LLM backends:
+### Example 1: Base Model Formatter (vLLM/TensorRT-LLM)
 ```python
-# model.py
+# model.py (in base model directory)
 from djl_python.input_parser import input_formatter
-from djl_python.encode_decode import decode
 
 @input_formatter
 def custom_input_formatter(decoded_payload: dict, tokenizer=None, **kwargs) -> dict:
     """
-    Custom input formatter for vLLM/TensorRT-LLM backends.
-    Transforms custom payload format to expected format.
+    Base model input formatter - applies to all requests by default.
     
     Args:
         decoded_payload (dict): Decoded request payload
@@ -80,9 +84,43 @@ def custom_input_formatter(decoded_payload: dict, tokenizer=None, **kwargs) -> d
     return decoded_payload
 ```
 
-### Example for other backends:
+### Example 2: Adapter-Specific Formatter (vLLM/TensorRT-LLM)
 ```python
-# model.py
+# adapters/my_adapter/model.py
+from djl_python.input_parser import input_formatter
+
+@input_formatter
+def custom_input_formatter(decoded_payload: dict, tokenizer=None, **kwargs) -> dict:
+    """
+    Adapter-specific input formatter - only applies when this adapter is used.
+    Overrides the base model formatter for this adapter.
+    
+    Args:
+        decoded_payload (dict): Decoded request payload
+        tokenizer: Tokenizer instance (optional)
+        **kwargs: Additional arguments
+        
+    Returns:
+        (dict): Transformed payload in expected format
+    """
+    # Adapter-specific preprocessing
+    if "inputs" in decoded_payload:
+        # Add adapter-specific prefix
+        decoded_payload["inputs"] = f"[ADAPTER_PREFIX] {decoded_payload['inputs']}"
+    
+    # Adapter-specific parameter defaults
+    if "parameters" not in decoded_payload:
+        decoded_payload["parameters"] = {}
+    
+    decoded_payload["parameters"].setdefault("temperature", 0.7)
+    decoded_payload["parameters"].setdefault("max_new_tokens", 512)
+    
+    return decoded_payload
+```
+
+### Example 3: Base Model Formatter (Other Backends)
+```python
+# model.py (in base model directory)
 from djl_python import Input
 from djl_python.input_parser import input_formatter
 from djl_python.request_io import TextInput
@@ -94,15 +132,13 @@ class MyInput(TextInput):
 @input_formatter
 def custom_input_formatter(input_item: Input, **kwargs) -> RequestInput:
     """
-    Replace this function with your own custom input formatter. 
+    Base model input formatter for other backends.
     
     Args:
       input_item (Input): Input object of a request.
       
     Returns:
       (RequestInput): parsed request input
-      
-      
     """
     content_type = input_item.get_property("Content-Type")
 
@@ -120,3 +156,27 @@ def custom_input_formatter(input_item: Input, **kwargs) -> RequestInput:
 ```
 
 In the above example, you can also extend the `RequestInput` or `TextInput` classes as needed for your own fields. Please note that these extra fields can be accessed in your custom output formatter but will not be passed down as inference parameters.
+
+## Adapter-Specific Formatters
+
+When using adapters, you can place a `model.py` file in the adapter directory with the same decorator-based formatters. The adapter's formatter will be used when that adapter is specified in the request, otherwise the base model's formatter is used.
+
+**Directory Structure:**
+```
+/opt/ml/model/
+  model.py                    # Base model formatter (optional)
+  adapters/
+    adapter1/
+      adapter_model.safetensors
+      adapter_config.json
+      model.py                # Adapter-specific formatter (optional)
+    adapter2/
+      adapter_model.safetensors
+      adapter_config.json
+      # No model.py - uses base model formatter
+```
+
+**Formatter Resolution:**
+1. Request with `adapter1` → Uses `adapters/adapter1/model.py` formatter
+2. Request with `adapter2` → Uses base model `/opt/ml/model/model.py` formatter
+3. Request without adapter → Uses base model `/opt/ml/model/model.py` formatter
