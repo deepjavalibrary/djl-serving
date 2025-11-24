@@ -308,8 +308,8 @@ option.max_loras=2
 option.max_lora_rank=64
 option.long_lora_scaling_factors=4.0
 option.adapters=adapters
-"option.gpu_memory_utilization":0.9
-"option.max_model_len":16384
+option.gpu_memory_utilization=0.9
+option.max_model_len=16384
 ```
 
 #### Qwen3 Coder with LoRA Adapters
@@ -323,8 +323,8 @@ option.max_loras=2
 option.max_lora_rank=64
 option.long_lora_scaling_factors=4.0
 option.adapters=adapters
-"option.gpu_memory_utilization":0.9
-"option.max_model_len":16384
+option.gpu_memory_utilization=0.9
+option.max_model_len=16384
 ```
 
 #### GPT-OSS 20B with LoRA Adapters
