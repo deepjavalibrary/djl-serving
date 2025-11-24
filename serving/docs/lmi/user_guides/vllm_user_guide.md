@@ -298,7 +298,6 @@ Tested varying values for:
 ```
 
 #### Llama Scout 4 with LoRA Adapters
-Adapter used: s3://djl-llm/llama-4-scout-17b-adapter/
 ```
 Constants:
 option.model_id=meta-llama/Llama-4-Scout-17B-16E-Instruct/
