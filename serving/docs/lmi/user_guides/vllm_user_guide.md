@@ -305,7 +305,6 @@ option.enable_lora=True
 option.max_loras=2
 option.max_lora_rank=64
 option.long_lora_scaling_factors=4.0
-option.adapters=adapters
 option.gpu_memory_utilization=0.9
 option.max_model_len=16384
 ```
@@ -320,7 +319,6 @@ option.enable_lora=True
 option.max_loras=2
 option.max_lora_rank=64
 option.long_lora_scaling_factors=4.0
-option.adapters=adapters
 option.gpu_memory_utilization=0.9
 option.max_model_len=16384
 ```
@@ -338,6 +336,5 @@ option.enable_lora=True
 option.max_loras=2
 option.max_lora_rank=64
 option.long_lora_scaling_factors=4.0
-option.adapters=adapters
 option.gpu_memory_utilization=0.9
 ```
