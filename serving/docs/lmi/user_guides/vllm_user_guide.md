@@ -263,7 +263,7 @@ Tested varying values for:
 
 #### DeepSeek V3.2 Exp Base
 ```
-on p4d
+on p5e
 
 Constants:
 -e HF_MODEL_ID=deepseek-ai/DeepSeek-V3.2-Exp-Base
