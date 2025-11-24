@@ -292,7 +292,6 @@ Tested varying values for:
 ```
 -e HF_MODEL_ID=openai/gpt-oss-20b
 -e OPTION_SPECULATIVE_CONFIG='{\"method\": \"eagle3\", \"model\":\"zhuyksirEAGLE3-gpt-oss-20b-bf16\", \"num_speculative_tokens\": 4}'
--e OPTION_USE_V2_BLOCK_MANAGER=True
 -e OPTION_TENSOR_PARALLEL_DEGREE=1
 -e OPTION_MAX_ROLLING_BATCH_SIZE=4
 ```
