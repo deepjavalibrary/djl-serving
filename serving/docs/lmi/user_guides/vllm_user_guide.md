@@ -237,3 +237,104 @@ async def handle(inputs: Input) -> Output:
 - Access model properties via `inputs.get_properties()`
 - Parse request data using `decode()` from `djl_python.encode_decode`
 - If the custom handler fails or is not found, the system will automatically fall back to the default vLLM handler
+
+### Sample Model Configurations
+
+These are the model configurations tested manually. Please use them as a guide
+
+#### Qwen3 VL 32B Instruct
+```
+on p4d
+
+SPECIAL REQUIREMENT:
+VLLM_ATTENTION_BACKEND=TORCH_SDPA
+
+Constants:
+-e HF_MODEL_ID=Qwen/Qwen3-VL-32B-Instruct
+-e OPTION_TENSOR_PARALLEL_DEGREE=max
+-e VLLM_ATTENTION_BACKEND=TORCH_SDPA
+-e OPTION_LIMIT_MM_PER_PROMPT="{\"image\": 4, \"video\": 0}"
+
+Tested varying values for:
+-e OPTION_MAX_ROLLING_BATCH_SIZE=128
+-e OPTION_MAX_MODEL_LEN=16384
+-e OPTION_GPU_MEMORY_UTILIZATION=0.9
+```
+
+#### DeepSeek V3.2 Exp Base
+```
+on p5e
+
+Constants:
+-e HF_MODEL_ID=deepseek-ai/DeepSeek-V3.2-Exp-Base
+-e OPTION_TENSOR_PARALLEL_DEGREE=8
+
+``` 
+#### Minimax M2
+```
+on p5.48xl
+
+SPECIAL REQUIREMENT:
+OPTION_ENABLE_EXPERT_PARALLEL=true
+
+Constants:
+-e HF_MODEL_ID=MiniMaxAI/MiniMax-M2
+-e OPTION_TENSOR_PARALLEL_DEGREE=max
+-e OPTION_ENABLE_EXPERT_PARALLEL=true
+
+Tested varying values for:
+-e OPTION_MAX_ROLLING_BATCH_SIZE=128
+-e OPTION_MAX_MODEL_LEN=16384
+-e OPTION_GPU_MEMORY_UTILIZATION=0.9
+```
+
+#### EAGLE3 Speculative Decoding for GPT-OSS 20B
+```
+-e HF_MODEL_ID=openai/gpt-oss-20b
+-e OPTION_SPECULATIVE_CONFIG='{\"method\": \"eagle3\", \"model\":\"zhuyksirEAGLE3-gpt-oss-20b-bf16\", \"num_speculative_tokens\": 4}'
+-e OPTION_TENSOR_PARALLEL_DEGREE=1
+-e OPTION_MAX_ROLLING_BATCH_SIZE=4
+```
+
+#### Llama Scout 4 with LoRA Adapters
+```
+Constants:
+option.model_id=meta-llama/Llama-4-Scout-17B-16E-Instruct/
+option.tensor_parallel_degree=max
+option.enable_lora=True
+option.max_loras=2
+option.max_lora_rank=64
+option.long_lora_scaling_factors=4.0
+option.gpu_memory_utilization=0.9
+option.max_model_len=16384
+```
+
+#### Qwen3 Coder with LoRA Adapters
+Adapter used: Krish356/qwen3-coder-react-lora-final
+```
+Constants:
+option.model_id=Qwen/Qwen3-Coder-30B-A3B-Instruct
+option.tensor_parallel_degree=max
+option.enable_lora=True
+option.max_loras=2
+option.max_lora_rank=64
+option.long_lora_scaling_factors=4.0
+option.gpu_memory_utilization=0.9
+option.max_model_len=16384
+```
+
+#### GPT-OSS 20B with LoRA Adapters
+Adapter used:
+1. waliboii/gpt-oss-20b-promptinj-lora
+2. jworks/gpt-oss-20b-uncensored-lora
+
+```
+Constants:
+option.model_id=openai/gpt-oss-20b
+option.tensor_parallel_degree=max
+option.enable_lora=True
+option.max_loras=2
+option.max_lora_rank=64
+option.long_lora_scaling_factors=4.0
+option.gpu_memory_utilization=0.9
+```
