@@ -37,7 +37,7 @@ jobs:
           cd serving && ./gradlew --refresh-dependencies createDeb
           sudo dpkg -i build/distributions/*.deb
           cd ../engines/python/setup
-          pip install -e ".[test]"
+          pip install --no-cache-dir -e ".[test]"
       - name: Run Java binary mode tests
         run: |
           cd tests/binary && python prepare.py pt && cd ..
@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           cd engines/python/setup
-          pip install -e ".[test]"
+          pip install --no-cache-dir -e ".[test]"
           cd ../../../serving
           ./gradlew jar
       - name: Run Java binary mode tests
