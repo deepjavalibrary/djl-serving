@@ -50,6 +50,8 @@ class Runner:
             self.image = f"{image_repo}:{container_tag}"
 
         os.system('rm -rf models')
+        # Clean up lmcache directory from previous test runs
+        os.system('rm -rf /tmp/lmcache')
 
         if download:
             os.system(f"./download_models.sh {self.container}")
@@ -78,6 +80,9 @@ class Runner:
             os.system("cat logs/serving.log")
         else:
             logging.warning("logs/serving.log not found")
+        
+        # Clean up lmcache directory after test
+        os.system('rm -rf /tmp/lmcache')
 
     def launch(self, env_vars=None, container=None, cmd=None):
         if env_vars is not None:
