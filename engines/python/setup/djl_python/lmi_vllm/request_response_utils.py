@@ -48,6 +48,7 @@ class ProcessedRequest:
         self.accumulate_chunks = accumulate_chunks
         self.include_prompt = include_prompt
         self.lora_request = None
+        self.adapter_name = None
 
 
 def convert_lmi_schema_to_completion_request(

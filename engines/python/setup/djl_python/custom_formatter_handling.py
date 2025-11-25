@@ -40,17 +40,25 @@ class CustomFormatterHandler:
         self.init_handler: Optional[Callable] = None
         self.is_sagemaker_script: bool = False
 
-    def load_formatters(self, model_dir: str):
-        """Load custom formatters/handlers from model.py with SageMaker detection"""
+    def load_formatters(self, model_dir: str, namespace: str = None):
+        """
+        Load custom formatters/handlers from model.py with SageMaker detection.
+        
+        :param model_dir: Directory containing model.py
+        :param namespace: Optional namespace for unique module naming (prevents conflicts 
+                         when loading multiple custom code modules)
+        """
         try:
-            self.input_formatter = get_annotated_function(
-                model_dir, "is_input_formatter")
+            self.input_formatter = get_annotated_function(model_dir,
+                                                          "is_input_formatter",
+                                                          namespace=namespace)
             self.output_formatter = get_annotated_function(
-                model_dir, "is_output_formatter")
+                model_dir, "is_output_formatter", namespace=namespace)
             self.prediction_handler = get_annotated_function(
-                model_dir, "is_prediction_handler")
+                model_dir, "is_prediction_handler", namespace=namespace)
             self.init_handler = get_annotated_function(model_dir,
-                                                       "is_init_handler")
+                                                       "is_init_handler",
+                                                       namespace=namespace)
 
             # Detect SageMaker script pattern for backward compatibility
             self._detect_sagemaker_functions(model_dir)

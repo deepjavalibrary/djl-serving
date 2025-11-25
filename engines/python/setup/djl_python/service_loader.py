@@ -12,10 +12,11 @@
 # the specific language governing permissions and limitations under the License.
 
 import importlib
+import importlib.util
 import json
 import logging
 import os
-from importlib.machinery import SourceFileLoader
+import sys
 from typing import Callable, Optional
 
 
@@ -34,22 +35,55 @@ class ModelService(object):
         return await getattr(self.module, function_name)(inputs)
 
 
-def load_model_service(model_dir, entry_point, device_id):
+def load_model_service(model_dir, entry_point, device_id, namespace=None):
+    """
+    Load a model service from a Python module.
+    
+    :param model_dir: Directory containing the model
+    :param entry_point: Python file or module to load
+    :param device_id: Device ID for the model
+    :param namespace: Optional namespace for unique module naming (e.g., adapter name, tenant ID)
+                     to prevent module conflicts when loading multiple custom code modules
+    :return: ModelService instance
+    """
     manifest_file = os.path.join(model_dir, "MAR-INF/MANIFEST.json")
     if not os.path.exists(manifest_file):
         if os.path.isabs(entry_point):
             if not os.path.exists(entry_point):
                 raise ValueError(f"entry-point file not found {entry_point}.")
-            module = SourceFileLoader("model", entry_point).load_module()
+            # Use namespace for unique module naming to avoid conflicts
+            if namespace:
+                module_name = f"ns_{namespace.replace('-', '_').replace('.', '_')}"
+            else:
+                # Fall back to hash-based naming
+                import hashlib
+                module_name = f"model_{hashlib.md5(entry_point.encode()).hexdigest()[:8]}"
+            spec = importlib.util.spec_from_file_location(
+                module_name, entry_point)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
         else:
             if entry_point.endswith(".py"):
                 entry_point_file = os.path.join(model_dir, entry_point)
-                entry_point = entry_point[:-3]
                 if not os.path.exists(entry_point_file):
                     raise ValueError(
                         f"entry-point file not found {entry_point_file}.")
 
-            module = importlib.import_module(entry_point)
+                # Use namespace for unique module naming to avoid conflicts
+                if namespace:
+                    module_name = f"ns_{namespace.replace('-', '_').replace('.', '_')}"
+                else:
+                    # Fall back to hash-based naming
+                    import hashlib
+                    module_name = f"model_{hashlib.md5(entry_point_file.encode()).hexdigest()[:8]}"
+                spec = importlib.util.spec_from_file_location(
+                    module_name, entry_point_file)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+            else:
+                module = importlib.import_module(entry_point)
 
         if module is None:
             raise ValueError(
@@ -98,17 +132,22 @@ def find_decorated_function(module,
 
 
 def get_annotated_function(model_dir: str,
-                           decorator_attribute: str) -> Optional[Callable]:
+                           decorator_attribute: str,
+                           namespace: str = None) -> Optional[Callable]:
     """
     Looks for a given annotation in model.py. User have to write their function
     in model.py as of now.
 
     :param model_dir: model directory to look for the model.py
     :param decorator_attribute: decorated_attribute
-    :return: Callable input_formatter function
+    :param namespace: optional namespace for unique module naming (prevents module conflicts)
+    :return: Callable function with the specified decorator
     """
     try:
-        service = load_model_service(model_dir, "model.py", -1)
+        service = load_model_service(model_dir,
+                                     "model.py",
+                                     -1,
+                                     namespace=namespace)
         annotated_function = find_decorated_function(service.module,
                                                      decorator_attribute)
         if annotated_function:

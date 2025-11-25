@@ -19,10 +19,12 @@ This is an extension of the [Management API](management_api.md) and can be acces
 `POST /models/{model_name}/adapters`
 
 * name: The adapter name.
-* src: The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
+* src: The adapter src. It currently requires a file path, but eventually an id or URL can be supported depending on the model handler.
 * preload (optional): Whether to preload the adapter during initialization, defaults to `true`.
 * pin (optional): Whether to pin the adapter, defaults to `false`. If this option is enabled, adapter will be preloaded, and the adapter is pinned during initialization. This helps certain latency sensitive adapters to be present in GPU memory without being evicted.
 * All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
+
+**Custom Formatters**: If the adapter directory contains a `model.py` file with `@input_formatter` or `@output_formatter` decorators, these custom formatters will be automatically loaded during registration. If custom code loading fails, the adapter registration will fail.
 
 ```bash
 curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=/opt/ml/model/adapters/a1"
@@ -30,6 +32,14 @@ curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=/opt/m
 {
   "status": "Adapter a1 registered"
 }
+```
+
+Example adapter directory structure with custom formatters:
+```
+/opt/ml/model/adapters/a1/
+  adapter_model.safetensors
+  adapter_config.json
+  model.py  # Optional: contains @input_formatter and/or @output_formatter
 ```
 
 ### Update an adapter
@@ -70,7 +80,7 @@ curl http://localhost:8080/models/adaptecho/adapters/a1
 
 `DELETE /models/{model_name}/adapters/{adapter_name}`
 
-Use the Unregister Adapter API to free up system resources:
+Use the Unregister Adapter API to free up system resources. This will also unload any custom formatters associated with the adapter.
 
 ```bash
 curl -X DELETE http://localhost:8080/models/adaptecho/adapters/a1

@@ -501,6 +501,21 @@ class TestVllmAsyncLora_g6:
             client.run("vllm_async_adapters phi2-unmerged-lora".split())
 
 
+@pytest.mark.vllm
+@pytest.mark.lora
+@pytest.mark.gpu_4
+class TestVllmAsyncLoraWithCustomCode_g6:
+
+    def test_lora_llama3_8b_async_with_custom_code(self):
+        with Runner('lmi', 'llama3-8b-unmerged-lora-with-custom-code') as r:
+            prepare.build_vllm_async_model(
+                "llama3-8b-unmerged-lora-with-custom-code")
+            r.launch()
+            client.run(
+                "vllm_async_adapters_chat llama3-8b-unmerged-lora-with-custom-code"
+                .split())
+
+
 @pytest.mark.correctness
 @pytest.mark.trtllm
 @pytest.mark.gpu_4

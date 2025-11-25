@@ -314,6 +314,31 @@ vllm_model_list = {
         "option.gpu_memory_utilization":
         "0.8",
     },
+    "llama3-8b-unmerged-lora-with-custom-code": {
+        "option.model_id":
+        "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.enable_lora":
+        "true",
+        "option.max_loras":
+        2,
+        "option.max_lora_rank":
+        64,
+        "option.long_lora_scaling_factors":
+        "4.0",
+        "option.adapters":
+        "adapters",
+        "adapter_ids": [
+            "UnderstandLing/Llama-3-8B-Instruct-fr",
+            "UnderstandLing/Llama-3-8B-Instruct-es",
+        ],
+        "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization":
+        "0.8",
+        "add_output_formatter":
+        True,
+    },
     "gemma-7b-unmerged-lora": {
         "option.model_id":
         "s3://djl-llm/gemma-7b/",
@@ -823,11 +848,49 @@ stateful_model_list = {
 }
 
 
+def create_model_py_with_output_formatter(target_dir, identifier_field,
+                                          identifier_value):
+    """
+    Create a model.py file with a custom output formatter.
+    
+    Args:
+        target_dir: Directory where model.py will be created
+        identifier_field: Field name to add to output (e.g., "_model_name", "_adapter_name")
+        identifier_value: Value for the identifier field
+    """
+    # Use triple quotes and avoid f-string for the generated code
+    model_py_content = '''"""Custom output formatter"""
+
+from djl_python.output_formatter import output_formatter
+import json
+
+@output_formatter
+def custom_output_formatter(output, **kwargs):
+    """
+    Add custom fields
+    """
+    if hasattr(output, 'model_dump'): # Sync Pydantic Object
+        output.{field} = "{value}"
+        return output
+    elif isinstance(output, str) and output.startswith("data: "): # Streaming SSE String
+        if output.strip() != "data: [DONE]":
+            data = json.loads(output[6:]) # Parse the JSON data after "data: "
+            data["{field}"] = "{value}"
+            return f"data: {{json.dumps(data)}}"
+    return output
+'''.format(field=identifier_field, value=identifier_value)
+
+    model_py_path = os.path.join(target_dir, "model.py")
+    with open(model_py_path, "w") as f:
+        f.write(model_py_content)
+
+
 def write_model_artifacts(properties,
                           requirements=None,
                           adapter_ids=[],
                           adapter_names=[],
-                          lmcache_config_file=None):
+                          lmcache_config_file=None,
+                          add_output_formatter=False):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
@@ -846,6 +909,12 @@ def write_model_artifacts(properties,
         with open(os.path.join(model_path, "requirements.txt"), "w") as f:
             f.write('\n'.join(requirements) + '\n')
 
+    # Add base model output formatter if requested
+    if add_output_formatter:
+        model_id = properties.get("option.model_id", "unknown_model")
+        create_model_py_with_output_formatter(model_path, "processed_by",
+                                              model_id)
+
     adapters_path = os.path.abspath(os.path.join(model_path, "adapters"))
     # Download adapters if any
     if adapter_ids:
@@ -863,6 +932,11 @@ def write_model_artifacts(properties,
                                   local_dir_use_symlinks=False,
                                   local_dir=dir)
                 adapter_cache[adapter_id] = dir
+
+                # Add adapter-specific output formatter if requested
+                if add_output_formatter:
+                    create_model_py_with_output_formatter(
+                        dir, "processed_by", adapter_name)
 
 
 def create_neo_input_model(properties):
@@ -977,7 +1051,9 @@ def build_vllm_async_model(model):
     write_model_artifacts(options,
                           adapter_ids=adapter_ids,
                           adapter_names=adapter_names,
-                          lmcache_config_file=lmcache_config_file)
+                          lmcache_config_file=lmcache_config_file,
+                          add_output_formatter=options.pop(
+                              "add_output_formatter", False))
 
 
 def build_vllm_async_model_with_custom_handler(model, handler_type="success"):
