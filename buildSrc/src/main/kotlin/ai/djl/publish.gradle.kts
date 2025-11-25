@@ -109,11 +109,28 @@ if (project.hasProperty("staging")) {
 
     tasks.register("postPublish") {
         doLast {
+            println("=== postPublish Debug Info ===")
+            println("URL: ${url}")
+            println("Project Group: ${project.group}")
+            println("Username: ${username}")
+            println("Token length: ${token.length}")
+            println("==============================")
+            
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Authorization", "Bearer ${token}")
             val status = conn.responseCode
+            
+            println("Response Status: ${status}")
+            println("Response Message: ${conn.responseMessage}")
+            
             if (status != HttpURLConnection.HTTP_OK) {
+                // Try to read error response body
+                val errorStream = conn.errorStream
+                if (errorStream != null) {
+                    val errorBody = errorStream.bufferedReader().use { it.readText() }
+                    println("Error Response Body: ${errorBody}")
+                }
                 throw GradleException("Failed to POST '${url}'. Received status code ${status}: ${conn.responseMessage}")
             }
         }
