@@ -132,7 +132,8 @@ jobs:
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}"
           fi
           # Always build deb for both nightly and release
-          ./gradlew --refresh-dependencies :serving:dockerDeb $([ "$mode" != "release" ] && echo "-Psnapshot" || echo "")
+          # Skip jacoco in release mode to avoid SNAPSHOT dependency resolution
+          ./gradlew --refresh-dependencies :serving:dockerDeb $([ "$mode" != "release" ] && echo "-Psnapshot" || echo "-x :jacoco:aggregateCodeCoverageReportResults")
           echo "BUILD_VERSION_ARG_DJL=$BUILD_VERSION_ARG_DJL" >> $GITHUB_ENV
           echo "BUILD_VERSION_ARG_SERVING=$BUILD_VERSION_ARG_SERVING" >> $GITHUB_ENV
       - name: Build docker image
