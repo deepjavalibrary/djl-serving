@@ -125,14 +125,14 @@ jobs:
           if [[ "$mode" != "release" ]]; then
             export NIGHTLY="-nightly"
             echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
-            ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
             export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
           else
-            rm -rf serving/docker/distributions
             export BUILD_VERSION_ARG_DJL="${DJL_VERSION}"
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}"
           fi
+          # Always build deb for both nightly and release
+          ./gradlew --refresh-dependencies :serving:dockerDeb $([ "$mode" != "release" ] && echo "-Psnapshot" || echo "")
           echo "BUILD_VERSION_ARG_DJL=$BUILD_VERSION_ARG_DJL" >> $GITHUB_ENV
           echo "BUILD_VERSION_ARG_SERVING=$BUILD_VERSION_ARG_SERVING" >> $GITHUB_ENV
       - name: Build docker image
