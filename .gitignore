@@ -41,5 +41,6 @@ dist/
 *.egg-info/
 *.pt
 
-.kiro
+.kiro/*
+!.kiro/steering/
 venv
