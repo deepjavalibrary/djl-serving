@@ -44,12 +44,14 @@ jobs:
           pip install awscli
       - name: Pull and sync nightly docker image
         working-directory: serving/docker
+        env:
+          MODE: ${{ github.event.inputs.mode }}
         run: |
-          version=${{ github.event.inputs.mode }}
+          version="$MODE"
           [ -z "$version" ] && version="nightly"
           repo="125045733377.dkr.ecr.us-east-1.amazonaws.com"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          ./scripts/pull_and_retag.sh $version $repo
+          ./scripts/pull_and_retag.sh "$version" "$repo"
       - name: Clean docker env
         working-directory: serving/docker
         run: |

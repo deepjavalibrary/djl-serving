@@ -104,7 +104,10 @@ jobs:
         working-directory: serving/docker
         run: sudo scripts/install_s5cmd.sh x64
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.container }} ${{ github.event.inputs.djl-version }}
+        env:
+          CONTAINER_TYPE: ${{ matrix.container }}
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh "$CONTAINER_TYPE" "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: serving/docker
         run: |
@@ -194,7 +197,10 @@ jobs:
         working-directory: serving/docker
         run: sudo scripts/install_s5cmd.sh x64
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.container }} ${{ github.event.inputs.djl-version }}
+        env:
+          CONTAINER_TYPE: ${{ matrix.container }}
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh "$CONTAINER_TYPE" "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: serving/docker
         run: |

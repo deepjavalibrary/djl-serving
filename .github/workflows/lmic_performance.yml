@@ -55,7 +55,9 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests "numpy<2" datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+        env:
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -91,7 +93,9 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests "numpy<2" datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+        env:
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -127,7 +131,9 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests "numpy<2" datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+        env:
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -163,7 +169,9 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests "numpy<2" datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+        env:
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -199,7 +207,9 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests "numpy<2" datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+        env:
+          DJL_VERSION: ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$DJL_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
