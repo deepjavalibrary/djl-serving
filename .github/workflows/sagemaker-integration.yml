@@ -70,8 +70,11 @@ jobs:
         run: pip3 install -U boto3 awscli
       - name: Install SageMaker Python SDK
         working-directory: tests/integration
+        env:
+          SAGEMAKER_REPOSITORY: ${{ github.event.inputs.sagemaker-repository }}
+          REPOSITORY_BRANCH: ${{ github.event.inputs.repository-branch }}
         run: |
-          ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} ${{ github.event.inputs.repository-branch }}
+          ./install_sagemaker_pysdk.sh "$SAGEMAKER_REPOSITORY" "$REPOSITORY_BRANCH"
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
