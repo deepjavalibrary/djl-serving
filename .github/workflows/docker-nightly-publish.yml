@@ -125,11 +125,15 @@ jobs:
           if [[ "$mode" != "release" ]]; then
             export NIGHTLY="-nightly"
             echo "NIGHTLY=$NIGHTLY" >> $GITHUB_ENV
+            export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
+            export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
+            ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
+          else
+            # Release mode: use published versions from Maven Central
+            export BUILD_VERSION_ARG_DJL="${DJL_VERSION}"
+            export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}"
+            ./gradlew --refresh-dependencies :serving:dockerDeb -Pstaging
           fi
-          # Always use SNAPSHOT dependencies and build deb locally
-          export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
-          export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
           echo "BUILD_VERSION_ARG_DJL=$BUILD_VERSION_ARG_DJL" >> $GITHUB_ENV
           echo "BUILD_VERSION_ARG_SERVING=$BUILD_VERSION_ARG_SERVING" >> $GITHUB_ENV
       - name: Build docker image
