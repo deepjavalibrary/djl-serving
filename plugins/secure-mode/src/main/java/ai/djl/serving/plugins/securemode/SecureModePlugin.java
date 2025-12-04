@@ -65,7 +65,7 @@ public class SecureModePlugin implements RequestHandler<Void> {
             String[] segments) {
         // Validate adapter before allowing the request to proceed
         Map<String, List<String>> params = decoder.parameters();
-        if (params.containsKey("src")) {
+        if (params.containsKey("src") && !params.get("src").isEmpty()) {
             String src = params.get("src").get(0);
             try {
                 SecureModeAdapterValidator.validateAdapterPath(src);
