@@ -18,7 +18,7 @@ jobs:
       - name: install Python Dependencies
         run: |
           cd engines/python/setup
-          pip install -e ".[test]"
+          pip install --no-cache-dir -e ".[test]"
       - name: run pytests
         run: |
           cd engines/python/setup
