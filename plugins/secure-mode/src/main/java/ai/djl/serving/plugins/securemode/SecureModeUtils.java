@@ -36,20 +36,20 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** A class for utils related to SageMaker Secure Mode. */
-final class SecureModeUtils {
+public final class SecureModeUtils {
 
     // Platform Secure Mode environment variables – these are protected and can only be set by
     // SageMaker platform
-    static final String SECURE_MODE_ENV_VAR = "SAGEMAKER_SECURE_MODE";
-    static final String UNTRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_UNTRUSTED_CHANNELS";
-    static final String SECURITY_CONTROLS_ENV_VAR = "SAGEMAKER_SECURITY_CONTROLS";
+    public static final String SECURE_MODE_ENV_VAR = "SAGEMAKER_SECURE_MODE";
+    public static final String UNTRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_UNTRUSTED_CHANNELS";
+    public static final String SECURITY_CONTROLS_ENV_VAR = "SAGEMAKER_SECURITY_CONTROLS";
 
     // Individual security controls names
-    static final String REQUIREMENTS_TXT_CONTROL = "DISALLOW_REQUIREMENTS_TXT";
-    static final String PICKLE_FILES_CONTROL = "DISALLOW_PICKLE_FILES";
-    static final String TRUST_REMOTE_CODE_CONTROL = "DISALLOW_TRUST_REMOTE_CODE";
-    static final String CUSTOM_ENTRYPOINT_CONTROL = "DISALLOW_CUSTOM_INFERENCE_SCRIPTS";
-    static final String CHAT_TEMPLATE_CONTROL = "DISALLOW_CHAT_TEMPLATE";
+    public static final String REQUIREMENTS_TXT_CONTROL = "DISALLOW_REQUIREMENTS_TXT";
+    public static final String PICKLE_FILES_CONTROL = "DISALLOW_PICKLE_FILES";
+    public static final String TRUST_REMOTE_CODE_CONTROL = "DISALLOW_TRUST_REMOTE_CODE";
+    public static final String CUSTOM_ENTRYPOINT_CONTROL = "DISALLOW_CUSTOM_INFERENCE_SCRIPTS";
+    public static final String CHAT_TEMPLATE_CONTROL = "DISALLOW_CHAT_TEMPLATE";
 
     private static final Pattern PICKLE_EXTENSIONS_REGEX =
             Pattern.compile(".*\\.(?i:bin|pt|pth|ckpt|pkl)$");
@@ -139,16 +139,12 @@ final class SecureModeUtils {
                     throw new IllegalConfigurationException(
                             "Custom entrypoint is prohibited in Secure Mode.");
                 }
-            } else if (Files.isRegularFile(modelDir.resolve("model.py"))) {
-                throw new IllegalConfigurationException(
-                        "Custom model.py is prohibited in Secure Mode.");
+            } else {
+                checkModelPy(modelDir, "model directory");
             }
         }
         if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
-            if (Files.isRegularFile(modelDir.resolve("requirements.txt"))) {
-                throw new IllegalConfigurationException(
-                        "Installing additional dependencies is prohibited in Secure Mode.");
-            }
+            checkRequirementsTxt(modelDir, "model directory");
         }
         String pythonExecutable = prop.getProperty("option.pythonExecutable");
         if (pythonExecutable != null
@@ -157,6 +153,39 @@ final class SecureModeUtils {
                     "Custom Python executable path is prohibited in Secure Mode. "
                             + "Only the following paths are allowed: "
                             + SecureModeAllowList.PYTHON_EXECUTABLE_ALLOWLIST);
+        }
+    }
+
+    /**
+     * Checks if model.py exists in the given directory.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IllegalConfigurationException if model.py is found
+     */
+    static void checkModelPy(Path dir, String pathDescription) {
+        if (Files.isRegularFile(dir.resolve("model.py"))) {
+            throw new IllegalConfigurationException(
+                    "Custom model.py found in "
+                            + pathDescription
+                            + ", but custom inference scripts are prohibited in Secure Mode.");
+        }
+    }
+
+    /**
+     * Checks if requirements.txt exists in the given directory.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IllegalConfigurationException if requirements.txt is found
+     */
+    static void checkRequirementsTxt(Path dir, String pathDescription) {
+        if (Files.isRegularFile(dir.resolve("requirements.txt"))) {
+            throw new IllegalConfigurationException(
+                    "requirements.txt found in "
+                            + pathDescription
+                            + ", but installing additional dependencies is prohibited in Secure"
+                            + " Mode.");
         }
     }
 
@@ -176,26 +205,62 @@ final class SecureModeUtils {
 
             boolean checkPickle = securityControls.contains(PICKLE_FILES_CONTROL);
             boolean checkJinja = securityControls.contains(CHAT_TEMPLATE_CONTROL);
-            try (Stream<Path> stream = Files.walk(dir)) {
-                for (Path p : stream.collect(Collectors.toList())) {
-                    String name = p.toFile().getName();
-                    if (checkPickle && PICKLE_EXTENSIONS_REGEX.matcher(name).matches()) {
+
+            if (checkPickle) {
+                scanPickleFiles(dir, path);
+            }
+
+            if (checkJinja) {
+                scanChatTemplates(dir);
+            }
+        }
+    }
+
+    /**
+     * Scans a directory for pickle-based files.
+     *
+     * @param dir the directory to scan
+     * @param pathDescription description of the path for error messages
+     * @throws IOException if there is an error scanning the directory
+     */
+    static void scanPickleFiles(Path dir, String pathDescription) throws IOException {
+        try (Stream<Path> stream = Files.walk(dir)) {
+            for (Path p : stream.collect(Collectors.toList())) {
+                Path fileName = p.getFileName();
+                if (fileName != null) {
+                    String name = fileName.toString();
+                    if (PICKLE_EXTENSIONS_REGEX.matcher(name).matches()) {
                         throw new IllegalConfigurationException(
-                                "Pickle-based files found in directory "
-                                        + path
+                                "Pickle-based file "
+                                        + name
+                                        + " found in "
+                                        + pathDescription
                                         + ", but only the Safetensors format is permitted in Secure"
                                         + " Mode.");
                     }
-                    if (checkJinja && "tokenizer_config.json".equals(name)) {
-                        try (Reader reader = Files.newBufferedReader(p)) {
-                            JsonObject jsonObject =
-                                    JsonUtils.GSON.fromJson(reader, JsonObject.class);
-                            if (jsonObject.has("chat_template")) {
-                                throw new IllegalConfigurationException(
-                                        "Jinja chat_template field found in "
-                                                + p
-                                                + ", but is prohibited in Secure Mode.");
-                            }
+                }
+            }
+        }
+    }
+
+    /**
+     * Scans a directory for Jinja chat templates in tokenizer_config.json files.
+     *
+     * @param dir the directory to scan
+     * @throws IOException if there is an error scanning the directory
+     */
+    private static void scanChatTemplates(Path dir) throws IOException {
+        try (Stream<Path> stream = Files.walk(dir)) {
+            for (Path p : stream.collect(Collectors.toList())) {
+                String name = p.toFile().getName();
+                if ("tokenizer_config.json".equals(name)) {
+                    try (Reader reader = Files.newBufferedReader(p)) {
+                        JsonObject jsonObject = JsonUtils.GSON.fromJson(reader, JsonObject.class);
+                        if (jsonObject.has("chat_template")) {
+                            throw new IllegalConfigurationException(
+                                    "Jinja chat_template field found in "
+                                            + p
+                                            + ", but is prohibited in Secure Mode.");
                         }
                     }
                 }
