@@ -15,7 +15,7 @@ package ai.djl.serving.plugins.securemode;
 import java.util.Set;
 
 /** Properties that are explicitly allowlisted in Secure Mode. */
-interface SecureModeAllowList {
+public interface SecureModeAllowList {
 
     public static final Set<String> PROPERTIES_ALLOWLIST =
             Set.of(

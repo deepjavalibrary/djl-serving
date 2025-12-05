@@ -3,9 +3,14 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":serving"))
+    // Note: We only depend on wlm, not serving, to avoid circular dependencies
+    // serving -> secure-mode -> serving (circular!)
     implementation(project(":wlm"))
+    
+    // For IllegalConfigurationException
+    compileOnly(project(":serving"))
 
+    testImplementation(project(":serving"))
     testImplementation(libs.testng) {
         exclude(group = "junit", module = "junit")
     }
