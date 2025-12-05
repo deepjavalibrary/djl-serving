@@ -3,8 +3,8 @@ name: Integration tests
 on:
   workflow_dispatch:
     inputs:
-      djl-version:
-        description: 'The released version of DJL.'
+      serving-version:
+        description: 'The released version of DJL Serving.'
         required: true
         default: ''
       tag-suffix:
@@ -19,8 +19,8 @@ on:
         default: '185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp'
   workflow_call:
     inputs:
-      djl-version:
-        description: 'The released version of DJL.'
+      serving-version:
+        description: 'The released version of DJL Serving.'
         required: false
         type: string
         default: ''
@@ -260,7 +260,7 @@ jobs:
       - name: Test
         working-directory: tests/integration
         env:
-          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          TEST_SERVING_VERSION: ${{ inputs.serving-version }}
           IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
           IMAGE_REPO: ${{ inputs.image-repo }}
         run: |
