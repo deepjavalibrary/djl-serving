@@ -37,7 +37,7 @@ jobs:
         uses: ./.github/workflows/integration.yml
         secrets: inherit
         with:
-            djl-version: ${{ needs.build.outputs.djl_version }}
+            serving-version: ${{ needs.build.outputs.serving_version }}
             tag-suffix: ${{ inputs.mode == 'release' && github.sha || format('{0}-{1}', 'nightly', github.sha) }}
 
 
@@ -88,7 +88,7 @@ jobs:
             - name: Get image tag
               id: get-tag
               run: |
-                  SERVING_VERSION=$(echo "${{ needs.build.outputs.djl_version }}")
+                  SERVING_VERSION=$(echo "${{ needs.build.outputs.serving_version }}")
                   mode=${{ inputs.mode }}
                   if [[ "$mode" != "release" ]]; then
                     NIGHTLY="-nightly"
