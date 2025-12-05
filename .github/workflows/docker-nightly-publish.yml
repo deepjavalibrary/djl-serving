@@ -28,6 +28,9 @@ on:
       djl_version:
         description: "djl version"
         value: ${{ jobs.nightly-build.outputs.djl_version }}
+      serving_version:
+        description: "djl serving version"
+        value: ${{ jobs.nightly-build.outputs.serving_version }}
 
 permissions:
   id-token: write
@@ -83,6 +86,7 @@ jobs:
       - SHA-${{ github.sha }}
     outputs:
       djl_version: ${{ steps.get-versions.outputs.DJL_VERSION }}
+      serving_version: ${{ steps.get-versions.outputs.SERVING_VERSION }}
     steps:
       - name: Clean disk space
         run: |
@@ -121,6 +125,7 @@ jobs:
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
           echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_OUTPUT
           echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
+          echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_OUTPUT
           mode=${{ inputs.mode }}
           if [[ "$mode" != "release" ]]; then
             export NIGHTLY="-nightly"
