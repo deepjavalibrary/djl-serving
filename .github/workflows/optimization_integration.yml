@@ -170,13 +170,13 @@ jobs:
       - name: "Compute Image Uri"
         id: compute-image-uri
         env:
-          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+          TEST_SERVING_VERSION: ${{ inputs.serving-version }}
           IMAGE_TAG_SUFFIX: ${{ inputs.tag-suffix }}
           IMAGE_REPO: ${{ inputs.image-repo }}
           CONTAINER: "lmi"
         run: |
-          DJL_VERSION=${TEST_DJL_VERSION:-"0.34.0"}
-          DJL_VERSION=$(echo $DJL_VERSION | xargs) # trim whitespace
+          SERVING_VERSION=${TEST_SERVING_VERSION:-"0.35.0"}
+          SERVING_VERSION=$(echo $SERVING_VERSION | xargs) # trim whitespace
 
           if [ -n "$OVERRIDE_TEST_CONTAINER" ]; then
             TEST_IMAGE_URI=$OVERRIDE_TEST_CONTAINER
@@ -186,7 +186,7 @@ jobs:
                 echo "Error: You must set the docker image repo via IMAGE_REPO environment variable. Ex: deepjavalibrary/djl-serving" >&2
                 exit 1
             fi
-            CONTAINER_TAG="${DJL_VERSION}-${CONTAINER}"
+            CONTAINER_TAG="${SERVING_VERSION}-${CONTAINER}"
             if [ -n "$IMAGE_TAG_SUFFIX" ]; then
                 CONTAINER_TAG="${CONTAINER_TAG}-${IMAGE_TAG_SUFFIX}"
             fi

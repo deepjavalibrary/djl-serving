@@ -8,7 +8,7 @@ import llm.prepare as prepare
 import llm.client as client
 import time
 
-djl_version = os.environ.get("TEST_SERVING_VERSION", "0.35.0").strip()
+serving_version = os.environ.get("TEST_SERVING_VERSION", "0.35.0").strip()
 override_image_tag_suffix = os.environ.get("IMAGE_TAG_SUFFIX", "").strip()
 image_repo = os.environ.get("IMAGE_REPO", "").strip()
 override_container = os.environ.get("OVERRIDE_TEST_CONTAINER", "").strip()
@@ -41,7 +41,7 @@ class Runner:
                 raise ValueError(
                     "You must set the docker image repo via IMAGE_REPO environment variable."
                     " Ex: deepjavalibrary/djl-serving")
-            container_tag = f"{djl_version}-{container}"
+            container_tag = f"{serving_version}-{container}"
             if len(override_image_tag_suffix) > 0:
                 container_tag = f"{container_tag}-{override_image_tag_suffix}"
             self.image = f"{image_repo}:{container_tag}"
