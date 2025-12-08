@@ -3,8 +3,8 @@ name: Large model integration tests with P4D and compiler optimizations
 on:
   workflow_dispatch:
     inputs:
-      djl-version:
-        description: 'The released version of DJL'
+      serving-version:
+        description: 'The released version of DJL Serving'
         required: false
         default: ''
       run_test:
@@ -50,8 +50,8 @@ jobs:
         run: pip3 install requests "numpy<2"
       - name: Build container name
         env:
-          DJL_VERSION: ${{ github.event.inputs.djl-version }}
-        run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm "$DJL_VERSION"
+          SERVING_VERSION: ${{ github.event.inputs.serving-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm "$SERVING_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -111,8 +111,8 @@ jobs:
         run: pip3 install requests "numpy<2"
       - name: Build container name
         env:
-          DJL_VERSION: ${{ github.event.inputs.djl-version }}
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$DJL_VERSION"
+          SERVING_VERSION: ${{ github.event.inputs.serving-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi "$SERVING_VERSION"
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
