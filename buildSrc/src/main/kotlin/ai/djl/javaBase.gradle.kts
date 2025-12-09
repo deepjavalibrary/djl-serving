@@ -11,7 +11,7 @@ plugins {
 }
 
 val libs = the<LibrariesForLibs>()
-var servingVersion: String? = System.getenv("DJL_VERSION")
+var servingVersion: String? = System.getenv("SERVING_VERSION")
 val stagingRepo: String? = System.getenv("DJL_STAGING")
 servingVersion = if (servingVersion == null) libs.versions.serving.get() else servingVersion
 if (!project.hasProperty("staging")) {
