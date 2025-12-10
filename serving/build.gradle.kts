@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-    api(platform("ai.djl:bom:${version}"))
+    api(platform("ai.djl:bom:${libs.versions.djl.get()}"))
     api(project(":wlm"))
     api("io.netty:netty-codec-http:${libs.versions.netty.get()}")
     api("io.netty:netty-transport-native-epoll:${libs.versions.netty.get()}:linux-aarch_64")
