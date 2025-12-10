@@ -417,6 +417,9 @@ vllm_model_list = {
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
         "option.limit_mm_per_prompt": '{"image": 4}',
+        "option.gpu_memory_utilization": "0.7",
+        "option.enforce_eager": True,
+        "option.tensor_parallel_degree": 1,
     },
     "paligemma-3b-mix-448": {
         "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
