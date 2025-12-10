@@ -16,7 +16,7 @@ from pydantic import Field
 from vllm import TokensPrompt
 from vllm.entrypoints.openai.serving_engine import RequestPrompt, TextTokensPrompt
 from vllm.entrypoints.openai.tool_parsers import ToolParser
-from vllm.transformers_utils.tokenizers.mistral import maybe_serialize_tool_calls
+from vllm.tokenizers.mistral import maybe_serialize_tool_calls
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest
 from vllm.entrypoints.chat_utils import (

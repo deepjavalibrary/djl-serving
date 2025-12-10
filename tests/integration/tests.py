@@ -552,17 +552,19 @@ class TestCorrectnessTrtLlm_g6:
                 "correctness trtllm-mistral-7b-instruct-v0.3-fp8".split())
 
 
-class TestMultiModalVllm_g6:
+@pytest.mark.vllm
+@pytest.mark.gpu_8
+class TestMultiModalVllm_p4d:
 
     def test_llava_next(self):
         with Runner("lmi", "llava_v1.6-mistral") as r:
-            prepare.build_vllm_model("llava_v1.6-mistral")
+            prepare.build_vllm_async_model("llava_v1.6-mistral")
             r.launch()
             client.run("multimodal llava_v1.6-mistral".split())
 
     def test_phi3_v(self):
         with Runner("lmi", "phi-3-vision-128k-instruct") as r:
-            prepare.build_vllm_model("phi-3-vision-128k-instruct")
+            prepare.build_vllm_async_model("phi-3-vision-128k-instruct")
             r.launch()
             client.run("multimodal phi-3-vision-128k-instruct".split())
 

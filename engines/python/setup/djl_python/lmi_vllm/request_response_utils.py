@@ -166,9 +166,11 @@ def vllm_non_stream_output_formatter(
     **_,
 ) -> Output:
     if isinstance(response, ErrorResponse):
-        return create_non_stream_output("",
-                                        error=response.message,
-                                        code=response.code)
+        error_msg = getattr(response, 'message', None) or getattr(
+            response, 'detail', str(response))
+        error_code = getattr(response, 'code', None) or getattr(
+            response, 'type', 500)
+        return create_non_stream_output("", error=error_msg, code=error_code)
     response_data = response.model_dump_json()
     return create_non_stream_output(response_data)
 
