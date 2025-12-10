@@ -551,8 +551,9 @@ class TestCorrectnessTrtLlm_g6:
             client.run(
                 "correctness trtllm-mistral-7b-instruct-v0.3-fp8".split())
 
-
-class TestMultiModalVllm_g6:
+@pytest.mark.vllm
+@pytest.mark.gpu_8
+class TestMultiModalVllm_p4d:
 
     def test_llava_next(self):
         with Runner("lmi", "llava_v1.6-mistral") as r:
