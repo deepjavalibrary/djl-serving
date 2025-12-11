@@ -1,0 +1,10 @@
+chunk_size: 256
+local_cpu: False
+save_unfull_chunk: True
+remote_url: "s3://djl-llm-cache/"
+remote_serde: "naive"
+blocking_timeout_secs: 10
+extra_config:
+  s3_region: "us-east-1"
+  s3_num_io_threads: 64
+  save_chunk_meta: True
