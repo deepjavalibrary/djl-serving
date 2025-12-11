@@ -678,6 +678,39 @@ class TestVllmLmcache_g6:
             ])
             client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
 
+    def test_lmcache_s3(self):
+        with Runner("lmi", "llama3-8b-lmcache-s3") as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml"
+            ])
+            client.run("vllm_lmcache llama3-8b-lmcache-s3".split())
+
+    def test_lmcache_redis(self):
+        import subprocess
+        import time
+
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(3)  # Wait for Redis to start
+
+        try:
+            with Runner("lmi", "llama3-8b-lmcache-redis") as r:
+                prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
+                r.launch(env_vars=[
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml"
+                ])
+                client.run("vllm_lmcache llama3-8b-lmcache-redis".split())
+        finally:
+            # Cleanup Redis container
+            subprocess.run(["docker", "stop", container_id],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+
     def test_lmcache_missing_role(self):
         with Runner("lmi", "llama3-8b-lmcache-missing-role") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-missing-role")
@@ -713,6 +746,40 @@ class TestVllmLmcachePerformance_g6:
             client.run(
                 "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
                 split())
+
+    def test_lmcache_performance_s3(self):
+        with Runner("lmi", "llama3-8b-lmcache-s3") as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml"
+            ])
+            client.run("vllm_lmcache_performance llama3-8b-lmcache-s3".split())
+
+    def test_lmcache_performance_redis(self):
+        import subprocess
+        import time
+
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(3)  # Wait for Redis to start
+
+        try:
+            with Runner("lmi", "llama3-8b-lmcache-redis") as r:
+                prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
+                r.launch(env_vars=[
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml"
+                ])
+                client.run(
+                    "vllm_lmcache_performance llama3-8b-lmcache-redis".split())
+        finally:
+            # Cleanup Redis container
+            subprocess.run(["docker", "stop", container_id],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
 
 
 @pytest.mark.gpu_4
