@@ -523,6 +523,66 @@ vllm_model_list = {
         "option.enable_prefix_caching": True,
         "load_on_devices": 0,
     },
+    "qwen2.5-1.5b": {
+        "option.model_id": "Qwen/Qwen2.5-1.5B",
+        "option.tensor_parallel_degree": 1,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+    },
+    "qwen2.5-7b": {
+        "option.model_id": "Qwen/Qwen2.5-7B",
+        "option.tensor_parallel_degree": 1,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+    },
+    "qwen2.5-72b": {
+        "option.model_id": "Qwen/Qwen2.5-72B",
+        "option.tensor_parallel_degree": 4,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+    },
+    "qwen2.5-1.5b-lmcache": {
+        "option.model_id":
+        "Qwen/Qwen2.5-1.5B",
+        "option.tensor_parallel_degree":
+        1,
+        "option.load_format":
+        "dummy",
+        "option.max_new_tokens":
+        100,
+        "lmcache_config_file":
+        "lmcache_qwen25_1_5b.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "qwen2.5-7b-lmcache": {
+        "option.model_id":
+        "Qwen/Qwen2.5-7B",
+        "option.tensor_parallel_degree":
+        1,
+        "option.load_format":
+        "dummy",
+        "option.max_new_tokens":
+        100,
+        "lmcache_config_file":
+        "lmcache_qwen25_7b.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "qwen2.5-72b-lmcache": {
+        "option.model_id":
+        "Qwen/Qwen2.5-72B",
+        "option.tensor_parallel_degree":
+        4,
+        "option.load_format":
+        "dummy",
+        "option.max_new_tokens":
+        100,
+        "lmcache_config_file":
+        "lmcache_qwen25_72b.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
     "tinyllama-input-len-exceeded": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.max_model_len": "50",

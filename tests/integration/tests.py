@@ -1006,6 +1006,91 @@ class TestStatefulModel_g6:
 
 
 @pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcacheScaling_g6:
+
+    def test_qwen25_1_5b(self):
+        """Test 1A: 8 docs × 128K = 1M context"""
+        with Runner("lmi", "qwen2.5-1.5b-1a") as r:
+            prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_1_5b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
+                "--num-documents 8 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_7b(self):
+        """Test 2A: 4 docs × 128K = 512K context"""
+        with Runner("lmi", "qwen2.5-7b-2a") as r:
+            prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_7b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
+                "--num-documents 4 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_72b(self):
+        """Test 3A: 4 docs × 100K < 450K context"""
+        with Runner("lmi", "qwen2.5-72b-3a-lmcache") as r:
+            prepare.build_vllm_async_model("qwen2.5-72b-lmcadhe")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_72b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0,1,2,3"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-72B --host localhost --port 8080 "
+                "--num-documents 40 --document-length 10000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_7b_cpu_overflow(self):
+        """Test 2C: 160 docs × 128K = 25.6M context"""
+        with Runner("lmi", "qwen2.5-7b-2c") as r:
+            prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_7b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
+                "--num-documents 160 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_1_5b_cpu_overflow(self):
+        """Test 1C: 330 docs × 128K = 51.2M context"""
+        with Runner("lmi", "qwen2.5-1.5b-1c") as r:
+            prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_1_5b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
+                "--num-documents 330 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+
+@pytest.mark.vllm
 @pytest.mark.gpu_8
 class TestVllm_p4d:
 

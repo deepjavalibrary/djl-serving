@@ -1,0 +1,7 @@
+max_local_cpu_size: 210.0
+
+# UNCOMMENT BELOW FOR DISK OFFLOADING
+
+# local_disk: "file:///tmp/lmcache/"
+# max_local_disk_size: 500.0
+# extra_config: {'use_odirect': True}
