@@ -644,6 +644,18 @@ vllm_model_list = {
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree": 4,
     },
+    "llama3-8b-lmcache-s3": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "lmcache_config_file": "lmcache_s3.yaml",
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "llama3-8b-lmcache-redis": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 4,
+        "lmcache_config_file": "lmcache_redis.yaml",
+        "option.kv_transfer_config": '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
 }
 
 vllm_neo_model_list = {
