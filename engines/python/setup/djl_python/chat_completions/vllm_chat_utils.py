@@ -78,9 +78,10 @@ def parse_chat_completions_request_vllm(
     default_sampling_params = rolling_batch.get_default_sampling_params()
     default_max_new_tokens = rolling_batch.engine.model_config.max_model_len - len(
         engine_prompt["prompt_token_ids"])
+    # Use max_tokens from request if provided, otherwise use default
+    max_tokens = chat_params.max_tokens or chat_params.max_completion_tokens or default_max_new_tokens
     sampling_params = chat_params.to_sampling_params(
-        default_max_new_tokens,
-        rolling_batch.engine.model_config.logits_processor_pattern,
+        max_tokens, rolling_batch.engine.model_config.logits_processor_pattern,
         default_sampling_params)
     params = {
         "stream": chat_params.stream,

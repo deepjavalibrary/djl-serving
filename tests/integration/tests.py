@@ -714,6 +714,207 @@ class TestVllmLmcachePerformance_g6:
                 "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
                 split())
 
+    def test_lmcache_long_doc_qa_qwen(self):
+        """Run the lmcache long_doc_qa benchmark inside the container
+        
+        This test runs the LMCache long_doc_qa benchmark with the following configuration:
+        - Model: Qwen/Qwen3-8B
+        - 46 documents with 10000 tokens each
+        - 100 token output length
+        - Max 4 inflight requests
+        """
+        with Runner('lmi', 'qwen3-8b-lmcache') as r:
+            prepare.build_vllm_async_model("qwen3-8b-lmcache")
+
+            # Launch with LMCache configuration
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_benchmark.yaml",
+                "PYTHONHASHSEED=0"
+            ])
+
+            # Run benchmark from host machine (sends requests to container)
+            benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                             f"--model Qwen/Qwen3-8B "
+                             "--host localhost "
+                             "--port 8080 "
+                             "--num-documents 46 "
+                             "--document-length 10000 "
+                             "--output-len 100 "
+                             "--repeat-count 1 "
+                             "--repeat-mode tile "
+                             "--max-inflight-requests 4")
+
+            logging.info(
+                f"Running LMCache benchmark from host: {benchmark_cmd}")
+            result = os.system(benchmark_cmd)
+
+            if result == 0:
+                logging.info("LMCache benchmark completed successfully!")
+            else:
+                raise RuntimeError(
+                    f"Benchmark failed with return code {result}")
+
+    def test_lmcache_ebs_benchmark(self):
+        """
+        Test LMCache with disk storage backend (EBS) instead of NVMe.
+        This test disables NVMe mounting to /tmp, forcing the container to use
+        the root EBS disk for true disk vs NVMe performance comparison.
+        """
+        with Runner('lmi', 'qwen3-8b-lmcache-ebs') as r:
+            prepare.build_vllm_async_model("qwen3-8b-lmcache-ebs")
+
+            # DISABLE_NVME_TMP=true forces /tmp to use EBS disk instead of NVMe
+            r.launch(
+                env_vars=[
+                    "DISABLE_NVME_TMP=true",
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_ebs.yaml",
+                    "PYTHONHASHSEED=0"
+                ])
+
+            # Run benchmark with same config as CPU test for comparison
+            benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                             f"--model Qwen/Qwen3-8B "
+                             "--host localhost "
+                             "--port 8080 "
+                             "--num-documents 46 "
+                             "--document-length 10000 "
+                             "--output-len 100 "
+                             "--repeat-count 1 "
+                             "--repeat-mode tile "
+                             "--max-inflight-requests 4")
+
+            logging.info(
+                f"Running disk storage benchmark from host: {benchmark_cmd}")
+            result = os.system(benchmark_cmd)
+
+            if result == 0:
+                logging.info(
+                    "EBS benchmark PASSED"
+                )
+            else:
+                raise RuntimeError(
+                    f"Disk storage benchmark failed with return code {result}"
+                )
+
+    def test_lmcache_nvme_benchmark(self):
+        """
+        Test LMCache with NVMe offloading.
+        
+        This benchmark uses the NVMe striped volume at /opt/dlami/nvme.
+        """
+        with Runner('lmi', 'qwen3-8b-lmcache-nvme') as r:
+            prepare.build_vllm_async_model("qwen3-8b-lmcache-nvme")
+            
+            r.launch(
+                    env_vars=[
+                        "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_nvme.yaml",
+                        "LMCACHE_USE_EXPERIMENTAL=True",
+                        "PYTHONHASHSEED=0"
+                    ])
+
+            # Run benchmark with same config as CPU test for comparison
+            benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                             f"--model Qwen/Qwen3-8B "
+                             "--host localhost "
+                             "--port 8080 "
+                             "--num-documents 46 "
+                             "--document-length 10000 "
+                             "--output-len 100 "
+                             "--repeat-count 1 "
+                             "--repeat-mode tile "
+                             "--max-inflight-requests 4")
+
+            logging.info(
+                f"Running NVMe offloading benchmark from host: {benchmark_cmd}"
+            )
+            result = os.system(benchmark_cmd)
+            
+            if result == 0:
+                logging.info(
+                    "NVMe offloading benchmark PASSED"
+                )
+            else:
+                raise RuntimeError(
+                    f"NVMe offloading benchmark failed with return code {result}"
+                )
+
+    def test_baseline_no_lmcache(self):
+        """
+        Baseline test with no LMCache.
+        """
+        with Runner('lmi', 'qwen3-8b-no-cache') as r:
+            prepare.build_vllm_async_model("qwen3-8b-no-cache")
+
+            r.launch(
+                env_vars=[
+                    "PYTHONHASHSEED=0"
+                ])
+
+            benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                             f"--model Qwen/Qwen3-8B "
+                             "--host localhost "
+                             "--port 8080 "
+                             "--num-documents 46 "
+                             "--document-length 10000 "
+                             "--output-len 100 "
+                             "--repeat-count 1 "
+                             "--repeat-mode tile "
+                             "--max-inflight-requests 4")
+
+            logging.info(
+                f"Running baseline (no cache) benchmark from host: {benchmark_cmd}")
+            result = os.system(benchmark_cmd)
+
+            if result == 0:
+                logging.info(
+                    "Baseline (no LMCache) benchmark PASSED"
+                )
+            else:
+                raise RuntimeError(
+                    f"Baseline benchmark failed with return code {result}"
+                )
+
+    def test_vllm_prefix_cache_baseline(self):
+        """
+        Test with vLLM's built-in prefix caching (no LMCache).
+        """
+        with Runner('lmi', 'qwen3-8b-vllm-prefix-cache') as r:
+            prepare.build_vllm_async_model("qwen3-8b-vllm-prefix-cache")
+
+            r.launch(
+                env_vars=[
+                    "PYTHONHASHSEED=0"
+                ])
+            
+            benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                             f"--model Qwen/Qwen3-8B "
+                             "--host localhost "
+                             "--port 8080 "
+                             "--num-documents 46 "
+                             "--document-length 10000 "
+                             "--output-len 100 "
+                             "--repeat-count 1 "
+                             "--repeat-mode tile "
+                             "--max-inflight-requests 4")
+
+            logging.info(
+                f"Running vLLM prefix cache benchmark from host: {benchmark_cmd}")
+            result = os.system(benchmark_cmd)
+
+            if result == 0:
+                logging.info(
+                    "vLLM prefix cache benchmark PASSED"
+                )
+            else:
+                raise RuntimeError(
+                    f"vLLM prefix cache benchmark failed with return code {result}"
+                )
+
 
 @pytest.mark.gpu_4
 class TestTextEmbedding_g6:
@@ -802,6 +1003,91 @@ class TestStatefulModel_g6:
             prepare.build_stateful_model("gemma-2b")
             r.launch()
             client.run("stateful gemma-2b".split())
+
+
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcacheScaling_g6:
+
+    def test_qwen25_1_5b(self):
+        """Test 1A: 8 docs × 128K = 1M context"""
+        with Runner("lmi", "qwen2.5-1.5b-1a") as r:
+            prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_1_5b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
+                "--num-documents 8 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_7b(self):
+        """Test 2A: 4 docs × 128K = 512K context"""
+        with Runner("lmi", "qwen2.5-7b-2a") as r:
+            prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_7b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
+                "--num-documents 4 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_72b(self):
+        """Test 3A: 4 docs × 100K < 450K context"""
+        with Runner("lmi", "qwen2.5-72b-3a-lmcache") as r:
+            prepare.build_vllm_async_model("qwen2.5-72b-lmcadhe")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_72b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0,1,2,3"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-72B --host localhost --port 8080 "
+                "--num-documents 40 --document-length 10000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_7b_cpu_overflow(self):
+        """Test 2C: 160 docs × 128K = 25.6M context"""
+        with Runner("lmi", "qwen2.5-7b-2c") as r:
+            prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_7b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
+                "--num-documents 160 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
+
+    def test_qwen25_1_5b_cpu_overflow(self):
+        """Test 1C: 330 docs × 128K = 51.2M context"""
+        with Runner("lmi", "qwen2.5-1.5b-1c") as r:
+            prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_1_5b.yaml",
+                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
+            ])
+            benchmark_cmd = (
+                "python lmcache_configs/djl_long_doc_qa_clean.py "
+                "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
+                "--num-documents 330 --document-length 128000 --output-len 100 "
+                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
+            )
+            os.system(benchmark_cmd)
 
 
 @pytest.mark.vllm

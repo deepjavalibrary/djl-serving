@@ -1,0 +1,5 @@
+chunk_size: 256
+local_cpu: false
+max_local_cpu_size: 5.0
+local_disk: "file:///tmp/lmcache/"
+max_local_disk_size: 66.0

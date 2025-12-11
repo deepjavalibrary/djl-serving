@@ -1,0 +1,7 @@
+# LMCache configuration for Qwen3-8B long_doc_qa benchmark
+# 256 Tokens per KV Chunk
+chunk_size: 256
+# Enable CPU memory backend
+local_cpu: true
+# 66GB of Pinned CPU memory (recommended for Qwen3-8B with 46 documents)
+max_local_cpu_size: 66.0

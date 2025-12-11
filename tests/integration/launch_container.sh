@@ -77,7 +77,13 @@ support_nvme() {
   fi
 }
 
-if [[ "$(support_nvme)" == *"true"* ]]; then
+# Check if DISABLE_NVME_TMP is set in docker_env file
+disable_nvme_tmp=false
+if [[ -f ${PWD}/docker_env ]] && grep -q "DISABLE_NVME_TMP=true" ${PWD}/docker_env; then
+  disable_nvme_tmp=true
+fi
+
+if [[ "$(support_nvme)" == *"true"* ]] && [[ "$disable_nvme_tmp" != "true" ]]; then
   sudo rm -rf /opt/dlami/nvme/inf_tmp || true
   sudo mkdir -p /opt/dlami/nvme/inf_tmp && sudo chmod 777 /opt/dlami/nvme/inf_tmp
   nvme="/opt/dlami/nvme/inf_tmp:/tmp"
