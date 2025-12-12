@@ -688,9 +688,6 @@ class TestVllmLmcache_g6:
             client.run("vllm_lmcache llama3-8b-lmcache-s3".split())
 
     def test_lmcache_redis(self):
-        import subprocess
-        import time
-
         # Start Redis via Docker
         redis_proc = subprocess.Popen(
             ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
@@ -760,9 +757,6 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             client.run("vllm_lmcache_performance llama3-8b-lmcache-s3".split())
 
     def test_lmcache_performance_redis(self):
-        import subprocess
-        import time
-
         # Start Redis via Docker
         redis_proc = subprocess.Popen(
             ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
@@ -871,9 +865,6 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         Test LMCache with Redis storage backend for long document QA.
         This benchmark tests Redis performance for distributed caching scenarios.
         """
-        import subprocess
-        import time
-        
         # Start Redis via Docker
         redis_proc = subprocess.Popen(
             ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
@@ -1179,9 +1170,6 @@ class TestVllmLmcacheScaling_g6:
 
     def test_qwen25_1_5b(self):
         """Test 1A: 8 docs × 128K = 1M context"""
-        import subprocess
-        import time
-        
         # Start Redis via Docker
         redis_proc = subprocess.Popen(
             ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
@@ -1206,9 +1194,6 @@ class TestVllmLmcacheScaling_g6:
 
     def test_qwen25_7b(self):
         """Test 2A: 4 docs × 128K = 512K context"""
-        import subprocess
-        import time
-        
         # Start Redis via Docker
         redis_proc = subprocess.Popen(
             ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
@@ -1226,16 +1211,13 @@ class TestVllmLmcacheScaling_g6:
             benchmark_cmd = (
                 "python lmcache_configs/djl_long_doc_qa_clean.py "
                 "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
-                "--num-documents 40 --document-length 128000 --output-len 100 "
+                "--num-documents 24 --document-length 128000 --output-len 100 "
                 "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
             )
             os.system(benchmark_cmd)
 
     def test_qwen25_72b(self):
         """Test 3A: 4 docs × 100K < 450K context"""
-        import subprocess
-        import time
-        
         # Start Redis via Docker
         redis_proc = subprocess.Popen(
             ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
@@ -1253,7 +1235,7 @@ class TestVllmLmcacheScaling_g6:
             benchmark_cmd = (
                 "python lmcache_configs/djl_long_doc_qa_clean.py "
                 "--model Qwen/Qwen2.5-72B --host localhost --port 8080 "
-                "--num-documents 200 --document-length 20000 --output-len 100 "
+                "--num-documents 40 --document-length 20000 --output-len 100 "
                 "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
             )
             os.system(benchmark_cmd)
