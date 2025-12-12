@@ -479,6 +479,26 @@ vllm_model_list = {
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
         "load_on_devices": 0,
     },
+    "qwen3-8b-lmcache-s3": {
+        "option.model_id": "Qwen/Qwen3-8B",
+        "option.tensor_parallel_degree": 1,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+        "lmcache_config_file": "lmcache_s3.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "load_on_devices": 0,
+    },
+    "qwen3-8b-lmcache-redis": {
+        "option.model_id": "Qwen/Qwen3-8B",
+        "option.tensor_parallel_degree": 1,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+        "lmcache_config_file": "lmcache_redis.yaml",
+        "option.kv_transfer_config":
+        '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "load_on_devices": 0,
+    },
     "qwen3-8b-baseline": {
         "option.model_id": "Qwen/Qwen3-8B",
         "option.tensor_parallel_degree": 1,
@@ -551,7 +571,7 @@ vllm_model_list = {
         "option.max_new_tokens":
         100,
         "lmcache_config_file":
-        "lmcache_qwen25_1_5b.yaml",
+        "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },
@@ -565,7 +585,7 @@ vllm_model_list = {
         "option.max_new_tokens":
         100,
         "lmcache_config_file":
-        "lmcache_qwen25_7b.yaml",
+        "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },
@@ -579,7 +599,7 @@ vllm_model_list = {
         "option.max_new_tokens":
         100,
         "lmcache_config_file":
-        "lmcache_qwen25_72b.yaml",
+        "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },

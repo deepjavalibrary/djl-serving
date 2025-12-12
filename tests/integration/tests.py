@@ -678,6 +678,40 @@ class TestVllmLmcache_g6:
             ])
             client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
 
+    def test_lmcache_s3(self):
+        with Runner("lmi", "llama3-8b-lmcache-s3") as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml",
+                "PYTHONHASHSEED=0"
+            ])
+            client.run("vllm_lmcache llama3-8b-lmcache-s3".split())
+
+    def test_lmcache_redis(self):
+        import subprocess
+        import time
+
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(3)  # Wait for Redis to start
+
+        try:
+            with Runner("lmi", "llama3-8b-lmcache-redis") as r:
+                prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
+                r.launch(env_vars=[
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml"
+                ])
+                client.run("vllm_lmcache llama3-8b-lmcache-redis".split())
+        finally:
+            # Cleanup Redis container
+            subprocess.run(["docker", "stop", container_id],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+
     def test_lmcache_missing_role(self):
         with Runner("lmi", "llama3-8b-lmcache-missing-role") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-missing-role")
@@ -713,6 +747,43 @@ class TestVllmLmcachePerformance_g6:
             client.run(
                 "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
                 split())
+
+@pytest.mark.vllm
+@pytest.mark.gpu_4
+class TestVllmLmcachePerformanceBenchmarks_g6:
+    def test_lmcache_performance_s3(self):
+        with Runner("lmi", "llama3-8b-lmcache-s3") as r:
+            prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml"
+            ])
+            client.run("vllm_lmcache_performance llama3-8b-lmcache-s3".split())
+
+    def test_lmcache_performance_redis(self):
+        import subprocess
+        import time
+
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(3)  # Wait for Redis to start
+
+        try:
+            with Runner("lmi", "llama3-8b-lmcache-redis") as r:
+                prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
+                r.launch(env_vars=[
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml"
+                ])
+                client.run(
+                    "vllm_lmcache_performance llama3-8b-lmcache-redis".split())
+        finally:
+            # Cleanup Redis container
+            subprocess.run(["docker", "stop", container_id],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
 
     def test_lmcache_long_doc_qa_qwen(self):
         """Run the lmcache long_doc_qa benchmark inside the container
@@ -754,6 +825,103 @@ class TestVllmLmcachePerformance_g6:
             else:
                 raise RuntimeError(
                     f"Benchmark failed with return code {result}")
+
+    def test_lmcache_s3_benchmark(self):
+        """
+        Test LMCache with S3 storage backend for long document QA.
+        This benchmark tests S3 performance for distributed caching scenarios.
+        """
+        with Runner('lmi', 'qwen3-8b-lmcache-s3') as r:
+            prepare.build_vllm_async_model("qwen3-8b-lmcache-s3")
+
+            r.launch(
+                env_vars=[
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml",
+                    "PYTHONHASHSEED=0"
+                ])
+
+            # Run benchmark with same config for comparison
+            benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                             f"--model Qwen/Qwen3-8B "
+                             "--host localhost "
+                             "--port 8080 "
+                             "--num-documents 46 "
+                             "--document-length 10000 "
+                             "--output-len 100 "
+                             "--repeat-count 1 "
+                             "--repeat-mode tile "
+                             "--max-inflight-requests 4")
+
+            logging.info(
+                f"Running S3 storage benchmark from host: {benchmark_cmd}")
+            result = os.system(benchmark_cmd)
+
+            if result == 0:
+                logging.info(
+                    "S3 benchmark PASSED"
+                )
+            else:
+                raise RuntimeError(
+                    f"S3 storage benchmark failed with return code {result}"
+                )
+
+    def test_lmcache_redis_benchmark(self):
+        """
+        Test LMCache with Redis storage backend for long document QA.
+        This benchmark tests Redis performance for distributed caching scenarios.
+        """
+        import subprocess
+        import time
+        
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(3)  # Wait for Redis to start
+        
+        try:
+            with Runner('lmi', 'qwen3-8b-lmcache-redis') as r:
+                prepare.build_vllm_async_model("qwen3-8b-lmcache-redis")
+
+                r.launch(
+                    env_vars=[
+                        "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
+                        "PYTHONHASHSEED=0"
+                    ])
+
+                # Run benchmark with same config for comparison
+                benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
+                benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                                 f"--model Qwen/Qwen3-8B "
+                                 "--host localhost "
+                                 "--port 8080 "
+                                 "--num-documents 46 "
+                                 "--document-length 10000 "
+                                 "--output-len 100 "
+                                 "--repeat-count 1 "
+                                 "--repeat-mode tile "
+                                 "--max-inflight-requests 4")
+
+                logging.info(
+                    f"Running Redis storage benchmark from host: {benchmark_cmd}")
+                result = os.system(benchmark_cmd)
+
+                if result == 0:
+                    logging.info(
+                        "Redis benchmark PASSED"
+                    )
+                else:
+                    raise RuntimeError(
+                        f"Redis storage benchmark failed with return code {result}"
+                    )
+        finally:
+            # Cleanup Redis container
+            subprocess.run(["docker", "stop", container_id],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
 
     def test_lmcache_ebs_benchmark(self):
         """
@@ -1011,48 +1179,81 @@ class TestVllmLmcacheScaling_g6:
 
     def test_qwen25_1_5b(self):
         """Test 1A: 8 docs × 128K = 1M context"""
+        import subprocess
+        import time
+        
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(3)  # Wait for Redis to start
+
         with Runner("lmi", "qwen2.5-1.5b-1a") as r:
             prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
             r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_1_5b.yaml",
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
                 "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
             ])
             benchmark_cmd = (
                 "python lmcache_configs/djl_long_doc_qa_clean.py "
                 "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
-                "--num-documents 8 --document-length 128000 --output-len 100 "
+                "--num-documents 200 --document-length 128000 --output-len 100 "
                 "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
             )
             os.system(benchmark_cmd)
 
     def test_qwen25_7b(self):
         """Test 2A: 4 docs × 128K = 512K context"""
+        import subprocess
+        import time
+        
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(5)  # Wait for Redis to start
+
         with Runner("lmi", "qwen2.5-7b-2a") as r:
             prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
             r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_7b.yaml",
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
                 "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
             ])
             benchmark_cmd = (
                 "python lmcache_configs/djl_long_doc_qa_clean.py "
                 "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
-                "--num-documents 4 --document-length 128000 --output-len 100 "
+                "--num-documents 40 --document-length 128000 --output-len 100 "
                 "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
             )
             os.system(benchmark_cmd)
 
     def test_qwen25_72b(self):
         """Test 3A: 4 docs × 100K < 450K context"""
+        import subprocess
+        import time
+        
+        # Start Redis via Docker
+        redis_proc = subprocess.Popen(
+            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        container_id = redis_proc.stdout.read().decode().strip()
+        time.sleep(5)  # Wait for Redis to start
+
         with Runner("lmi", "qwen2.5-72b-3a-lmcache") as r:
-            prepare.build_vllm_async_model("qwen2.5-72b-lmcadhe")
+            prepare.build_vllm_async_model("qwen2.5-72b-lmcache")
             r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_72b.yaml",
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
                 "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0,1,2,3"
             ])
             benchmark_cmd = (
                 "python lmcache_configs/djl_long_doc_qa_clean.py "
                 "--model Qwen/Qwen2.5-72B --host localhost --port 8080 "
-                "--num-documents 40 --document-length 10000 --output-len 100 "
+                "--num-documents 200 --document-length 20000 --output-len 100 "
                 "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
             )
             os.system(benchmark_cmd)
