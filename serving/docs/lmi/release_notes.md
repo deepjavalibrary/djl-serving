@@ -3,9 +3,38 @@
 Below are the release notes for recent Large Model Inference (LMI) images for use on SageMaker.
 For details on historical releases, refer to the [Github Releases page](https://github.com/deepjavalibrary/djl-serving/releases).
 
-## LMI V17 (DJL-Serving 0.35.0)
+## LMI V18 (DJL-Serving 0.36.0)
 
 Meet your brand new image! 💿
+
+#### LMI (vLLM) Image – 12-15-2025
+```
+763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.36.0-lmi18.0.0-cu128
+```
+* vLLM has been upgraded to `0.12.0`
+* LMCache support for on-host caching of KV cache delivers up to 20x improvement to request latency for long context requests. Refer to [LMCache Performance Benefits for LMI Customers](../lmcache_performance.md) for more details
+* Added support for adapter-scoped custom code (e.g., model.py) that can be registered dynamically via the adapter management APIs, enabling per-adapter input/output formatting for multi-tenant LoRA deployments
+
+##### Key Features
+
+**Enhanced Adapter Management with Custom Code Support**
+* On adapter registration, DJL Serving now checks the adapter directory for `model.py` and (if present) loads the adapter's custom formatters before registering adapter weights
+* If adapter custom code loading fails, registration fails fast (adapter weights are not registered) and returns an error response (code 424)
+* During inference, adapter-specific formatters override base model formatters when the inference targets an adapter
+* On adapter unregistration, the adapter's custom code is unloaded/cleaned up
+* Enables per-adapter input/output formatting for multi-tenant LoRA deployments
+
+**LMCache Performance Improvements**
+* Up to 28x speedup in Time to First Token (TTFT) with CPU offloading (achieved with Qwen 2.5-7B at 2M token context length)
+* Up to 16x speedup in TTFT with NVMe-based offloading (achieved with Qwen 2.5-72B at 1M token context length using O_DIRECT)
+* Comprehensive benchmarking suite across different storage backends (CPU RAM, NVMe, Redis, S3, EBS)
+
+**Security & Stability**
+* Enhanced security validation for adapters in Secure Mode plugin
+* Improved multimodal integration test stability with vLLM 0.12.0
+* Updated CI/CD pipeline to use serving version consistently across workflows
+
+## LMI V17 (DJL-Serving 0.35.0)
 
 #### LMI (vLLM) Image – 9-30-2025
 ```
