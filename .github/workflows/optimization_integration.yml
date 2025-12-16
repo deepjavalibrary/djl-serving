@@ -175,7 +175,7 @@ jobs:
           IMAGE_REPO: ${{ inputs.image-repo }}
           CONTAINER: "lmi"
         run: |
-          SERVING_VERSION=${TEST_SERVING_VERSION:-"0.35.0"}
+          SERVING_VERSION=${TEST_SERVING_VERSION:-"0.36.0"}
           SERVING_VERSION=$(echo $SERVING_VERSION | xargs) # trim whitespace
 
           if [ -n "$OVERRIDE_TEST_CONTAINER" ]; then

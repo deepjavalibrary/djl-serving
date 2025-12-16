@@ -8,7 +8,7 @@ import llm.prepare as prepare
 import llm.client as client
 import time
 
-serving_version = os.environ.get("TEST_SERVING_VERSION", "0.35.0").strip()
+serving_version = os.environ.get("TEST_SERVING_VERSION", "0.36.0").strip()
 override_image_tag_suffix = os.environ.get("IMAGE_TAG_SUFFIX", "").strip()
 image_repo = os.environ.get("IMAGE_REPO", "").strip()
 override_container = os.environ.get("OVERRIDE_TEST_CONTAINER", "").strip()
@@ -745,9 +745,11 @@ class TestVllmLmcachePerformance_g6:
                 "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
                 split())
 
+
 @pytest.mark.vllm
 @pytest.mark.gpu_4
 class TestVllmLmcachePerformanceBenchmarks_g6:
+
     def test_lmcache_performance_s3(self):
         with Runner("lmi", "llama3-8b-lmcache-s3") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
@@ -828,11 +830,10 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         with Runner('lmi', 'qwen3-8b-lmcache-s3') as r:
             prepare.build_vllm_async_model("qwen3-8b-lmcache-s3")
 
-            r.launch(
-                env_vars=[
-                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml",
-                    "PYTHONHASHSEED=0"
-                ])
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml",
+                "PYTHONHASHSEED=0"
+            ])
 
             # Run benchmark with same config for comparison
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
@@ -852,13 +853,10 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             result = os.system(benchmark_cmd)
 
             if result == 0:
-                logging.info(
-                    "S3 benchmark PASSED"
-                )
+                logging.info("S3 benchmark PASSED")
             else:
                 raise RuntimeError(
-                    f"S3 storage benchmark failed with return code {result}"
-                )
+                    f"S3 storage benchmark failed with return code {result}")
 
     def test_lmcache_redis_benchmark(self):
         """
@@ -872,16 +870,15 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             stderr=subprocess.DEVNULL)
         container_id = redis_proc.stdout.read().decode().strip()
         time.sleep(3)  # Wait for Redis to start
-        
+
         try:
             with Runner('lmi', 'qwen3-8b-lmcache-redis') as r:
                 prepare.build_vllm_async_model("qwen3-8b-lmcache-redis")
 
-                r.launch(
-                    env_vars=[
-                        "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
-                        "PYTHONHASHSEED=0"
-                    ])
+                r.launch(env_vars=[
+                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
+                    "PYTHONHASHSEED=0"
+                ])
 
                 # Run benchmark with same config for comparison
                 benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
@@ -897,13 +894,12 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
                                  "--max-inflight-requests 4")
 
                 logging.info(
-                    f"Running Redis storage benchmark from host: {benchmark_cmd}")
+                    f"Running Redis storage benchmark from host: {benchmark_cmd}"
+                )
                 result = os.system(benchmark_cmd)
 
                 if result == 0:
-                    logging.info(
-                        "Redis benchmark PASSED"
-                    )
+                    logging.info("Redis benchmark PASSED")
                 else:
                     raise RuntimeError(
                         f"Redis storage benchmark failed with return code {result}"
@@ -924,12 +920,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             prepare.build_vllm_async_model("qwen3-8b-lmcache-ebs")
 
             # DISABLE_NVME_TMP=true forces /tmp to use EBS disk instead of NVMe
-            r.launch(
-                env_vars=[
-                    "DISABLE_NVME_TMP=true",
-                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_ebs.yaml",
-                    "PYTHONHASHSEED=0"
-                ])
+            r.launch(env_vars=[
+                "DISABLE_NVME_TMP=true",
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_ebs.yaml",
+                "PYTHONHASHSEED=0"
+            ])
 
             # Run benchmark with same config as CPU test for comparison
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
@@ -949,13 +944,10 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             result = os.system(benchmark_cmd)
 
             if result == 0:
-                logging.info(
-                    "EBS benchmark PASSED"
-                )
+                logging.info("EBS benchmark PASSED")
             else:
                 raise RuntimeError(
-                    f"Disk storage benchmark failed with return code {result}"
-                )
+                    f"Disk storage benchmark failed with return code {result}")
 
     def test_lmcache_nvme_benchmark(self):
         """
@@ -965,13 +957,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         """
         with Runner('lmi', 'qwen3-8b-lmcache-nvme') as r:
             prepare.build_vllm_async_model("qwen3-8b-lmcache-nvme")
-            
-            r.launch(
-                    env_vars=[
-                        "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_nvme.yaml",
-                        "LMCACHE_USE_EXPERIMENTAL=True",
-                        "PYTHONHASHSEED=0"
-                    ])
+
+            r.launch(env_vars=[
+                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_nvme.yaml",
+                "LMCACHE_USE_EXPERIMENTAL=True", "PYTHONHASHSEED=0"
+            ])
 
             # Run benchmark with same config as CPU test for comparison
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
@@ -990,11 +980,9 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
                 f"Running NVMe offloading benchmark from host: {benchmark_cmd}"
             )
             result = os.system(benchmark_cmd)
-            
+
             if result == 0:
-                logging.info(
-                    "NVMe offloading benchmark PASSED"
-                )
+                logging.info("NVMe offloading benchmark PASSED")
             else:
                 raise RuntimeError(
                     f"NVMe offloading benchmark failed with return code {result}"
@@ -1007,10 +995,7 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         with Runner('lmi', 'qwen3-8b-no-cache') as r:
             prepare.build_vllm_async_model("qwen3-8b-no-cache")
 
-            r.launch(
-                env_vars=[
-                    "PYTHONHASHSEED=0"
-                ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
 
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
             benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
@@ -1025,17 +1010,15 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
                              "--max-inflight-requests 4")
 
             logging.info(
-                f"Running baseline (no cache) benchmark from host: {benchmark_cmd}")
+                f"Running baseline (no cache) benchmark from host: {benchmark_cmd}"
+            )
             result = os.system(benchmark_cmd)
 
             if result == 0:
-                logging.info(
-                    "Baseline (no LMCache) benchmark PASSED"
-                )
+                logging.info("Baseline (no LMCache) benchmark PASSED")
             else:
                 raise RuntimeError(
-                    f"Baseline benchmark failed with return code {result}"
-                )
+                    f"Baseline benchmark failed with return code {result}")
 
     def test_vllm_prefix_cache_baseline(self):
         """
@@ -1044,11 +1027,8 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         with Runner('lmi', 'qwen3-8b-vllm-prefix-cache') as r:
             prepare.build_vllm_async_model("qwen3-8b-vllm-prefix-cache")
 
-            r.launch(
-                env_vars=[
-                    "PYTHONHASHSEED=0"
-                ])
-            
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
+
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
             benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
@@ -1062,13 +1042,12 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
                              "--max-inflight-requests 4")
 
             logging.info(
-                f"Running vLLM prefix cache benchmark from host: {benchmark_cmd}")
+                f"Running vLLM prefix cache benchmark from host: {benchmark_cmd}"
+            )
             result = os.system(benchmark_cmd)
 
             if result == 0:
-                logging.info(
-                    "vLLM prefix cache benchmark PASSED"
-                )
+                logging.info("vLLM prefix cache benchmark PASSED")
             else:
                 raise RuntimeError(
                     f"vLLM prefix cache benchmark failed with return code {result}"
