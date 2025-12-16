@@ -29,8 +29,8 @@ class RequestStats:
     successful: bool
 
 
-async def send_djl_request(session, semaphore, base_url, prompt, output_len, 
-                          prompt_index, total_prompts):
+async def send_djl_request(session, semaphore, base_url, prompt, output_len,
+                           prompt_index, total_prompts):
     """Send a single async request to DJL's /invocations endpoint with streaming."""
     async with semaphore:
         start_time = time.time()
@@ -51,29 +51,31 @@ async def send_djl_request(session, semaphore, base_url, prompt, output_len,
 
         try:
             async with session.post(
-                f"{base_url}/invocations",
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            ) as response:
+                    f"{base_url}/invocations",
+                    json=payload,
+                    headers={"Content-Type": "application/json"}) as response:
                 async for line in response.content:
                     if not line:
                         continue
 
                     line_str = line.decode('utf-8').strip()
-                    
+
                     if not line_str or line_str.startswith('data:'):
                         continue
 
                     try:
                         chunk_data = json.loads(line_str)
 
-                        if isinstance(chunk_data, dict) and 'choices' in chunk_data:
+                        if isinstance(chunk_data,
+                                      dict) and 'choices' in chunk_data:
                             choice = chunk_data['choices'][0]
                             content = None
 
-                            if 'delta' in choice and 'content' in choice['delta']:
+                            if 'delta' in choice and 'content' in choice[
+                                    'delta']:
                                 content = choice['delta']['content']
-                            elif 'message' in choice and 'content' in choice['message']:
+                            elif 'message' in choice and 'content' in choice[
+                                    'message']:
                                 content = choice['message']['content']
 
                             if content:
@@ -86,7 +88,7 @@ async def send_djl_request(session, semaphore, base_url, prompt, output_len,
 
             end_time = time.time()
             final_response = "".join(responses)
-            
+
             # Print complete request info
             print(f"\n[Request {prompt_index + 1}/{total_prompts}] "
                   f"Completed in {end_time - start_time:.2f}s")
@@ -115,24 +117,25 @@ async def send_djl_request(session, semaphore, base_url, prompt, output_len,
             )
 
 
-async def run_benchmark(base_url, model, prompts, output_len, max_inflight_requests):
+async def run_benchmark(base_url, model, prompts, output_len,
+                        max_inflight_requests):
     """Run benchmark with given prompts using asyncio."""
     # Create semaphore to limit concurrent requests
     semaphore = asyncio.Semaphore(max_inflight_requests)
-    
+
     # Create aiohttp session with no timeout
     timeout = aiohttp.ClientTimeout(total=None)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         # Create all tasks
         tasks = [
-            send_djl_request(session, semaphore, base_url, prompt, output_len, 
-                           i, len(prompts))
-            for i, prompt in enumerate(prompts)
+            send_djl_request(session,
+                             semaphore, base_url, prompt, output_len, i,
+                             len(prompts)) for i, prompt in enumerate(prompts)
         ]
-        
+
         # Execute all tasks concurrently
         request_stats = await asyncio.gather(*tasks)
-    
+
     # Sort by prompt_id to maintain order
     request_stats = list(request_stats)
     request_stats.sort(key=lambda x: x.prompt_id)
@@ -175,8 +178,8 @@ async def main(args):
     pre_warmup_prompts = [
         str(i) + "xx" + " ".join(["hi"] * 1000) for i in range(5)
     ]
-    await run_benchmark(base_url, args.model, pre_warmup_prompts, args.output_len,
-                       args.max_inflight_requests)
+    await run_benchmark(base_url, args.model, pre_warmup_prompts,
+                        args.output_len, args.max_inflight_requests)
 
     # Prepare main prompts
     warmup_prompts = [
@@ -187,8 +190,8 @@ async def main(args):
     # Warmup round
     print("\n=== Warmup round ===")
     warmup_start_time = time.time()
-    warmup_request_stats = await run_benchmark(base_url, args.model, warmup_prompts,
-                                               args.output_len,
+    warmup_request_stats = await run_benchmark(base_url, args.model,
+                                               warmup_prompts, args.output_len,
                                                args.max_inflight_requests)
     warmup_end_time = time.time()
 
@@ -200,7 +203,8 @@ async def main(args):
 
     benchmark_start_time = time.time()
     benchmark_request_stats = await run_benchmark(base_url, args.model,
-                                                  query_prompts, args.output_len,
+                                                  query_prompts,
+                                                  args.output_len,
                                                   args.max_inflight_requests)
     benchmark_end_time = time.time()
 
