@@ -61,6 +61,7 @@ class Properties(BaseModel):
     tgi_compat: bool = False
     bedrock_compat: bool = False
     enable_lora: bool = False
+    lmcache_auto_config: bool = False
 
     # Spec_dec
     draft_model_id: Optional[str] = None
