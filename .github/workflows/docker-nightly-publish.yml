@@ -134,7 +134,8 @@ jobs:
             export BUILD_VERSION_ARG_DJL="${DJL_VERSION}-SNAPSHOT"
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}-SNAPSHOT"
           else
-            rm -rf serving/docker/distributions
+            # Build from source for robustness instead of downloading from publish.djl.ai
+            ./gradlew --refresh-dependencies :serving:dockerDeb -Pstaging
             export BUILD_VERSION_ARG_DJL="${DJL_VERSION}"
             export BUILD_VERSION_ARG_SERVING="${SERVING_VERSION}"
           fi

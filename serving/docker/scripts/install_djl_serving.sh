@@ -26,9 +26,6 @@ if [ -z "$PYTORCH_JNI" ]; then
     java-17-amazon-corretto-jdk
 
   # install DJLServing package
-  if [ ! -f djl-serving_all.deb ]; then
-    curl "https://publish.djl.ai/djl-serving/djl-serving_${DJL_SERVING_VERSION//-/\~}-1_all.deb" -f -o djl-serving_all.deb
-  fi
   dpkg -i djl-serving_all.deb
   rm djl-serving_all.deb
 
