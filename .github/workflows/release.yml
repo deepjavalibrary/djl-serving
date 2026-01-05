@@ -1,0 +1,10 @@
+name: Release Pipeline
+
+on: workflow_dispatch
+
+jobs:
+  release:
+    uses: ./.github/workflows/nightly.yml
+    secrets: inherit
+    with:
+      mode: release
