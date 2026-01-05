@@ -821,8 +821,8 @@ def extract_chat_content(response_content):
             # Non-streaming chat completion format
             if parsed.get("choices") and parsed.get(
                     "object") == "chat.completion":
-                return parsed["choices"][0].get("message", {}).get(
-                    "content", "")
+                return parsed["choices"][0].get("message",
+                                                {}).get("content", "")
             # Streaming chat completion format - look for final chunk with content
             # For simplicity in accuracy tests, we use non-streaming mode
         except json.JSONDecodeError:
@@ -837,20 +837,22 @@ def validate_lora_differentiation(base_output, adapter_outputs, input_text):
     if not base_output or not adapter_outputs:
         LOGGER.warning("Missing outputs, skipping differentiation validation")
         return
-    
+
     # Check adapters differ from base
     for name, output in adapter_outputs.items():
         if output and output == base_output:
             raise AssertionError(f"Adapter '{name}' same as base model")
-    
+
     # Check adapters differ from each other
     outputs = list(adapter_outputs.items())
     for i, (n1, o1) in enumerate(outputs):
-        for n2, o2 in outputs[i+1:]:
+        for n2, o2 in outputs[i + 1:]:
             if o1 and o2 and o1 == o2:
                 raise AssertionError(f"Adapters '{n1}' and '{n2}' identical")
-    
-    LOGGER.info(f"✓ LoRA validation passed: {len(adapter_outputs)} adapters all different")
+
+    LOGGER.info(
+        f"✓ LoRA validation passed: {len(adapter_outputs)} adapters all different"
+    )
 
 
 def collect_lora_outputs(adapters, input_text, seq_length):
@@ -874,7 +876,8 @@ def collect_lora_outputs(adapters, input_text, seq_length):
     }
 
     if not adapters:
-        LOGGER.warning("No adapters provided, skipping adapter output collection")
+        LOGGER.warning(
+            "No adapters provided, skipping adapter output collection")
         return adapter_outputs, None
 
     # Collect adapter outputs
@@ -892,9 +895,12 @@ def collect_lora_outputs(adapters, input_text, seq_length):
         generated_text = extract_generated_text(message)
         if generated_text is not None:
             adapter_outputs[adapter] = generated_text
-            LOGGER.info(f"Collected output for adapter '{adapter}': {generated_text[:100]}...")
+            LOGGER.info(
+                f"Collected output for adapter '{adapter}': {generated_text[:100]}..."
+            )
         else:
-            LOGGER.warning(f"Could not extract generated_text for adapter '{adapter}'")
+            LOGGER.warning(
+                f"Could not extract generated_text for adapter '{adapter}'")
 
     # Collect base model output
     req = {
@@ -911,7 +917,7 @@ def collect_lora_outputs(adapters, input_text, seq_length):
         LOGGER.info(f"Collected base model output: {base_output[:100]}...")
     else:
         LOGGER.warning("Could not extract generated_text for base model")
-    
+
     return adapter_outputs, base_output
 
 
@@ -930,7 +936,8 @@ def collect_lora_outputs_chat(adapters, messages, seq_length):
     adapter_outputs = {}
 
     if not adapters:
-        LOGGER.warning("No adapters provided, skipping adapter output collection")
+        LOGGER.warning(
+            "No adapters provided, skipping adapter output collection")
         return adapter_outputs, None
 
     # Collect adapter outputs
@@ -945,13 +952,17 @@ def collect_lora_outputs_chat(adapters, messages, seq_length):
         LOGGER.info(f"LoRA chat accuracy req for adapter '{adapter}': {req}")
         res = send_json(req)
         message = res.content.decode("utf-8")
-        LOGGER.info(f"LoRA chat accuracy res for adapter '{adapter}': {message}")
+        LOGGER.info(
+            f"LoRA chat accuracy res for adapter '{adapter}': {message}")
         content = extract_chat_content(message)
         if content is not None:
             adapter_outputs[adapter] = content
-            LOGGER.info(f"Collected chat output for adapter '{adapter}': {content[:100]}...")
+            LOGGER.info(
+                f"Collected chat output for adapter '{adapter}': {content[:100]}..."
+            )
         else:
-            LOGGER.warning(f"Could not extract chat content for adapter '{adapter}'")
+            LOGGER.warning(
+                f"Could not extract chat content for adapter '{adapter}'")
 
     # Collect base model output
     req = {
@@ -966,10 +977,11 @@ def collect_lora_outputs_chat(adapters, messages, seq_length):
     LOGGER.info(f"LoRA chat accuracy res for base model: {message}")
     base_output = extract_chat_content(message)
     if base_output is not None:
-        LOGGER.info(f"Collected base model chat output: {base_output[:100]}...")
+        LOGGER.info(
+            f"Collected base model chat output: {base_output[:100]}...")
     else:
         LOGGER.warning("Could not extract chat content for base model")
-    
+
     return adapter_outputs, base_output
 
 
@@ -1736,11 +1748,11 @@ def test_handler_adapters(model, model_spec):
     adapter_outputs, base_model_output = collect_lora_outputs(
         spec.get("adapters"),
         inputs[0],  # Use same input for all adapters for fair comparison
-        spec["seq_length"][0]
-    )
+        spec["seq_length"][0])
 
     # Validate that LoRA adapters produce different outputs than base model and each other
-    validate_lora_differentiation(base_model_output, adapter_outputs, inputs[0])
+    validate_lora_differentiation(base_model_output, adapter_outputs,
+                                  inputs[0])
     LOGGER.info("LoRA accuracy validation completed successfully")
 
     # awscurl little benchmark phase
@@ -1846,11 +1858,11 @@ def test_handler_adapters_chat(model, model_spec):
     adapter_outputs, base_model_output = collect_lora_outputs_chat(
         spec.get("adapters"),
         messages[0],  # Use same messages for all adapters for fair comparison
-        spec["seq_length"][0]
-    )
+        spec["seq_length"][0])
 
     # Validate that LoRA adapters produce different outputs than base model and each other
-    validate_lora_differentiation(base_model_output, adapter_outputs, str(messages[0]))
+    validate_lora_differentiation(base_model_output, adapter_outputs,
+                                  str(messages[0]))
     LOGGER.info("LoRA chat accuracy validation completed successfully")
 
     # awscurl little benchmark phase
