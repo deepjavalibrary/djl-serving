@@ -830,7 +830,35 @@ def extract_chat_content(response_content):
     return None
 
 
-def validate_lora_differentiation(base_output, adapter_outputs, input_text):
+def validate_determinism(outputs_1, outputs_2, label=""):
+    """
+    Validate that two invocations produce identical outputs.
+    
+    Args:
+        outputs_1: First invocation outputs (dict for adapters, string for base)
+        outputs_2: Second invocation outputs
+        label: Description for logging (e.g., "base model", "adapter french")
+    """
+    if isinstance(outputs_1, dict) and isinstance(outputs_2, dict):
+        # Adapter outputs
+        for adapter in outputs_1.keys():
+            out1 = outputs_1.get(adapter)
+            out2 = outputs_2.get(adapter)
+            if out1 and out2 and out1 != out2:
+                raise AssertionError(
+                    f"Adapter '{adapter}' not deterministic! Output 1: '{out1[:100]}...' != Output 2: '{out2[:100]}...'"
+                )
+        LOGGER.info(f"✓ Determinism verified for {len(outputs_1)} adapters")
+    else:
+        # Base model output
+        if outputs_1 and outputs_2 and outputs_1 != outputs_2:
+            raise AssertionError(
+                f"{label} not deterministic! Output 1: '{outputs_1[:100]}...' != Output 2: '{outputs_2[:100]}...'"
+            )
+        LOGGER.info(f"✓ Determinism verified for {label}")
+
+
+def validate_lora_differentiation(base_output, adapter_outputs):
     """
     Validate that adapter outputs differ from base model and from each other.
     """
@@ -841,21 +869,24 @@ def validate_lora_differentiation(base_output, adapter_outputs, input_text):
     # Check adapters differ from base
     for name, output in adapter_outputs.items():
         if output and output == base_output:
-            raise AssertionError(f"Adapter '{name}' same as base model")
+            raise AssertionError(
+                f"Adapter '{name}' produced same output as base model - adapter may not be applied"
+            )
 
     # Check adapters differ from each other
     outputs = list(adapter_outputs.items())
     for i, (n1, o1) in enumerate(outputs):
         for n2, o2 in outputs[i + 1:]:
             if o1 and o2 and o1 == o2:
-                raise AssertionError(f"Adapters '{n1}' and '{n2}' identical")
+                raise AssertionError(
+                    f"Adapters '{n1}' and '{n2}' produced identical outputs")
 
     LOGGER.info(
-        f"✓ LoRA validation passed: {len(adapter_outputs)} adapters all different"
+        f"✓ Differentiation verified: {len(adapter_outputs)} adapters all different from base and each other"
     )
 
 
-def collect_lora_outputs(adapters, input_text, seq_length):
+def collect_lora_outputs(adapters, input_text, seq_length, stream=False):
     """
     Collect outputs from adapters and base model using deterministic parameters.
     
@@ -863,6 +894,7 @@ def collect_lora_outputs(adapters, input_text, seq_length):
         adapters: List of adapter names
         input_text: Input prompt to use
         seq_length: Max new tokens to generate
+        stream: Whether to use streaming mode
     
     Returns:
         Tuple of (adapter_outputs dict, base_model_output string)
@@ -871,6 +903,9 @@ def collect_lora_outputs(adapters, input_text, seq_length):
     deterministic_params = {
         "do_sample": False,
         "temperature": 0.0,
+        "top_p": 1.0,
+        "top_k": -1,
+        "seed": 42,
         "max_new_tokens": seq_length,
         "details": True
     }
@@ -886,7 +921,7 @@ def collect_lora_outputs(adapters, input_text, seq_length):
             "inputs": input_text,
             "parameters": deterministic_params,
             "adapters": adapter,
-            "stream": False
+            "stream": stream
         }
         LOGGER.info(f"LoRA accuracy req for adapter '{adapter}': {req}")
         res = send_json(req)
@@ -906,7 +941,7 @@ def collect_lora_outputs(adapters, input_text, seq_length):
     req = {
         "inputs": input_text,
         "parameters": deterministic_params,
-        "stream": False
+        "stream": stream
     }
     LOGGER.info(f"LoRA accuracy req for base model (no adapter): {req}")
     res = send_json(req)
@@ -921,7 +956,7 @@ def collect_lora_outputs(adapters, input_text, seq_length):
     return adapter_outputs, base_output
 
 
-def collect_lora_outputs_chat(adapters, messages, seq_length):
+def collect_lora_outputs_chat(adapters, messages, seq_length, stream=False):
     """
     Collect chat outputs from adapters and base model using deterministic parameters.
     
@@ -929,6 +964,7 @@ def collect_lora_outputs_chat(adapters, messages, seq_length):
         adapters: List of adapter names
         messages: Chat messages to use
         seq_length: Max tokens to generate
+        stream: Whether to use streaming mode
     
     Returns:
         Tuple of (adapter_outputs dict, base_model_output string)
@@ -946,8 +982,10 @@ def collect_lora_outputs_chat(adapters, messages, seq_length):
             "messages": messages,
             "max_tokens": seq_length,
             "temperature": 0.0,
+            "top_p": 1.0,
+            "seed": 42,
             "adapters": adapter,
-            "stream": False
+            "stream": stream
         }
         LOGGER.info(f"LoRA chat accuracy req for adapter '{adapter}': {req}")
         res = send_json(req)
@@ -969,7 +1007,9 @@ def collect_lora_outputs_chat(adapters, messages, seq_length):
         "messages": messages,
         "max_tokens": seq_length,
         "temperature": 0.0,
-        "stream": False
+        "top_p": 1.0,
+        "seed": 42,
+        "stream": stream
     }
     LOGGER.info(f"LoRA chat accuracy req for base model (no adapter): {req}")
     res = send_json(req)
@@ -1745,14 +1785,27 @@ def test_handler_adapters(model, model_spec):
             response_checker(res, message)
 
     # LoRA accuracy validation phase - collect outputs with deterministic parameters
-    adapter_outputs, base_model_output = collect_lora_outputs(
-        spec.get("adapters"),
-        inputs[0],  # Use same input for all adapters for fair comparison
-        spec["seq_length"][0])
+    # Test both streaming and non-streaming modes
+    for stream in stream_values:
+        LOGGER.info(f"LoRA accuracy validation with stream={stream}")
+        # Collect outputs twice to verify determinism
+        adapter_outputs_1, base_output_1 = collect_lora_outputs(
+            spec.get("adapters"),
+            inputs[0],
+            spec["seq_length"][0],
+            stream=stream)
+        adapter_outputs_2, base_output_2 = collect_lora_outputs(
+            spec.get("adapters"),
+            inputs[0],
+            spec["seq_length"][0],
+            stream=stream)
 
-    # Validate that LoRA adapters produce different outputs than base model and each other
-    validate_lora_differentiation(base_model_output, adapter_outputs,
-                                  inputs[0])
+        # Phase 1: Validate determinism
+        validate_determinism(base_output_1, base_output_2, "base model")
+        validate_determinism(adapter_outputs_1, adapter_outputs_2)
+
+        # Phase 2: Validate differentiation
+        validate_lora_differentiation(base_output_1, adapter_outputs_1)
     LOGGER.info("LoRA accuracy validation completed successfully")
 
     # awscurl little benchmark phase
@@ -1855,14 +1908,27 @@ def test_handler_adapters_chat(model, model_spec):
                 check_output_formatter_applied(message, req["adapters"])
 
     # LoRA accuracy validation phase - collect outputs with deterministic parameters
-    adapter_outputs, base_model_output = collect_lora_outputs_chat(
-        spec.get("adapters"),
-        messages[0],  # Use same messages for all adapters for fair comparison
-        spec["seq_length"][0])
+    # Test both streaming and non-streaming modes
+    for stream in stream_values:
+        LOGGER.info(f"LoRA chat accuracy validation with stream={stream}")
+        # Collect outputs twice to verify determinism
+        adapter_outputs_1, base_output_1 = collect_lora_outputs_chat(
+            spec.get("adapters"),
+            messages[0],
+            spec["seq_length"][0],
+            stream=stream)
+        adapter_outputs_2, base_output_2 = collect_lora_outputs_chat(
+            spec.get("adapters"),
+            messages[0],
+            spec["seq_length"][0],
+            stream=stream)
 
-    # Validate that LoRA adapters produce different outputs than base model and each other
-    validate_lora_differentiation(base_model_output, adapter_outputs,
-                                  str(messages[0]))
+        # Phase 1: Validate determinism
+        validate_determinism(base_output_1, base_output_2, "base model")
+        validate_determinism(adapter_outputs_1, adapter_outputs_2)
+
+        # Phase 2: Validate differentiation
+        validate_lora_differentiation(base_output_1, adapter_outputs_1)
     LOGGER.info("LoRA chat accuracy validation completed successfully")
 
     # awscurl little benchmark phase
