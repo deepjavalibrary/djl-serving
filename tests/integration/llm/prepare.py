@@ -304,6 +304,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.fully_sharded_loras":
+        "true",
         "option.adapters":
         "adapters",
         "adapter_ids": [
@@ -327,6 +329,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.fully_sharded_loras":
+        "true",
         "option.adapters":
         "adapters",
         "adapter_ids": [
@@ -352,6 +356,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.fully_sharded_loras":
+        "true",
         "option.adapters":
         "adapters",
         "adapter_ids": [
