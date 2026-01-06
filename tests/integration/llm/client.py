@@ -1949,7 +1949,15 @@ def test_handler_adapters_chat(model, model_spec):
     # Test both streaming and non-streaming modes
     for stream in stream_values:
         LOGGER.info(f"LoRA chat accuracy validation with stream={stream}")
-        # Collect outputs twice to verify determinism
+        
+        # Warm-up call to stabilize vLLM's internal state (first invocation can differ)
+        collect_lora_outputs_chat(
+            spec.get("adapters"),
+            messages[0],
+            spec["seq_length"][0],
+            stream=stream)
+        
+        # Collect outputs twice to verify determinism (after warm-up)
         adapter_outputs_1, base_output_1 = collect_lora_outputs_chat(
             spec.get("adapters"),
             messages[0],
