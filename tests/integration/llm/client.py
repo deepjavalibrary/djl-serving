@@ -832,63 +832,29 @@ def extract_chat_content(response_content):
 
 def validate_determinism(outputs_1, outputs_2, label=""):
     """
-    Validate that two invocations produce substantially similar outputs.
-    
-    Due to floating-point precision in vLLM's greedy decoding, tokens with very similar
-    log probabilities may be selected differently across invocations. We validate that
-    outputs are substantially similar (at least 90% token overlap) rather than bit-exact identical.
+    Validate that two invocations produce identical outputs.
     
     Args:
         outputs_1: First invocation outputs (dict for adapters, string for base)
         outputs_2: Second invocation outputs
         label: Description for logging (e.g., "base model", "adapter french")
     """
-    def calculate_token_similarity(text1, text2):
-        """Calculate token-level similarity between two texts."""
-        if not text1 or not text2:
-            return 1.0 if text1 == text2 else 0.0
-        
-        # Split into tokens (simple whitespace split)
-        tokens1 = text1.split()
-        tokens2 = text2.split()
-        
-        if len(tokens1) == 0 or len(tokens2) == 0:
-            return 1.0 if text1 == text2 else 0.0
-        
-        # Count matching tokens from the start
-        matches = sum(1 for t1, t2 in zip(tokens1, tokens2) if t1 == t2)
-        max_len = max(len(tokens1), len(tokens2))
-        
-        return matches / max_len if max_len > 0 else 0.0
-    
-    MIN_SIMILARITY = 0.9  # At least 90% token overlap required
-    
     if isinstance(outputs_1, dict) and isinstance(outputs_2, dict):
         # Adapter outputs
         for adapter in outputs_1.keys():
             out1 = outputs_1.get(adapter)
             out2 = outputs_2.get(adapter)
-            if out1 and out2:
-                similarity = calculate_token_similarity(out1, out2)
-                if similarity < MIN_SIMILARITY:
-                    raise AssertionError(
-                        f"Adapter '{adapter}' outputs differ too much (similarity: {similarity:.1%})! "
-                        f"Output 1: '{out1[:80]}...' != Output 2: '{out2[:80]}...'"
-                    )
-                if similarity < 1.0:
-                    LOGGER.info(f"  Adapter '{adapter}': {similarity:.1%} similarity (minor token variations)")
+            if out1 and out2 and out1 != out2:
+                raise AssertionError(
+                    f"Adapter '{adapter}' not deterministic! Output 1: '{out1[:100]}...' != Output 2: '{out2[:100]}...'"
+                )
         LOGGER.info(f"✓ Determinism verified for {len(outputs_1)} adapters")
     else:
         # Base model output
-        if outputs_1 and outputs_2:
-            similarity = calculate_token_similarity(outputs_1, outputs_2)
-            if similarity < MIN_SIMILARITY:
-                raise AssertionError(
-                    f"{label} outputs differ too much (similarity: {similarity:.1%})! "
-                    f"Output 1: '{outputs_1[:80]}...' != Output 2: '{outputs_2[:80]}...'"
-                )
-            if similarity < 1.0:
-                LOGGER.info(f"  {label}: {similarity:.1%} similarity (minor token variations)")
+        if outputs_1 and outputs_2 and outputs_1 != outputs_2:
+            raise AssertionError(
+                f"{label} not deterministic! Output 1: '{outputs_1[:100]}...' != Output 2: '{outputs_2[:100]}...'"
+            )
         LOGGER.info(f"✓ Determinism verified for {label}")
 
 
