@@ -861,7 +861,6 @@ def validate_determinism(outputs_1, outputs_2, label=""):
         LOGGER.info(f"✓ Determinism verified for {label}")
 
 
-
 def validate_lora_differentiation(base_output, adapter_outputs):
     """
     Validate that adapter outputs differ from base model and from each other.
@@ -886,8 +885,7 @@ def validate_lora_differentiation(base_output, adapter_outputs):
         for n2, o2 in outputs[i + 1:]:
             if o1 and o2 and o1 == o2:
                 raise AssertionError(
-                    f"Adapters '{n1}' and '{n2}' produced identical outputs"
-                )
+                    f"Adapters '{n1}' and '{n2}' produced identical outputs")
 
     LOGGER.info(
         f"✓ Differentiation verified: {len(adapter_outputs)} adapters all different from base and each other"
@@ -1205,8 +1203,10 @@ def batch_generation_chat(batch_size):
             "role": "assistant",
             "content": "Hi, what can i help you with today?"
         }, {
-            "role": "user",
-            "content": "What is deep learning in your opinion? How does it help human?"
+            "role":
+            "user",
+            "content":
+            "What is deep learning in your opinion? How does it help human?"
         }],
         [{
             "role": "user",
@@ -1796,15 +1796,14 @@ def test_handler_adapters(model, model_spec):
     # Test both streaming and non-streaming modes
     for stream in stream_values:
         LOGGER.info(f"LoRA accuracy validation with stream={stream}")
-        
+
         # Warm-up call to stabilize vLLM internal state (KV cache, GPU precision)
         # First invocation can differ due to initialization effects
         LOGGER.info("Warm-up invocation before determinism validation")
-        collect_lora_outputs(
-            spec.get("adapters"),
-            inputs[0],
-            spec["seq_length"][0],
-            stream=stream)
+        collect_lora_outputs(spec.get("adapters"),
+                             inputs[0],
+                             spec["seq_length"][0],
+                             stream=stream)
 
         # Collect outputs twice to verify determinism and LoRA differentiation
         adapter_outputs_1, base_output_1 = collect_lora_outputs(
@@ -1929,15 +1928,14 @@ def test_handler_adapters_chat(model, model_spec):
     # Test both streaming and non-streaming modes
     for stream in stream_values:
         LOGGER.info(f"LoRA chat accuracy validation with stream={stream}")
-        
+
         # Warm-up call to stabilize vLLM internal state (KV cache, GPU precision)
         # First invocation can differ due to initialization effects
         LOGGER.info("Warm-up invocation before determinism validation")
-        collect_lora_outputs_chat(
-            spec.get("adapters"),
-            messages[0],
-            spec["seq_length"][0],
-            stream=stream)
+        collect_lora_outputs_chat(spec.get("adapters"),
+                                  messages[0],
+                                  spec["seq_length"][0],
+                                  stream=stream)
 
         # Collect outputs twice to verify determinism and LoRA differentiation
         adapter_outputs_1, base_output_1 = collect_lora_outputs_chat(
