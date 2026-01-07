@@ -835,7 +835,6 @@ def validate_determinism(outputs_1, outputs_2, label=""):
     Validate that two invocations produce identical outputs.
     
     Note: LoRA adapters may exhibit non-determinism with vLLM's greedy decoding (temperature=0).
-    Using --fully-sharded-loras can restore determinism but is not always enabled.
     See: https://github.com/vllm-project/vllm/issues/7977
     
     Args:
@@ -1798,6 +1797,15 @@ def test_handler_adapters(model, model_spec):
     for stream in stream_values:
         LOGGER.info(f"LoRA accuracy validation with stream={stream}")
         
+        # Warm-up call to stabilize vLLM internal state (KV cache, GPU precision)
+        # First invocation can differ due to initialization effects
+        LOGGER.info("Warm-up invocation before determinism validation")
+        collect_lora_outputs(
+            spec.get("adapters"),
+            inputs[0],
+            spec["seq_length"][0],
+            stream=stream)
+
         # Collect outputs twice to verify determinism and LoRA differentiation
         adapter_outputs_1, base_output_1 = collect_lora_outputs(
             spec.get("adapters"),
@@ -1922,6 +1930,15 @@ def test_handler_adapters_chat(model, model_spec):
     for stream in stream_values:
         LOGGER.info(f"LoRA chat accuracy validation with stream={stream}")
         
+        # Warm-up call to stabilize vLLM internal state (KV cache, GPU precision)
+        # First invocation can differ due to initialization effects
+        LOGGER.info("Warm-up invocation before determinism validation")
+        collect_lora_outputs_chat(
+            spec.get("adapters"),
+            messages[0],
+            spec["seq_length"][0],
+            stream=stream)
+
         # Collect outputs twice to verify determinism and LoRA differentiation
         adapter_outputs_1, base_output_1 = collect_lora_outputs_chat(
             spec.get("adapters"),
