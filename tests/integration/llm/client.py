@@ -834,22 +834,32 @@ def validate_determinism(outputs_1, outputs_2, label=""):
     """
     Validate that two invocations produce identical outputs.
     
-    Note: LoRA adapter determinism validation has been removed due to vLLM's non-determinism
-    when using LoRA adapters with greedy decoding (temperature=0). The base model produces
-    deterministic outputs, but LoRA adapters can produce varying results across invocations.
+    Note: LoRA adapters may exhibit non-determinism with vLLM's greedy decoding (temperature=0).
     Using --fully-sharded-loras can restore determinism but is not always enabled.
     See: https://github.com/vllm-project/vllm/issues/7977
     
     Args:
-        outputs_1: First invocation output (string)
-        outputs_2: Second invocation output (string)
-        label: Description for logging (e.g., "base model")
+        outputs_1: First invocation outputs (dict for adapters, string for base)
+        outputs_2: Second invocation outputs
+        label: Description for logging (e.g., "base model", "adapter french")
     """
-    if outputs_1 != outputs_2:
-        raise AssertionError(
-            f"{label} not deterministic! Output 1: '{outputs_1[:100]}...' != Output 2: '{outputs_2[:100]}...'"
-        )
-    LOGGER.info(f"✓ Determinism verified for {label}")
+    if isinstance(outputs_1, dict) and isinstance(outputs_2, dict):
+        # Adapter outputs
+        for adapter in outputs_1.keys():
+            out1 = outputs_1.get(adapter)
+            out2 = outputs_2.get(adapter)
+            if out1 != out2:
+                raise AssertionError(
+                    f"Adapter '{adapter}' not deterministic! Output 1: '{out1[:100] if out1 else None}...' != Output 2: '{out2[:100] if out2 else None}...'"
+                )
+        LOGGER.info(f"✓ Determinism verified for {len(outputs_1)} adapters")
+    else:
+        # Base model output
+        if outputs_1 != outputs_2:
+            raise AssertionError(
+                f"{label} not deterministic! Output 1: '{outputs_1[:100] if outputs_1 else None}...' != Output 2: '{outputs_2[:100] if outputs_2 else None}...'"
+            )
+        LOGGER.info(f"✓ Determinism verified for {label}")
 
 
 
@@ -1788,14 +1798,23 @@ def test_handler_adapters(model, model_spec):
     for stream in stream_values:
         LOGGER.info(f"LoRA accuracy validation with stream={stream}")
         
-        # Collect outputs to validate LoRA differentiation
+        # Collect outputs twice to verify determinism and LoRA differentiation
         adapter_outputs_1, base_output_1 = collect_lora_outputs(
             spec.get("adapters"),
             inputs[0],
             spec["seq_length"][0],
             stream=stream)
+        adapter_outputs_2, base_output_2 = collect_lora_outputs(
+            spec.get("adapters"),
+            inputs[0],
+            spec["seq_length"][0],
+            stream=stream)
 
-        # Phase: Validate differentiation
+        # Phase 1: Validate determinism
+        validate_determinism(base_output_1, base_output_2, "base model")
+        validate_determinism(adapter_outputs_1, adapter_outputs_2)
+
+        # Phase 2: Validate differentiation (adapters differ from base and each other)
         validate_lora_differentiation(base_output_1, adapter_outputs_1)
     LOGGER.info("LoRA accuracy validation completed successfully")
 
@@ -1903,14 +1922,23 @@ def test_handler_adapters_chat(model, model_spec):
     for stream in stream_values:
         LOGGER.info(f"LoRA chat accuracy validation with stream={stream}")
         
-        # Collect outputs to validate LoRA differentiation
+        # Collect outputs twice to verify determinism and LoRA differentiation
         adapter_outputs_1, base_output_1 = collect_lora_outputs_chat(
             spec.get("adapters"),
             messages[0],
             spec["seq_length"][0],
             stream=stream)
+        adapter_outputs_2, base_output_2 = collect_lora_outputs_chat(
+            spec.get("adapters"),
+            messages[0],
+            spec["seq_length"][0],
+            stream=stream)
 
-        # Phase: Validate differentiation
+        # Phase 1: Validate determinism
+        validate_determinism(base_output_1, base_output_2, "base model")
+        validate_determinism(adapter_outputs_1, adapter_outputs_2)
+
+        # Phase 2: Validate differentiation (adapters differ from base and each other)
         validate_lora_differentiation(base_output_1, adapter_outputs_1)
     LOGGER.info("LoRA chat accuracy validation completed successfully")
 
