@@ -371,10 +371,10 @@ vllm_model_list = {
         "option.adapters":
         "adapters",
         "adapter_ids": [
-            "Chuanming/Alpaca-Gemma-7b-lora",
-            "girtcius/gemma-7b-dante-lora",
+            "philschmid/gemma-7b-dolly-chatml",
+            "llama-duo/gemma7b-summarize-claude3sonnet-30k",
         ],
-        "adapter_names": ["alpaca", "dante"],
+        "adapter_names": ["chatml", "claude3sonnet"],
         "option.gpu_memory_utilization":
         "0.8",
     },
