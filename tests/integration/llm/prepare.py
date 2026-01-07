@@ -316,8 +316,6 @@ vllm_model_list = {
         "4.0",
         "option.enforce_eager":
         True,
-        "option.fully_sharded_loras":
-        "true",
         "option.adapters":
         "adapters",
         "adapter_ids": [
@@ -343,8 +341,6 @@ vllm_model_list = {
         "4.0",
         "option.enforce_eager":
         True,
-        "option.fully_sharded_loras":
-        "true",
         "option.adapters":
         "adapters",
         "adapter_ids": [
@@ -372,8 +368,6 @@ vllm_model_list = {
         "4.0",
         "option.enforce_eager":
         True,
-        "option.fully_sharded_loras":
-        "true",
         "option.adapters":
         "adapters",
         "adapter_ids": [
