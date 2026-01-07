@@ -913,7 +913,6 @@ def collect_lora_outputs(adapters, input_text, seq_length, stream=False):
         "temperature": 0.0,
         "top_p": 1.0,
         "top_k": -1,
-        "seed": 42,
         "max_new_tokens": seq_length,
         "details": True
     }
@@ -991,7 +990,6 @@ def collect_lora_outputs_chat(adapters, messages, seq_length, stream=False):
             "max_tokens": seq_length,
             "temperature": 0.0,
             "top_p": 1.0,
-            "seed": 42,
             "adapters": adapter,
             "stream": stream
         }
@@ -1016,7 +1014,6 @@ def collect_lora_outputs_chat(adapters, messages, seq_length, stream=False):
         "max_tokens": seq_length,
         "temperature": 0.0,
         "top_p": 1.0,
-        "seed": 42,
         "stream": stream
     }
     LOGGER.info(f"LoRA chat accuracy req for base model (no adapter): {req}")
