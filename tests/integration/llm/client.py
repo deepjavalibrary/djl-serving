@@ -1206,7 +1206,7 @@ def batch_generation_chat(batch_size):
             "content": "Hi, what can i help you with today?"
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "What is deep learning in your opinion? How does it help human?"
         }],
         [{
             "role": "user",
