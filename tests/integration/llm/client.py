@@ -195,7 +195,7 @@ vllm_model_spec = {
         "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
-        "adapters": ["french", "spanish"],
+        "adapters": ["medical", "exam"],
         "tokenizer": "unsloth/llama-3-8b-Instruct"
     },
     "llama3-8b-unmerged-lora-with-custom-code": {
@@ -203,7 +203,7 @@ vllm_model_spec = {
         "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
-        "adapters": ["french", "spanish"],
+        "adapters": ["medical", "exam"],
         "tokenizer": "unsloth/llama-3-8b-Instruct",
         "add_output_formatter": True,
     },
