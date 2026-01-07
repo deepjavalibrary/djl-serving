@@ -211,7 +211,7 @@ vllm_model_spec = {
         "batch_size": [4],
         "seq_length": [16, 32],
         "worker": 1,
-        "adapters": ["alpaca", "dante"],
+        "adapters": ["chatml", "claude3sonnet"],
         "tokenizer": "unsloth/gemma-7b"
     },
     "phi2-unmerged-lora": {
