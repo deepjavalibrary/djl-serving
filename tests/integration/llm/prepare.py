@@ -171,6 +171,7 @@ vllm_model_list = {
         "option.max_loras": 2,
         "option.max_lora_rank": 16,
         "option.long_lora_scaling_factors": "4.0",
+        "option.enforce_eager": True,
         "option.adapters": "adapters",
         "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
@@ -182,6 +183,7 @@ vllm_model_list = {
         "option.enable_lora": "true",
         "option.max_loras": 6,
         "option.max_cpu_loras": 8,
+        "option.enforce_eager": True,
         "option.adapters": "adapters",
         "adapter_ids": ["tloen/alpaca-lora-7b"] * 20,
         "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
@@ -202,6 +204,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.adapters":
         "adapters",
         "adapter_ids": [
@@ -225,6 +229,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.adapters":
         "adapters",
         "adapter_ids": [
@@ -250,6 +256,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.lora_dtype":
         "float16",
         "option.adapters":
@@ -279,6 +287,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.lora_dtype":
         "float16",
         "option.adapters":
@@ -304,6 +314,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.fully_sharded_loras":
         "true",
         "option.adapters":
@@ -329,6 +341,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.fully_sharded_loras":
         "true",
         "option.adapters":
@@ -356,6 +370,8 @@ vllm_model_list = {
         64,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.fully_sharded_loras":
         "true",
         "option.adapters":
@@ -381,6 +397,8 @@ vllm_model_list = {
         128,
         "option.long_lora_scaling_factors":
         "4.0",
+        "option.enforce_eager":
+        True,
         "option.adapters":
         "adapters",
         "adapter_ids": [
