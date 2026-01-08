@@ -307,10 +307,10 @@ vllm_model_list = {
         "option.adapters":
         "adapters",
         "adapter_ids": [
-            "UnderstandLing/Llama-3-8B-Instruct-fr",
-            "UnderstandLing/Llama-3-8B-Instruct-es",
+            "ae-aydin/Llama-3-8B-Instruct-Medical-QLoRA",
+            "shileii/Teachers_Exam_LLaMA_8B",
         ],
-        "adapter_names": ["french", "spanish"],
+        "adapter_names": ["medical", "exam"],
         "option.gpu_memory_utilization":
         "0.8",
     },
@@ -330,10 +330,10 @@ vllm_model_list = {
         "option.adapters":
         "adapters",
         "adapter_ids": [
-            "UnderstandLing/Llama-3-8B-Instruct-fr",
-            "UnderstandLing/Llama-3-8B-Instruct-es",
+            "ae-aydin/Llama-3-8B-Instruct-Medical-QLoRA",
+            "shileii/Teachers_Exam_LLaMA_8B",
         ],
-        "adapter_names": ["french", "spanish"],
+        "adapter_names": ["medical", "exam"],
         "option.gpu_memory_utilization":
         "0.8",
         "add_output_formatter":
@@ -355,10 +355,10 @@ vllm_model_list = {
         "option.adapters":
         "adapters",
         "adapter_ids": [
-            "Chuanming/Alpaca-Gemma-7b-lora",
-            "girtcius/gemma-7b-dante-lora",
+            "philschmid/gemma-7b-dolly-chatml",
+            "llama-duo/gemma7b-summarize-claude3sonnet-30k",
         ],
-        "adapter_names": ["alpaca", "dante"],
+        "adapter_names": ["chatml", "claude3sonnet"],
         "option.gpu_memory_utilization":
         "0.8",
     },
