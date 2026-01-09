@@ -88,6 +88,18 @@ class VLLMHandler(AdapterFormatterMixin):
                 f"Failed to initialize due to custom formatter error: {e}")
             raise
 
+        # Apply LMCache auto-configuration if enabled
+        if self.vllm_properties.lmcache_auto_config:
+            from djl_python.lmcache_utils import apply_lmcache_auto_config
+            model_path = properties.get("model_id") or model_dir
+
+            updated_properties = apply_lmcache_auto_config(
+                model_path, properties)
+
+            # Update properties and recreate vLLM properties to include kv_transfer_config
+            properties.update(updated_properties)
+            self.vllm_properties = VllmRbProperties(**properties)
+
         self.vllm_engine_args = self.vllm_properties.get_engine_args(
             async_engine=True)
         self.vllm_engine = AsyncLLMEngine.from_engine_args(

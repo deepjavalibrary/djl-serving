@@ -86,6 +86,13 @@ public final class LmiUtils {
             return;
         }
 
+        // Configure LMCache auto-config: set maxWorkers to 1 if enabled
+        if ("true".equalsIgnoreCase(prop.getProperty("option.lmcache_auto_config"))) {
+            logger.info("LMCache auto-config enabled, setting maxWorkers to 1");
+            prop.setProperty("maxWorkers", "1");
+            modelInfo.setMaxWorkers(1);
+        }
+
         LmiConfigRecommender.configure(prop, modelConfig);
         logger.info(
                 "Detected mpi_mode: {}, rolling_batch: {}, tensor_parallel_degree: {}, for"

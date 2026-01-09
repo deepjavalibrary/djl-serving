@@ -1,4 +1,4 @@
-max_local_cpu_size: 850.0
+max_local_cpu_size: 550
 
 # UNCOMMENT BELOW FOR DISK OFFLOADING
 

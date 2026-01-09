@@ -585,7 +585,7 @@ vllm_model_list = {
         "option.max_new_tokens":
         100,
         "lmcache_config_file":
-        "lmcache_redis.yaml",
+        "lmcache_qwen25_7b.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },
@@ -599,7 +599,7 @@ vllm_model_list = {
         "option.max_new_tokens":
         100,
         "lmcache_config_file":
-        "lmcache_redis.yaml",
+        "lmcache_qwen25_72b.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
     },
