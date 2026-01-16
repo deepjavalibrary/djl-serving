@@ -665,25 +665,19 @@ class TestVllmLmcache_g6:
     def test_lmcache_cpu(self):
         with Runner("lmi", "llama3-8b-lmcache-cpu") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch(env_vars=[
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_local_storage(self):
         with Runner("lmi", "llama3-8b-lmcache-local-storage") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch(env_vars=[
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
 
     def test_lmcache_s3(self):
         with Runner("lmi", "llama3-8b-lmcache-s3") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
-            r.launch(env_vars=[
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache llama3-8b-lmcache-s3".split())
 
     def test_lmcache_redis(self):
@@ -698,9 +692,7 @@ class TestVllmLmcache_g6:
         try:
             with Runner("lmi", "llama3-8b-lmcache-redis") as r:
                 prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
-                r.launch(env_vars=[
-                    "PYTHONHASHSEED=0"
-                ])
+                r.launch(env_vars=["PYTHONHASHSEED=0"])
                 client.run("vllm_lmcache llama3-8b-lmcache-redis".split())
         finally:
             # Cleanup Redis container
@@ -718,10 +710,17 @@ class TestVllmLmcache_g6:
         with Runner("lmi", "qwen3-8b-no-cache") as r:
             prepare.build_vllm_async_model("qwen3-8b-no-cache")
             r.launch(env_vars=[
-                "PYTHONHASHSEED=0",
-                "OPTION_LMCACHE_AUTO_CONFIG=True"
+                "PYTHONHASHSEED=0", "OPTION_LMCACHE_AUTO_CONFIG=True"
             ])
             client.run("vllm_lmcache qwen3-8b-lmcache-auto".split())
+
+    def test_lmcache_auto_config_larger_model(self):
+        with Runner("lmi", "qwen2.5-72b-no-cache") as r:
+            prepare.build_vllm_async_model("qwen2.5-72b")
+            r.launch(env_vars=[
+                "PYTHONHASHSEED=0", "OPTION_LMCACHE_AUTO_CONFIG=True"
+            ])
+            client.run("vllm_lmcache qwen2.5-72b-lmcache-auto".split())
 
 
 @pytest.mark.vllm

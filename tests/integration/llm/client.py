@@ -284,6 +284,11 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "Qwen/Qwen3-8B"
     },
+    "qwen2.5-72b-lmcache-auto": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "Qwen/Qwen2.5-72B"
+    },
 }
 
 vllm_neo_model_spec = {

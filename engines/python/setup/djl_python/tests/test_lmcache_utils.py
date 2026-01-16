@@ -110,7 +110,7 @@ class TestLMCacheUtils(unittest.TestCase):
     def test_fails_only_with_config_file_property(self):
         """Test that auto-config only fails with config file property, not env vars"""
         # Set env vars (should only warn)
-        os.environ["LMCACHE_LOCAL_DISK"] = "/tmp/cache"
+        os.environ["LMCACHE_LOCAL_DISK"] = "/tmp/lmcache"
 
         # But also set property (should fail)
         properties = {
@@ -296,7 +296,7 @@ class TestLMCacheUtils(unittest.TestCase):
         self.assertEqual(os.environ["LMCACHE_MAX_LOCAL_CPU_SIZE"], "50")
         self.assertEqual(os.environ["LMCACHE_MAX_LOCAL_DISK_SIZE"], "200")
         self.assertEqual(os.environ["LMCACHE_LOCAL_DISK"],
-                         "file:///tmp/cache/")
+                         "file:///tmp/lmcache/")
         self.assertEqual(os.environ["LMCACHE_ENABLE_LAZY_MEMORY_ALLOCATOR"],
                          "true")
         self.assertEqual(os.environ["PYTHONHASHSEED"], "0")

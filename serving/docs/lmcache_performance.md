@@ -79,7 +79,7 @@ max_local_cpu_size: 5.0 # Changes with Model Size
 # 256 Tokens per KV Chunk
 chunk_size: 256
 # Enable Disk backend
-local_disk: "file://tmp/cache/" # Fixed for SM customers
+local_disk: "file://tmp/lmcache/" # Fixed for SM customers
 # 5GB of Disk memory
 max_local_disk_size: 5.0 # Changes with Model Size
 # Disable OS page cache in favor of CPU Pinned Memory
@@ -100,10 +100,10 @@ The auto-configuration feature:
 - Calculates cache sizes based on model size and instance resources
 - Utilizes LMCache's LazyMemoryAllocator to reduce startup time
 - Sets up both CPU and disk backends with appropriate sizes
-- Generates the LMCache configuration file automatically
 - Requires `maxWorkers=1` (automatically enforced)
+- Only supported for Tensor Parallelism
 
-**Note**: Auto-configuration is designed for single model deployments. If serving multiple model copies on the same server, use manual configuration.
+**Note**: Auto-configuration is designed for serving a single model per container instance. For serving multiple models or model copies use SageMaker's Inference Components which ensures resource isolation between models and model copies.
 
 ## Deployment Recommendations
 
@@ -111,7 +111,7 @@ The auto-configuration feature:
 2. **Use NVMe with O_DIRECT enabled** for workloads requiring larger cache capacity
 3. **Implement session-based sticky routing** on SageMaker Classic to maximize cache hit rates
 4. **Consider model architecture**: Models with different KV head configurations (e.g., Llama 3 8B vs Qwen 2.5-7B) will have different offloading thresholds
-5. **For multi-model deployments**: Use manual configuration instead of auto-config
+5. **Use auto-configuration** for rapid single model deployments
 
 ## Performance Validation
 
