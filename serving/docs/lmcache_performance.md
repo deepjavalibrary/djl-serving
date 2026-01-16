@@ -51,7 +51,9 @@ For a p4de.24xlarge -
 
 ## How to use LMCache
 
-ENV Variables should be set as shown here
+### Option 1: Manual Configuration
+
+For custom configurations, you can manually specify LMCache settings:
 
 ```
 OPTION_LMCACHE_CONFIG_FILE=/opt/ml/model/lmcache_config.yaml
@@ -60,31 +62,48 @@ OPTION_KV_TRANSFER_CONFIG={"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_bo
 
 lmcache_config.yaml changes as per the backend. But if any of the backends are not configured correctly, vLLM defaults to CPU offloading. vLLM does not currently support specifying advanced LMCache configuration as ENV variables.
 
-### On-Host RAM offloading
+#### On-Host RAM offloading
 
-```
+```yaml
 # lmcache_config.yaml
 # 256 Tokens per KV Chunk
-**chunk_size**: 256
+chunk_size: 256
 # 5GB of Pinned CPU memory
-**max_local_cpu_size**: 5.0 # Changes with Model Size
+max_local_cpu_size: 5.0 # Changes with Model Size
 ```
 
-### On-Host NVME offloading
+#### On-Host NVME offloading
 
-```
-*# lmcache_config.yaml*
-*# 256 Tokens per KV Chunk*
-**chunk_size**: 256
-*# Enable Disk backend*
-**local_disk**: "file://tmp/cache/" # Fixed for SM customers
-*# 5GB of Disk memory*
-**max_local_disk_size**: 5.0 # Changes with Model Size
-*# Disable OS page cache in favor of CPU Pinned Memory*
-**extra_config**: {'use_odirect': True} # Fixed for SM customers
+```yaml
+# lmcache_config.yaml
+# 256 Tokens per KV Chunk
+chunk_size: 256
+# Enable Disk backend
+local_disk: "file://tmp/cache/" # Fixed for SM customers
+# 5GB of Disk memory
+max_local_disk_size: 5.0 # Changes with Model Size
+# Disable OS page cache in favor of CPU Pinned Memory
+extra_config: {'use_odirect': True} # Fixed for SM customers
 # 5GB of Pinned CPU memory
-**max_local_cpu_size**: 5.0 # default
+max_local_cpu_size: 5.0 # default
 ```
+
+### Option 2: Automatic Configuration
+
+LMI can provide automatic LMCache configuration for CPU and local storage offloading based on your instance resources and model size:
+
+* `option.lmcache_auto_config=True` in serving.properties
+* `OPTION_LMCACHE_AUTO_CONFIG=True` as an environment variable
+
+The auto-configuration feature:
+- Automatically detects available CPU RAM and local storage
+- Calculates cache sizes based on model size and instance resources
+- Utilizes LMCache's LazyMemoryAllocator to reduce startup time
+- Sets up both CPU and disk backends with appropriate sizes
+- Generates the LMCache configuration file automatically
+- Requires `maxWorkers=1` (automatically enforced)
+
+**Note**: Auto-configuration is designed for single model deployments. If serving multiple model copies on the same server, use manual configuration.
 
 ## Deployment Recommendations
 
@@ -92,6 +111,7 @@ lmcache_config.yaml changes as per the backend. But if any of the backends are n
 2. **Use NVMe with O_DIRECT enabled** for workloads requiring larger cache capacity
 3. **Implement session-based sticky routing** on SageMaker Classic to maximize cache hit rates
 4. **Consider model architecture**: Models with different KV head configurations (e.g., Llama 3 8B vs Qwen 2.5-7B) will have different offloading thresholds
+5. **For multi-model deployments**: Use manual configuration instead of auto-config
 
 ## Performance Validation
 

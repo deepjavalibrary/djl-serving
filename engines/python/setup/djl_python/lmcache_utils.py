@@ -14,53 +14,22 @@
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import yaml
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
-import torch
-from transformers import AutoConfig, AutoModel
+import psutil
+from huggingface_hub import HfApi
 
 logger = logging.getLogger(__name__)
 
-
-def get_numa_node_memory() -> float:
-    """
-    Get available memory size of a single NUMA node in GB.
-    
-    Returns:
-        float: Available memory size of first NUMA node in GB, or total system memory as fallback
-    """
-    try:
-        result = subprocess.run(['numactl', '-H'],
-                                capture_output=True,
-                                text=True,
-                                timeout=10)
-
-        if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                if 'node 0 free:' in line.lower():
-                    parts = line.split()
-                    for i, part in enumerate(parts):
-                        if part.lower() == 'free:' and i + 1 < len(parts):
-                            free_mb = int(parts[i + 1])
-                            free_gb = free_mb / 1024.0
-                            logger.info(
-                                f"NUMA node 0 available memory: {free_gb:.1f}GB"
-                            )
-                            return free_gb
-
-    except Exception as e:
-        logger.warning(f"NUMA detection failed: {e}")
-
-    # Fallback to total system memory for any failure or non-NUMA systems
-    logger.info("Using total system memory instead of NUMA node memory")
-    return get_total_cpu_memory()
+LMCACHE_DIR = '/tmp/cache'
 
 
-def get_total_cpu_memory() -> float:
+def get_available_cpu_memory() -> float:
     """
     Get total available CPU memory in GB.
     
@@ -68,25 +37,19 @@ def get_total_cpu_memory() -> float:
         float: Total available CPU memory in GB
     """
     try:
-        with open('/proc/meminfo', 'r') as f:
-            for line in f:
-                if line.startswith('MemAvailable:'):
-                    mem_kb = int(line.split()[1])
-                    mem_gb = mem_kb / (1024 * 1024)
-                    logger.info(f"Total available CPU memory: {mem_gb:.1f}GB")
-                    return mem_gb
+        mem = psutil.virtual_memory()
+        mem_gb = mem.available / (1024**3)
+        logger.info(f"Total available CPU memory: {mem_gb:.1f}GB")
+        return mem_gb
     except Exception as e:
         logger.error(f"Failed to get CPU memory: {e}")
         raise
 
 
-def get_cache_config(properties: Dict[str, str],
-                     model_size_gb: float) -> float:
+def calculate_cpu_cache_size(properties: Dict[str, str],
+                             model_size_gb: float) -> float:
     """
-    Calculate cache configuration using appropriate CPU memory based on TP degree.
-    
-    For TP=1: Uses single NUMA node memory to avoid CUDA allocation limits
-    For TP>1: Uses total system memory since it's distributed across processes
+    Calculate CPU cache size for LMCache based on available memory and TP degree.
     
     Args:
         properties: Serving properties
@@ -97,126 +60,200 @@ def get_cache_config(properties: Dict[str, str],
     """
     tp_degree = int(properties.get("tensor_parallel_degree", 1))
 
-    if tp_degree == 1:
-        # For single process (TP=1), use single NUMA node memory to avoid CUDA limits
-        total_cpu_memory = get_numa_node_memory()
-    else:
-        # For multi-process (TP>1), use total system memory since it's distributed
-        total_cpu_memory = get_total_cpu_memory()
+    total_cpu_memory = get_available_cpu_memory()
 
+    # Reserve space: max of 2x model size or 20% of total disk
     total_reserved = max(2 * model_size_gb, 0.2 * total_cpu_memory)
     total_cache_memory = max(0, total_cpu_memory - total_reserved)
 
-    # Divide total cache by TP degree to get cache size per LMCache worker
+    # Divide total cache by TP degree to get cache size per LMCache engine (1 engine per VLLM worker, # of VLLM workers = TP * DP)
     cpu_cache_gb_per_gpu = total_cache_memory / tp_degree
 
-    logger.info(f"Cache calculation summary:")
+    logger.info(f"CPU cache calculation:")
     logger.info(f"  Model size: {model_size_gb:.1f}GB")
-    logger.info(f"  Available CPU memory: {total_cpu_memory:.1f}GB")
-    logger.info(f"  Total reserved: {total_reserved:.1f}GB")
+    logger.info(f"  Total CPU memory: {total_cpu_memory:.1f}GB")
     logger.info(
-        f"  Total available cache memory: {total_cache_memory:.1f}GB ({total_cache_memory/total_cpu_memory:.1%} of available)"
+        f"  Reserved CPU memory: {total_reserved:.1f}GB (max of 2x model or 20% of total)"
     )
+    logger.info(f"  Total CPU cache: {total_cache_memory:.1f}GB")
     logger.info(
-        f"  Cache per GPU (TP={tp_degree}): {cpu_cache_gb_per_gpu:.1f}GB")
+        f"  CPU cache per worker (TP={tp_degree}): {cpu_cache_gb_per_gpu:.1f}GB"
+    )
 
     return cpu_cache_gb_per_gpu
 
 
-def get_disk_space_info() -> float:
+def calculate_disk_cache_size(properties: Dict[str, str],
+                             model_size_gb: float) -> float:
     """
-    Get available disk space in GB for LMCache storage.
-    
-    Returns:
-        float: total_disk_gb
-    """
-    try:
-        stat = shutil.disk_usage('/tmp/lmcache')
-        total_disk_gb = stat.total / (1024**3)
-        logger.info(
-            f"Using /tmp/lmcache with {total_disk_gb:.1f}GB total space")
-    except Exception as e:
-        logger.warning(f"Could not get disk usage for /tmp/lmcache: {e}")
-        total_disk_gb = 0
-
-    logger.info(f"Disk space: {total_disk_gb:.1f}GB")
-    return total_disk_gb
-
-
-def calculate_model_size_meta_device(model_id_or_path: str) -> Tuple[int, str]:
-    """
-    Calculate model size using meta device.
+    Calculate disk cache size for LMCache based on available disk space and TP degree.
     
     Args:
-        model_id_or_path: HuggingFace model ID or local path to model
+        properties: Serving properties
+        model_size_gb: Model size in GB
         
     Returns:
-        Tuple[int, str]: (total_parameters, dtype)
+        float: disk_cache_gb_per_gpu
+    """
+    tp_degree = int(properties.get("tensor_parallel_degree", 1))
+
+    try:
+        stat = shutil.disk_usage('/tmp')
+        total_disk_gb = stat.total / (1024**3)
+        logger.info(f"Total disk space: {total_disk_gb:.1f}GB")
+    except Exception as e:
+        logger.warning(f"Could not get disk usage: {e}")
+        return 0
+
+    # Reserve space: max of 2x model size or 20% of total disk
+    total_reserved = max(2 * model_size_gb, 0.2 * total_disk_gb)
+    total_cache_disk = max(0, total_disk_gb - total_reserved)
+
+    # Divide total cache by TP degree to get cache size per LMCache engine (1 engine per VLLM worker, # of VLLM workers = TP * DP)
+    disk_cache_gb_per_gpu = total_cache_disk / tp_degree
+
+    logger.info(f"Disk cache calculation:")
+    logger.info(f"  Model size: {model_size_gb:.1f}GB")
+    logger.info(f"  Total disk: {total_disk_gb:.1f}GB")
+    logger.info(
+        f"  Reserved disk: {total_reserved:.1f}GB (max of 2x model or 20% of total)"
+    )
+    logger.info(f"  Total disk cache: {total_cache_disk:.1f}GB")
+    logger.info(
+        f"  Disk cache per worker (TP={tp_degree}): {disk_cache_gb_per_gpu:.1f}GB"
+    )
+
+    return disk_cache_gb_per_gpu
+
+
+def get_directory_size_gb(path: str) -> float:
+    """
+    Calculate total size of model files in a directory in GB.
+    
+    Only counts safetensors OR .bin files to avoid overcounting.
+    
+    Args:
+        path: Path to directory
+        
+    Returns:
+        float: Total size in GB
+    """
+    safetensors_size = 0
+    bin_size = 0
+
+    for dirpath, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            filepath = os.path.join(dirpath, filename)
+            if os.path.exists(filepath):
+                file_size = os.path.getsize(filepath)
+
+                if filename.endswith('.safetensors'):
+                    safetensors_size += file_size
+                elif filename.endswith('.bin'):
+                    bin_size += file_size
+
+    if safetensors_size > 0:
+        total_size = safetensors_size
+    elif bin_size > 0:
+        total_size = bin_size
+    else:
+        logger.warning(f"No .safetensors or .bin files found in {path}")
+        total_size = 0
+
+    size_gb = total_size / (1024**3)
+    logger.info(f"Model file size for {path}: {size_gb:.2f}GB")
+    return size_gb
+
+
+def calculate_model_size_from_hf_api(model_id: str) -> float:
+    """
+    Calculate model size using HuggingFace Hub API.
+    
+    Args:
+        model_id: HuggingFace model ID (e.g., 'meta-llama/Llama-2-7b-hf')
+        
+    Returns:
+        float: Model size in GB
     """
     try:
-        logger.info(f"Calculating model size for: {model_id_or_path}")
-
-        # Load config from model_id or local path
-        config = AutoConfig.from_pretrained(model_id_or_path)
-
-        dtype = getattr(config, 'torch_dtype', 'float32')
-        dtype_str = str(dtype).split('.')[-1] if '.' in str(dtype) else str(
-            dtype)
-
-        with torch.device("meta"):
-            model = AutoModel.from_config(config)
-
-        total_params = sum(p.numel() for p in model.parameters())
-
         logger.info(
-            f"Model size: {total_params:,} parameters, dtype: {dtype_str}")
-        return total_params, dtype_str
+            f"Fetching model info from HuggingFace Hub API: {model_id}")
+
+        api = HfApi()
+        info = api.model_info(model_id, files_metadata=True)
+
+        safetensors_size = 0
+        bin_size = 0
+
+        if hasattr(info, 'siblings') and info.siblings:
+            for sibling in info.siblings:
+                filename = sibling.rfilename
+                size_bytes = sibling.size or 0
+
+                if filename.endswith('.safetensors'):
+                    safetensors_size += size_bytes
+                elif filename.endswith('.bin'):
+                    bin_size += size_bytes
+
+        if safetensors_size > 0:
+            total_size_bytes = safetensors_size
+            logger.info(f"Using safetensors files for size calculation")
+        elif bin_size > 0:
+            total_size_bytes = bin_size
+            logger.info(f"Using .bin files for size calculation")
+        else:
+            raise ValueError("No model files found in model metadata")
+
+        size_gb = total_size_bytes / (1024**3)
+        logger.info(f"Model size from HF API: {size_gb:.2f}GB")
+        return size_gb
 
     except Exception as e:
-        logger.error(f"Failed to calculate model size using meta device: {e}")
-        raise RuntimeError(
-            f"Unable to calculate model size for '{model_id_or_path}'. "
-            f"Model size calculation failed with error: {e}. "
-            f"Please ensure the model is accessible and has a valid config.json file."
-        )
+        logger.warning(f"Failed to get model size from HF API: {e}")
+        raise
 
 
-def create_lmcache_config_file(cpu_cache_gb: float, disk_cache_gb: float,
-                               model_dir: str) -> str:
+def set_lmcache_env_vars(cpu_cache_gb: float, disk_cache_gb: float) -> None:
     """
-    Create LMCache YAML configuration file with calculated sizes.
+    Set LMCache environment variables with calculated sizes.
+    
+    This configures LMCache directly via environment variables instead of using
+    a YAML config file.
     
     Args:
         cpu_cache_gb: CPU cache size in GB
-        disk_cache_gb: Disk cache size in GB  
-        model_dir: Directory to save the config file
-        
-    Returns:
-        str: Path to created config file
+        disk_cache_gb: Disk cache size in GB
     """
-    config = {
-        'max_local_cpu_size': int(cpu_cache_gb),
-        'max_local_disk_size': int(disk_cache_gb),
-        'local_disk': 'file:///tmp/lmcache/',
-        'extra_config': {
-            'use_odirect': True
-        }
-    }
+    # Core cache size settings
+    os.environ["LMCACHE_MAX_LOCAL_CPU_SIZE"] = str(int(cpu_cache_gb))
+    os.environ["LMCACHE_MAX_LOCAL_DISK_SIZE"] = str(int(disk_cache_gb))
+    os.environ["LMCACHE_LOCAL_DISK"] = f'file://{LMCACHE_DIR}/'
 
-    config_path = os.path.join(model_dir, "lmcache_auto_config.yaml")
+    # Enable lazy memory allocator for large CPU caches
+    os.environ["LMCACHE_ENABLE_LAZY_MEMORY_ALLOCATOR"] = "true"
 
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f, default_flow_style=False)
+    # Set PYTHONHASHSEED for deterministic hashing (required for LMCache)
+    os.environ["PYTHONHASHSEED"] = "0"
 
-    logger.info(f"Created LMCache config: {config_path}")
-    logger.info(f"Config contents: {config}")
+    # Extra config for O_DIRECT (better disk I/O performance)
+    os.environ["LMCACHE_EXTRA_CONFIG"] = '{"use_odirect": true}'
 
-    return config_path
+    logger.info(f"Set LMCache environment variables:")
+    logger.info(f"  LMCACHE_MAX_LOCAL_CPU_SIZE={int(cpu_cache_gb)}")
+    logger.info(f"  LMCACHE_MAX_LOCAL_DISK_SIZE={int(disk_cache_gb)}")
+    logger.info(f"  LMCACHE_LOCAL_DISK={LMCACHE_DIR}/")
+    logger.info(f"  LMCACHE_ENABLE_LAZY_MEMORY_ALLOCATOR=true")
+    logger.info(f"  PYTHONHASHSEED=0")
+    logger.info(f"  LMCACHE_EXTRA_CONFIG={{'use_odirect': true}}")
 
 
 def get_model_size_gb(model_id_or_path: str) -> float:
     """
-    Get model size in GB from parameters and dtype.
+    Get model size in GB using the best available method.
+    
+    Two-option approach:
+    1. If local directory: Get directory size
+    2. If HuggingFace model ID: Use HF API 
     
     Args:
         model_id_or_path: HuggingFace model ID or local path
@@ -224,26 +261,23 @@ def get_model_size_gb(model_id_or_path: str) -> float:
     Returns:
         float: Model size in GB
     """
-    total_params, dtype_str = calculate_model_size_meta_device(
-        model_id_or_path)
+    if os.path.isdir(model_id_or_path):
+        size_gb = get_directory_size_gb(model_id_or_path)
+        if size_gb > 0:
+            return size_gb
+        else:
+            raise RuntimeError(
+                f"No model files found in directory '{model_id_or_path}'. "
+                f"Please ensure the directory contains model artifacts.")
 
-    # Calculate bytes per parameter based on dtype
-    dtype_bytes = {
-        'float32': 4,
-        'float16': 2,
-        'bfloat16': 2,
-        'int8': 1,
-        'int4': 0.5
-    }
-
-    bytes_per_param = dtype_bytes.get(dtype_str, 4)
-    total_bytes = total_params * bytes_per_param
-    model_size_gb = total_bytes / (1024**3)
-
-    logger.info(
-        f"Model size: {model_size_gb:.1f}GB ({total_params:,} params × {bytes_per_param} bytes)"
-    )
-    return model_size_gb
+    try:
+        return calculate_model_size_from_hf_api(model_id_or_path)
+    except Exception as e:
+        logger.error(
+            f"HF API method failed for model ID '{model_id_or_path}': {e}")
+        raise RuntimeError(
+            f"Unable to calculate model size for HuggingFace model ID '{model_id_or_path}'. "
+            f"Please ensure the model ID is correct and accessible.")
 
 
 def apply_lmcache_auto_config(model_path: str,
@@ -256,8 +290,7 @@ def apply_lmcache_auto_config(model_path: str,
     2. Adds kv_transfer_config for LMCache
     3. Calculates model size
     4. Determines cache configuration using total available CPU memory
-    5. Creates LMCache config file
-    6. Sets LMCACHE_CONFIG_FILE environment variable
+    5. Sets LMCache environment variables directly
     
     Args:
         model_path: Path to model (local directory or HuggingFace model ID)
@@ -269,6 +302,34 @@ def apply_lmcache_auto_config(model_path: str,
     # Check if auto-config is enabled
     if not properties.get("lmcache_auto_config", "false").lower() == "true":
         return properties
+
+    # Fail fast if expert parallelism is enabled
+    # EP changes worker count calculation (TP × DP), which auto-config doesn't currently support
+    if properties.get("enable_expert_parallel", "false").lower() == "true":
+        raise RuntimeError(
+            "LMCache auto-configuration does not currently support expert parallelism (option.enable_expert_parallel=true). "
+            "Either disable expert parallelism or use manual LMCache configuration with option.lmcache_config_file"
+        )
+
+    # Fail fast if lmcache_config_file property is set (manual config file)
+    if "lmcache_config_file" in properties:
+        raise RuntimeError(
+            f"LMCache auto-configuration cannot proceed: option.lmcache_config_file is set to '{properties['lmcache_config_file']}'. "
+            f"Auto-configuration is incompatible with manual LMCache configuration files. "
+            f"Either remove option.lmcache_config_file or disable auto-configuration "
+            f"by setting option.lmcache_auto_config=false")
+
+    # Warn if LMCACHE_* env vars are already set (they will be overwritten)
+    lmcache_env_vars = {
+        k: v
+        for k, v in os.environ.items() if k.startswith("LMCACHE_")
+    }
+    if lmcache_env_vars:
+        env_var_list = ", ".join(
+            f"{k}={v}" for k, v in list(lmcache_env_vars.items())[:3])
+        logger.warning(
+            f"LMCache auto-configuration detected existing LMCACHE environment variables: {env_var_list}. "
+            f"Applicable LMCache configuration variables will be overwritten by auto-configuration.")
 
     updated_properties = properties.copy()
 
@@ -284,19 +345,12 @@ def apply_lmcache_auto_config(model_path: str,
 
         model_size_gb = get_model_size_gb(model_path)
 
-        cpu_cache_gb = get_cache_config(properties, model_size_gb)
+        cpu_cache_gb = calculate_cpu_cache_size(properties, model_size_gb)
 
-        disk_cache_gb = get_disk_space_info()
+        disk_cache_gb = calculate_disk_cache_size(properties, model_size_gb)
 
-        model_dir = properties.get("model_dir", ".")
-        config_file_path = create_lmcache_config_file(cpu_cache_gb,
-                                                      disk_cache_gb, model_dir)
-
-        # Set environment variable for LMCache to find the config
-        os.environ["LMCACHE_CONFIG_FILE"] = os.path.abspath(config_file_path)
-        logger.info(
-            f"Set LMCACHE_CONFIG_FILE environment variable: {os.environ['LMCACHE_CONFIG_FILE']}"
-        )
+        # Set LMCache configuration via environment variables
+        set_lmcache_env_vars(cpu_cache_gb, disk_cache_gb)
 
         logger.info("LMCache auto-configuration completed successfully")
         logger.info(
@@ -305,6 +359,9 @@ def apply_lmcache_auto_config(model_path: str,
 
     except Exception as e:
         logger.error(f"LMCache auto-configuration failed: {e}")
-        logger.warning("Continuing without LMCache auto-configuration")
+        raise RuntimeError(
+            f"LMCache auto-configuration failed: {e}. "
+            f"Disable auto-configuration by setting option.lmcache_auto_config=false "
+            f"and provide a manual LMCache configuration.")
 
     return updated_properties
