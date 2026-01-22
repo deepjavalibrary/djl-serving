@@ -121,7 +121,7 @@ class VllmRbProperties(Properties):
     @model_validator(mode='after')
     def validate_tool_call_parser(self):
         if self.enable_auto_tool_choice:
-            from vllm.entrypoints.openai.tool_parsers import ToolParserManager
+            from vllm.tool_parsers import ToolParserManager
             valid_tool_parses = ToolParserManager.list_registered()
             if self.tool_call_parser not in valid_tool_parses:
                 raise ValueError(
