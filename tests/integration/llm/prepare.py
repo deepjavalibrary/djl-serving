@@ -613,6 +613,7 @@ vllm_model_list = {
         "option.trust_remote_code": True,
         "option.max_model_len": 16384,
         "option.gpu_memory_utilization": "0.9",
+        "option.enable_expert_parallel": True,
     },
     "llama-4-scout-17b-16e-instruct": {
         "option.model_id": "s3://djl-llm/Llama-4-Scout-17B-16E-Instruct/",
