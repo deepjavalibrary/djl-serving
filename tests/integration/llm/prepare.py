@@ -529,7 +529,7 @@ vllm_model_list = {
     },
     "qwen3-8b-no-cache": {
         "option.model_id": "Qwen/Qwen3-8B",
-        "option.tensor_parallel_degree": 1,
+        "option.tensor_parallel_degree": 2,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
         "option.enable_prefix_caching": False,
@@ -671,6 +671,15 @@ vllm_model_list = {
         "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+    },
+    "qwen2.5-32b": {
+        "option.model_id": "Qwen/Qwen2.5-32B",
+        "option.tensor_parallel_degree": 4,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+        "option.max_model_len": 16384,
+        "option.enable_prefix_caching": False,
+        "load_on_devices": 0,
     },
 }
 

@@ -715,12 +715,12 @@ class TestVllmLmcache_g6:
             client.run("vllm_lmcache qwen3-8b-lmcache-auto".split())
 
     def test_lmcache_auto_config_larger_model(self):
-        with Runner("lmi", "qwen2.5-72b-no-cache") as r:
-            prepare.build_vllm_async_model("qwen2.5-72b")
+        with Runner("lmi", "qwen2.5-32b") as r:
+            prepare.build_vllm_async_model("qwen2.5-32b")
             r.launch(env_vars=[
                 "PYTHONHASHSEED=0", "OPTION_LMCACHE_AUTO_CONFIG=True"
             ])
-            client.run("vllm_lmcache qwen2.5-72b-lmcache-auto".split())
+            client.run("vllm_lmcache qwen2.5-32b-lmcache-auto".split())
 
 
 @pytest.mark.vllm

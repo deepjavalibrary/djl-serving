@@ -55,7 +55,7 @@ class VLLMRollingBatch(RollingBatch):
         self.tool_parser = None
         self.reasoning_parser = None
         if self.vllm_configs.enable_auto_tool_choice:
-            from vllm.entrypoints.openai.tool_parsers import ToolParserManager
+            from vllm.tool_parsers import ToolParserManager
             try:
                 self.tool_parser = ToolParserManager.get_tool_parser(
                     self.vllm_configs.tool_call_parser)
