@@ -274,15 +274,20 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
-    "qwen3-8b-lmcache-s3": {
+    "llama3-8b-lmcache-s3": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "Qwen/Qwen2-7B"
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
-    "qwen3-8b-lmcache-redis": {
+    "qwen3-8b-lmcache-auto": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "Qwen/Qwen2-7B"
+        "tokenizer": "Qwen/Qwen3-8B"
+    },
+    "qwen2.5-72b-lmcache-auto": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "Qwen/Qwen2.5-72B"
     },
 }
 

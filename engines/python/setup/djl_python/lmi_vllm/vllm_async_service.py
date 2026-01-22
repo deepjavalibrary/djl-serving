@@ -35,6 +35,7 @@ from djl_python.async_utils import handle_streaming_response, create_non_stream_
 from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 from djl_python.custom_handler_service import CustomHandlerService
 from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
+from djl_python.lmcache_utils import apply_lmcache_auto_config
 
 from djl_python.lmi_vllm.request_response_utils import (
     ProcessedRequest,
@@ -87,6 +88,36 @@ class VLLMHandler(AdapterFormatterMixin):
             logger.error(
                 f"Failed to initialize due to custom formatter error: {e}")
             raise
+
+        # Handle manual LMCache config file if specified
+        if "lmcache_config_file" in properties:
+            config_file = properties["lmcache_config_file"]
+
+            if os.path.isabs(config_file):
+                config_file_path = config_file
+            else:
+                config_file_path = os.path.join(model_dir, config_file)
+
+            if not os.path.exists(config_file_path):
+                raise FileNotFoundError(
+                    f"LMCache config file not found: {config_file_path}")
+
+            os.environ["LMCACHE_CONFIG_FILE"] = os.path.abspath(
+                config_file_path)
+            logger.info(
+                f"Set LMCACHE_CONFIG_FILE to: {os.environ['LMCACHE_CONFIG_FILE']}"
+            )
+
+        # Apply LMCache auto-configuration if enabled
+        if self.vllm_properties.lmcache_auto_config:
+            model_path = properties.get("model_id") or model_dir
+
+            updated_properties = apply_lmcache_auto_config(
+                model_path, properties)
+
+            # Update properties and recreate vLLM properties to include kv_transfer_config
+            properties.update(updated_properties)
+            self.vllm_properties = VllmRbProperties(**properties)
 
         self.vllm_engine_args = self.vllm_properties.get_engine_args(
             async_engine=True)

@@ -86,6 +86,32 @@ public final class LmiUtils {
             return;
         }
 
+        // LMCache auto-config requires maxWorkers=1 for accurate resource calculation
+        // Explanation:
+        // - maxWorkers controls the number of DJL worker threads (each with its own PyProcess).
+        // - One PyProcess spins up one VLLM engine, and LMCache P2P cache sharing is currently not
+        // implemented for the LMCache auto configuration feature.
+        // - Auto-config calculates CPU/disk cache sizes based on total available resources for one
+        // model copy.
+        if ("true".equalsIgnoreCase(prop.getProperty("option.lmcache_auto_config"))) {
+            String maxWorkersStr = prop.getProperty("maxWorkers");
+            if (maxWorkersStr != null) {
+                int maxWorkers = Integer.parseInt(maxWorkersStr);
+                if (maxWorkers > 1) {
+                    throw new IllegalArgumentException(
+                            "LMCache auto-configuration (option.lmcache_auto_config=true) is"
+                                    + " incompatible with maxWorkers > 1. Current maxWorkers="
+                                    + maxWorkers
+                                    + ". Auto-config calculates cache sizes for a single model"
+                                    + " copy. Either set maxWorkers=1 or disable LMCache"
+                                    + " auto-configuration.");
+                }
+            }
+            logger.info("LMCache auto-config enabled, setting maxWorkers to 1");
+            prop.setProperty("maxWorkers", "1");
+            modelInfo.setMaxWorkers(1);
+        }
+
         LmiConfigRecommender.configure(prop, modelConfig);
         logger.info(
                 "Detected mpi_mode: {}, rolling_batch: {}, tensor_parallel_degree: {}, for"

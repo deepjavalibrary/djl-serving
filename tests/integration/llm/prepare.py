@@ -474,7 +474,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
-        "lmcache_config_file": "lmcache_qwen3_benchmark.yaml",
+        "option.lmcache_config_file": "lmcache_qwen3_benchmark.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
         "load_on_devices": 0,
@@ -484,7 +484,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
-        "lmcache_config_file": "lmcache_s3.yaml",
+        "option.lmcache_config_file": "lmcache_s3.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
         "load_on_devices": 0,
@@ -494,7 +494,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
-        "lmcache_config_file": "lmcache_redis.yaml",
+        "option.lmcache_config_file": "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
         "load_on_devices": 0,
@@ -512,7 +512,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
-        "lmcache_config_file": "lmcache_qwen3_ebs.yaml",
+        "option.lmcache_config_file": "lmcache_qwen3_ebs.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
         "load_on_devices": 0,
@@ -522,7 +522,7 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
-        "lmcache_config_file": "lmcache_qwen3_nvme.yaml",
+        "option.lmcache_config_file": "lmcache_qwen3_nvme.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
         "load_on_devices": 0,
@@ -557,51 +557,39 @@ vllm_model_list = {
     },
     "qwen2.5-72b": {
         "option.model_id": "Qwen/Qwen2.5-72B",
-        "option.tensor_parallel_degree": 4,
+        "option.tensor_parallel_degree": 8,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
     },
     "qwen2.5-1.5b-lmcache": {
-        "option.model_id":
-        "Qwen/Qwen2.5-1.5B",
-        "option.tensor_parallel_degree":
-        1,
-        "option.load_format":
-        "dummy",
-        "option.max_new_tokens":
-        100,
-        "lmcache_config_file":
-        "lmcache_redis.yaml",
+        "option.model_id": "Qwen/Qwen2.5-1.5B",
+        "option.tensor_parallel_degree": 1,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+        "option.lmcache_config_file": "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "load_on_devices": 0
     },
     "qwen2.5-7b-lmcache": {
-        "option.model_id":
-        "Qwen/Qwen2.5-7B",
-        "option.tensor_parallel_degree":
-        1,
-        "option.load_format":
-        "dummy",
-        "option.max_new_tokens":
-        100,
-        "lmcache_config_file":
-        "lmcache_redis.yaml",
+        "option.model_id": "Qwen/Qwen2.5-7B",
+        "option.tensor_parallel_degree": 1,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+        "option.lmcache_config_file": "lmcache_qwen25_7b.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "load_on_devices": 0
     },
     "qwen2.5-72b-lmcache": {
-        "option.model_id":
-        "Qwen/Qwen2.5-72B",
-        "option.tensor_parallel_degree":
-        4,
-        "option.load_format":
-        "dummy",
-        "option.max_new_tokens":
-        100,
-        "lmcache_config_file":
-        "lmcache_redis.yaml",
+        "option.model_id": "Qwen/Qwen2.5-72B",
+        "option.tensor_parallel_degree": 4,
+        "option.load_format": "dummy",
+        "option.max_new_tokens": 100,
+        "option.lmcache_config_file": "lmcache_qwen25_72b.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
+        "load_on_devices": 0
     },
     "tinyllama-input-len-exceeded": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
@@ -640,7 +628,7 @@ vllm_model_list = {
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         4,
-        "lmcache_config_file":
+        "option.lmcache_config_file":
         "lmcache_cpu.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
@@ -650,7 +638,7 @@ vllm_model_list = {
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         4,
-        "lmcache_config_file":
+        "option.lmcache_config_file":
         "lmcache_local_storage.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
@@ -669,7 +657,7 @@ vllm_model_list = {
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         4,
-        "lmcache_config_file":
+        "option.lmcache_config_file":
         "lmcache_s3.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
@@ -679,7 +667,7 @@ vllm_model_list = {
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         4,
-        "lmcache_config_file":
+        "option.lmcache_config_file":
         "lmcache_redis.yaml",
         "option.kv_transfer_config":
         '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}',
@@ -1204,10 +1192,7 @@ def build_vllm_async_model(model):
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])
-
-    lmcache_config_file = options.pop("lmcache_config_file", None)
-    if lmcache_config_file:
-        options["option.lmcache_config_file"] = lmcache_config_file
+    lmcache_config_file = options.get("option.lmcache_config_file", None)
 
     write_model_artifacts(options,
                           adapter_ids=adapter_ids,

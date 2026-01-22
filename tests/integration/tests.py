@@ -665,26 +665,19 @@ class TestVllmLmcache_g6:
     def test_lmcache_cpu(self):
         with Runner("lmi", "llama3-8b-lmcache-cpu") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_local_storage(self):
         with Runner("lmi", "llama3-8b-lmcache-local-storage") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache llama3-8b-lmcache-local-storage".split())
 
     def test_lmcache_s3(self):
         with Runner("lmi", "llama3-8b-lmcache-s3") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml",
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache llama3-8b-lmcache-s3".split())
 
     def test_lmcache_redis(self):
@@ -699,9 +692,7 @@ class TestVllmLmcache_g6:
         try:
             with Runner("lmi", "llama3-8b-lmcache-redis") as r:
                 prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
-                r.launch(env_vars=[
-                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml"
-                ])
+                r.launch(env_vars=["PYTHONHASHSEED=0"])
                 client.run("vllm_lmcache llama3-8b-lmcache-redis".split())
         finally:
             # Cleanup Redis container
@@ -714,6 +705,22 @@ class TestVllmLmcache_g6:
             prepare.build_vllm_async_model("llama3-8b-lmcache-missing-role")
             with pytest.raises(Exception):
                 r.launch()
+
+    def test_lmcache_auto_config(self):
+        with Runner("lmi", "qwen3-8b-no-cache") as r:
+            prepare.build_vllm_async_model("qwen3-8b-no-cache")
+            r.launch(env_vars=[
+                "PYTHONHASHSEED=0", "OPTION_LMCACHE_AUTO_CONFIG=True"
+            ])
+            client.run("vllm_lmcache qwen3-8b-lmcache-auto".split())
+
+    def test_lmcache_auto_config_larger_model(self):
+        with Runner("lmi", "qwen2.5-72b-no-cache") as r:
+            prepare.build_vllm_async_model("qwen2.5-72b")
+            r.launch(env_vars=[
+                "PYTHONHASHSEED=0", "OPTION_LMCACHE_AUTO_CONFIG=True"
+            ])
+            client.run("vllm_lmcache qwen2.5-72b-lmcache-auto".split())
 
 
 @pytest.mark.vllm
@@ -729,18 +736,14 @@ class TestVllmLmcachePerformance_g6:
     def test_lmcache_performance_cpu(self):
         with Runner("lmi", "llama3-8b-lmcache-cpu") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-cpu")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_cpu.yaml"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run(
                 "vllm_lmcache_performance llama3-8b-lmcache-cpu".split())
 
     def test_lmcache_performance_local_storage(self):
         with Runner("lmi", "llama3-8b-lmcache-local-storage") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-local-storage")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_local_storage.yaml"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run(
                 "vllm_lmcache_performance llama3-8b-lmcache-local-storage".
                 split())
@@ -753,9 +756,7 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
     def test_lmcache_performance_s3(self):
         with Runner("lmi", "llama3-8b-lmcache-s3") as r:
             prepare.build_vllm_async_model("llama3-8b-lmcache-s3")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
             client.run("vllm_lmcache_performance llama3-8b-lmcache-s3".split())
 
     def test_lmcache_performance_redis(self):
@@ -770,9 +771,7 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         try:
             with Runner("lmi", "llama3-8b-lmcache-redis") as r:
                 prepare.build_vllm_async_model("llama3-8b-lmcache-redis")
-                r.launch(env_vars=[
-                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml"
-                ])
+                r.launch(env_vars=["PYTHONHASHSEED=0"])
                 client.run(
                     "vllm_lmcache_performance llama3-8b-lmcache-redis".split())
         finally:
@@ -794,14 +793,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             prepare.build_vllm_async_model("qwen3-8b-lmcache")
 
             # Launch with LMCache configuration
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_benchmark.yaml",
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
 
             # Run benchmark from host machine (sends requests to container)
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+            benchmark_cmd = (f"python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
                              "--host localhost "
                              "--port 8080 "
@@ -830,14 +826,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         with Runner('lmi', 'qwen3-8b-lmcache-s3') as r:
             prepare.build_vllm_async_model("qwen3-8b-lmcache-s3")
 
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_s3.yaml",
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
 
             # Run benchmark with same config for comparison
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+            benchmark_cmd = (f"python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
                              "--host localhost "
                              "--port 8080 "
@@ -875,14 +868,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             with Runner('lmi', 'qwen3-8b-lmcache-redis') as r:
                 prepare.build_vllm_async_model("qwen3-8b-lmcache-redis")
 
-                r.launch(env_vars=[
-                    "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
-                    "PYTHONHASHSEED=0"
-                ])
+                r.launch(env_vars=["PYTHONHASHSEED=0"])
 
                 # Run benchmark with same config for comparison
                 benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-                benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+                benchmark_cmd = (f"python {benchmark_script} "
                                  f"--model Qwen/Qwen3-8B "
                                  "--host localhost "
                                  "--port 8080 "
@@ -920,15 +910,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             prepare.build_vllm_async_model("qwen3-8b-lmcache-ebs")
 
             # DISABLE_NVME_TMP=true forces /tmp to use EBS disk instead of NVMe
-            r.launch(env_vars=[
-                "DISABLE_NVME_TMP=true",
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_ebs.yaml",
-                "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["DISABLE_NVME_TMP=true", "PYTHONHASHSEED=0"])
 
             # Run benchmark with same config as CPU test for comparison
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+            benchmark_cmd = (f"python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
                              "--host localhost "
                              "--port 8080 "
@@ -958,14 +944,11 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
         with Runner('lmi', 'qwen3-8b-lmcache-nvme') as r:
             prepare.build_vllm_async_model("qwen3-8b-lmcache-nvme")
 
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen3_nvme.yaml",
-                "LMCACHE_USE_EXPERIMENTAL=True", "PYTHONHASHSEED=0"
-            ])
+            r.launch(env_vars=["PYTHONHASHSEED=0"])
 
             # Run benchmark with same config as CPU test for comparison
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+            benchmark_cmd = (f"python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
                              "--host localhost "
                              "--port 8080 "
@@ -998,7 +981,7 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             r.launch(env_vars=["PYTHONHASHSEED=0"])
 
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+            benchmark_cmd = (f"python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
                              "--host localhost "
                              "--port 8080 "
@@ -1030,7 +1013,7 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
             r.launch(env_vars=["PYTHONHASHSEED=0"])
 
             benchmark_script = "lmcache_configs/djl_long_doc_qa_clean.py"
-            benchmark_cmd = (f"PYTHONHASHSEED=0 python {benchmark_script} "
+            benchmark_cmd = (f"python {benchmark_script} "
                              f"--model Qwen/Qwen3-8B "
                              "--host localhost "
                              "--port 8080 "
@@ -1141,115 +1124,6 @@ class TestStatefulModel_g6:
             prepare.build_stateful_model("gemma-2b")
             r.launch()
             client.run("stateful gemma-2b".split())
-
-
-@pytest.mark.vllm
-@pytest.mark.gpu_4
-class TestVllmLmcacheScaling_g6:
-
-    def test_qwen25_1_5b(self):
-        """Test 1A: 8 docs × 128K = 1M context"""
-        # Start Redis via Docker
-        redis_proc = subprocess.Popen(
-            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL)
-        container_id = redis_proc.stdout.read().decode().strip()
-        time.sleep(3)  # Wait for Redis to start
-
-        with Runner("lmi", "qwen2.5-1.5b-1a") as r:
-            prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
-                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
-            ])
-            benchmark_cmd = (
-                "python lmcache_configs/djl_long_doc_qa_clean.py "
-                "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
-                "--num-documents 200 --document-length 128000 --output-len 100 "
-                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
-            )
-            os.system(benchmark_cmd)
-
-    def test_qwen25_7b(self):
-        """Test 2A: 4 docs × 128K = 512K context"""
-        # Start Redis via Docker
-        redis_proc = subprocess.Popen(
-            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL)
-        container_id = redis_proc.stdout.read().decode().strip()
-        time.sleep(5)  # Wait for Redis to start
-
-        with Runner("lmi", "qwen2.5-7b-2a") as r:
-            prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
-                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
-            ])
-            benchmark_cmd = (
-                "python lmcache_configs/djl_long_doc_qa_clean.py "
-                "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
-                "--num-documents 24 --document-length 128000 --output-len 100 "
-                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
-            )
-            os.system(benchmark_cmd)
-
-    def test_qwen25_72b(self):
-        """Test 3A: 4 docs × 100K < 450K context"""
-        # Start Redis via Docker
-        redis_proc = subprocess.Popen(
-            ["docker", "run", "-d", "--rm", "-p", "6379:6379", "redis:alpine"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL)
-        container_id = redis_proc.stdout.read().decode().strip()
-        time.sleep(5)  # Wait for Redis to start
-
-        with Runner("lmi", "qwen2.5-72b-3a-lmcache") as r:
-            prepare.build_vllm_async_model("qwen2.5-72b-lmcache")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_redis.yaml",
-                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0,1,2,3"
-            ])
-            benchmark_cmd = (
-                "python lmcache_configs/djl_long_doc_qa_clean.py "
-                "--model Qwen/Qwen2.5-72B --host localhost --port 8080 "
-                "--num-documents 40 --document-length 20000 --output-len 100 "
-                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
-            )
-            os.system(benchmark_cmd)
-
-    def test_qwen25_7b_cpu_overflow(self):
-        """Test 2C: 160 docs × 128K = 25.6M context"""
-        with Runner("lmi", "qwen2.5-7b-2c") as r:
-            prepare.build_vllm_async_model("qwen2.5-7b-lmcache")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_7b.yaml",
-                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
-            ])
-            benchmark_cmd = (
-                "python lmcache_configs/djl_long_doc_qa_clean.py "
-                "--model Qwen/Qwen2.5-7B --host localhost --port 8080 "
-                "--num-documents 160 --document-length 128000 --output-len 100 "
-                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
-            )
-            os.system(benchmark_cmd)
-
-    def test_qwen25_1_5b_cpu_overflow(self):
-        """Test 1C: 330 docs × 128K = 51.2M context"""
-        with Runner("lmi", "qwen2.5-1.5b-1c") as r:
-            prepare.build_vllm_async_model("qwen2.5-1.5b-lmcache")
-            r.launch(env_vars=[
-                "LMCACHE_CONFIG_FILE=/opt/ml/model/test/lmcache_qwen25_1_5b.yaml",
-                "PYTHONHASHSEED=0", "CUDA_VISIBLE_DEVICES=0"
-            ])
-            benchmark_cmd = (
-                "python lmcache_configs/djl_long_doc_qa_clean.py "
-                "--model Qwen/Qwen2.5-1.5B --host localhost --port 8080 "
-                "--num-documents 330 --document-length 128000 --output-len 100 "
-                "--repeat-count 1 --repeat-mode tile --max-inflight-requests 4"
-            )
-            os.system(benchmark_cmd)
 
 
 @pytest.mark.vllm
