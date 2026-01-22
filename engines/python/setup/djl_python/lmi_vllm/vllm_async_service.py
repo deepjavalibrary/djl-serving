@@ -31,7 +31,7 @@ from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.encode_decode import decode
-from djl_python.async_utils import handle_streaming_response, create_non_stream_output, _extract_lora_adapter
+from djl_python.async_utils import handle_streaming_response, create_non_stream_output, create_stream_chunk_output, _extract_lora_adapter
 from djl_python.custom_formatter_handling import CustomFormatterHandler, CustomFormatterError
 from djl_python.custom_handler_service import CustomHandlerService
 from djl_python.rolling_batch.rolling_batch_vllm_utils import create_lora_request, get_lora_request
@@ -162,6 +162,14 @@ class VLLMHandler(AdapterFormatterMixin):
             self.session_manager: SessionManager = SessionManager(properties)
         self.initialized = True
 
+    def _get_custom_formatter(self, adapter_name: Optional[str] = None) -> bool:
+        """Check if a custom output formatter exists for the adapter or base model."""
+        if adapter_name:
+            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
+            if adapter_formatter and adapter_formatter.output_formatter:
+                return True
+        return self.output_formatter is not None
+
     def preprocess_request(self, inputs: Input) -> ProcessedRequest:
         batch = inputs.get_batches()
         assert len(batch) == 1, "only one request per batch allowed"
@@ -255,50 +263,67 @@ class VLLMHandler(AdapterFormatterMixin):
             logger.fatal("vLLM engine is dead, terminating process")
             kill_process_tree(os.getpid())
 
-    async def inference(
-            self,
-            inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
+    async def inference(self, inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
         await self.check_health()
         try:
             processed_request = self.preprocess_request(inputs)
         except CustomFormatterError as e:
             logger.exception("Custom formatter failed")
-            output = create_non_stream_output(
+            return create_non_stream_output(
                 "", error=f"Custom formatter failed: {str(e)}", code=424)
-            return output
         except Exception as e:
             logger.exception("Input parsing failed")
-            output = create_non_stream_output(
+            return create_non_stream_output(
                 "", error=f"Input parsing failed: {str(e)}", code=424)
-            return output
 
         # vLLM will extract the adapter from the request object via _maybe_get_adapters()
         response = await processed_request.inference_invoker(
             processed_request.vllm_request)
 
-        if isinstance(response, types.AsyncGeneratorType):
-            # Apply streaming output formatter (adapter-specific or base model)
-            response = self.apply_output_formatter_streaming_raw(
-                response, adapter_name=processed_request.adapter_name)
+        # Check if custom formatter exists (applies to both streaming and non-streaming)
+        custom_formatter = self._get_custom_formatter(processed_request.adapter_name)
 
-            return handle_streaming_response(
+        if isinstance(response, types.AsyncGeneratorType):
+            return self._handle_streaming_response(response, processed_request, custom_formatter)
+
+        # Non-streaming response
+        if custom_formatter:
+            formatted_response = self.apply_output_formatter(
+                response, adapter_name=processed_request.adapter_name)
+            # If custom formatter returns a Pydantic model, serialize it
+            if hasattr(formatted_response, 'model_dump_json'):
+                formatted_response = formatted_response.model_dump_json()
+            elif hasattr(formatted_response, 'model_dump'):
+                formatted_response = formatted_response.model_dump()
+            return create_non_stream_output(formatted_response)
+        
+        # LMI formatter for non-streaming
+        return processed_request.non_stream_output_formatter(
+            response,
+            request=processed_request.vllm_request,
+            tokenizer=self.tokenizer,
+        )
+
+    async def _handle_streaming_response(self, response, processed_request, custom_formatter):
+        """Handle streaming responses as an async generator"""
+        if custom_formatter:
+            # Custom formatter: apply to each chunk and yield directly
+            async for chunk in response:
+                formatted_chunk = self.apply_output_formatter(
+                    chunk, adapter_name=processed_request.adapter_name)
+                yield create_stream_chunk_output(formatted_chunk, last_chunk=False)
+            yield create_stream_chunk_output("", last_chunk=True)
+        else:
+            # LMI formatter for streaming
+            async for output in handle_streaming_response(
                 response,
                 processed_request.stream_output_formatter,
                 request=processed_request.vllm_request,
                 accumulate_chunks=processed_request.accumulate_chunks,
                 include_prompt=processed_request.include_prompt,
                 tokenizer=self.tokenizer,
-            )
-
-        # Apply output formatter (adapter-specific or base model)
-        response = self.apply_output_formatter(
-            response, adapter_name=processed_request.adapter_name)
-
-        return processed_request.non_stream_output_formatter(
-            response,
-            request=processed_request.vllm_request,
-            tokenizer=self.tokenizer,
-        )
+            ):
+                yield output
 
     async def add_lora(self, lora_name: str, lora_alias: str, lora_path: str):
         logging.info(f"Adding LoRA {lora_name} from {lora_path}")

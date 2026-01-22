@@ -657,6 +657,14 @@ class TestVllmCustomFormatters_g6:
             with pytest.raises(Exception):
                 r.launch()
 
+    def test_custom_formatter_final_output(self):
+        """Test that custom formatter is the final formatter (not overridden by LMI formatter)"""
+        with Runner("lmi", "gpt-neox-20b-custom-final") as r:
+            prepare.build_vllm_async_model_with_example_formatter(
+                "gpt-neox-20b-custom")
+            r.launch()
+            client.run("custom_final gpt-neox-20b".split())
+
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
