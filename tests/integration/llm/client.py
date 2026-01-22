@@ -1695,6 +1695,27 @@ def test_custom_formatter_async(model, model_spec):
         assert "custom_formatter_applied" in message, "Output does not contain custom_formatter_applied_tag"
 
 
+def test_custom_formatter_final(model, model_spec):
+    modelspec_checker(model, model_spec)
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
+    req = {"inputs": batch_generation(1)[0]}
+    seq_length = spec["seq_length"][0]
+    params = {"max_new_tokens": seq_length}
+    req["parameters"] = params
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        message = res.content.decode("utf-8")
+        LOGGER.info(f"res: {message}")
+        parsed = json.loads(message.strip().split('\n')[0])
+        assert "custom_formatter_applied" in message, "Output does not contain custom_formatter_applied_tag"
+
+
 def check_output_formatter_applied(response_text, expected_identifier):
     """
     Check if output formatter was applied correctly.
@@ -2582,6 +2603,8 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, vllm_model_spec)
     elif args.handler == "custom":
         test_custom_formatter_async(args.model, custom_formatter_spec)
+    elif args.handler == "custom_final":
+        test_custom_formatter_final(args.model, vllm_model_spec)
     elif args.handler == "custom_handler":
         test_custom_handler_async(args.model, custom_formatter_spec)
     elif args.handler == "vllm_adapters":
