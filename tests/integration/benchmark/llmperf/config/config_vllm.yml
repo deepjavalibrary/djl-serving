@@ -1,0 +1,100 @@
+region: "us-west-2"
+
+cloudwatch:
+  metrics_namespace: "EC2_LLM_Benchmark"
+
+s3:
+  #bucket_name: "djl-benchmark-llm"
+  #folder: "ec2"
+  bucket_name: "lninga-test"
+  folder: "llmperf"
+
+metrics:
+  results_ttft_s_quantiles_p50:
+    metric_name: "TTFT_P50"
+    unit: "Milliseconds"
+    
+  results_ttft_s_quantiles_p99:
+    metric_name: "TTFT_P99"
+    unit: "Milliseconds"
+  
+  results_inter_token_latency_s_quantiles_p50:
+    metric_name: "InterTokenLatency_P50"
+    unit: "Milliseconds"
+    
+  results_inter_token_latency_s_quantiles_p99:
+    metric_name: "InterTokenLatency_P99"
+    unit: "Milliseconds"
+    
+  results_request_output_throughput_token_per_s_quantiles_p50: 
+    metric_name: "OutputThroughputToken_P50"
+    unit: "Count"
+    
+  results_request_output_throughput_token_per_s_quantiles_p99: 
+    metric_name: "OutputThroughputToken_P99"
+    unit: "None"
+
+  results_number_input_tokens_quantiles_p50:
+    metric_name: "NumberOfInputTokens_p50"
+    unit: "None"
+      
+  results_number_input_tokens_quantiles_p99:
+    metric_name: "NumberOfInputTokens_p99"
+    unit: "None"
+
+  results_number_output_tokens_quantiles_p50:
+    metric_name: "NumberOfOutputTokens_p50"
+    unit: "None"
+      
+  results_number_output_tokens_quantiles_p99:
+    metric_name: "NumberOfOutputTokens_p99"
+    unit: "None"
+
+  results_error_rate:
+    metric_name: "ErrorRate"
+    unit: "Percent"
+
+benchmarks:
+  - model: "meta-llama/Llama-3.1-8B-Instruct"
+    tests:
+      - test_name: "tp2_500_250"
+        llmperf_parameters:
+          num-concurrent-requests-list: [1,2,4,8,16,32,64]
+          others: ["--mean-input-tokens 500", "--stddev-input-tokens 150", "--mean-output-tokens 250", "--stddev-output-tokens 150", "--max-num-completed-requests 1000", "--timeout 600", "--llm-api openai"]
+        containers:
+          - container: "vllm"
+            instance_types: ["p4d.24xlarge", "g5.12xlarge"]
+            repo: "public.ecr.aws/q9t5s3a7/vllm-ci-test-repo"  
+            #repo: "vllm/vllm-openai"
+            tag: "latest"
+            action: yes
+            docker_parameters:
+              ["--runtime", "nvidia", "--gpus", "all", "--shm-size", "20g", "-v",  "/home/ubuntu/.cache/huggingface:/tmp/.cache/huggingface", "-p", "8080:8000"]       
+            server_parameters:
+              ["--model", "meta-llama/Llama-3.1-8B-Instruct", "--disable-log-stats", "--disable-log-requests", "--gpu-memory-utilization=0.9", "-tp=2", "--num-scheduler-steps=10", "--max-num-seqs=512", "--swap-space=16", "--max-model-len=8192"]
+      - test_name: "tp2_500_2000"
+        llmperf_parameters:
+          num-concurrent-requests-list: [1,2,4,8,16,32,64]
+          others: ["--mean-input-tokens 500", "--stddev-input-tokens 150", "--mean-output-tokens 2000", "--stddev-output-tokens 150", "--max-num-completed-requests 1000", "--timeout: 600", "--llm-api openai"]
+        containers:
+          - container: "vllm"
+            instance_types: ["p4d.24xlarge", "g5.12xlarge"]
+            repo: "public.ecr.aws/q9t5s3a7/vllm-ci-test-repo"
+            action: no
+            docker_parameters:
+              ["--runtime", "nvidia", "--gpus", "all", "--shm-size", "20g", "-v",  "/home/ubuntu/.cache/huggingface:/tmp/.cache/huggingface", "-p", "8080:8000"]       
+            server_parameters:
+              ["--model", "meta-llama/Llama-3.1-8B-Instruct", "--disable-log-stats", "--disable-log-requests", "--gpu-memory-utilization=0.9", "-tp=2", "--num-scheduler-steps=10", "--max-num-seqs=512", "--swap-space=16", "--max-model-len=8192"]
+      - test_name: "tp2_2000_500"
+        llmperf_parameters:
+          num-concurrent-requests-list: [1,2,4,8,16,32,64]
+          others: others: ["--mean-input-tokens 2000", "--stddev-input-tokens 150", "--mean-output-tokens 500", "--stddev-output-tokens 150", "--max-num-completed-requests 1000", "--timeout: 600", "--llm-api openai"]
+        containers:
+          - container: "vllm"
+            instance_types: ["p4d.24xlarge", "g5.12xlarge"]
+            repo: "public.ecr.aws/q9t5s3a7/vllm-ci-test-repo"
+            action: no
+            docker_parameters:
+              ["--runtime", "nvidia", "--gpus", "all", "--shm-size", "20g", "-v",  "/home/ubuntu/.cache/huggingface:/tmp/.cache/huggingface", "-p", "8080:8000"]      
+            server_parameters:
+              ["--model", "meta-llama/Llama-3.1-8B-Instruct", "--disable-log-stats", "--disable-log-requests", "--gpu-memory-utilization=0.9", "-tp=2", "--num-scheduler-steps=10", "--max-num-seqs=512", "--swap-space=16", "--max-model-len=8192"]     
