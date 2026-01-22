@@ -1,8 +1,8 @@
-torch==2.9.0
+torch==2.9.1
 autoawq
 torchvision
 peft==0.15.1
-protobuf==4.25.8
+protobuf>=6.30.0
 transformers==4.57.1
 hf-transfer
 zstandard
@@ -32,7 +32,7 @@ uvloop
 ninja
 peft
 llmcompressor
-vllm==0.12.0
+vllm==0.14.0
 xgrammar
 flashinfer-python==0.5.3
 lmcache
