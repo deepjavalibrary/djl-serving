@@ -201,7 +201,7 @@ vllm_model_spec = {
     "llama3-8b-unmerged-lora-with-custom-code": {
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
         "batch_size": [4],
-        "seq_length": [16, 32],
+        "seq_length": [32, 64],
         "worker": 1,
         "adapters": ["medical", "exam"],
         "tokenizer": "unsloth/llama-3-8b-Instruct",
