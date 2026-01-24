@@ -821,6 +821,9 @@ def extract_chat_content(response_content):
         line = line.strip()
         if not line:
             continue
+
+        if line.startswith("data: "):
+            line = line[6:]  # Remove "data: " prefix
         try:
             parsed = json.loads(line)
             # Non-streaming chat completion format
@@ -1576,6 +1579,16 @@ def response_checker(res, message):
             for item in message.split('\n'):
                 item = item.strip()
                 if len(item) > 0:
+                    if item.startswith('data: '):
+                        item = item[6:]  # Remove "data: " prefix
+
+                    # Skip [DONE] markers
+                    if item == '[DONE]':
+                        continue
+
+                    # Skip empty items after stripping
+                    if not item:
+                        continue
                     try:
                         json_lines.append(json.loads(item))
                     except json.JSONDecodeError as e:
@@ -1714,6 +1727,18 @@ def check_output_formatter_applied(response_text, expected_identifier):
         line = line.strip()
         if not line:
             continue
+
+        if line.startswith('data: '):
+            line = line[6:]  # Remove "data: " prefix
+
+        # Skip [DONE] markers
+        if line == '[DONE]':
+            continue
+
+        # Skip empty lines after stripping
+        if not line:
+            continue
+
         try:
             parsed_json = json.loads(line)
             # Check for text completion format
