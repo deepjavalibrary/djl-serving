@@ -1581,14 +1581,6 @@ def response_checker(res, message):
                 if len(item) > 0:
                     if item.startswith('data: '):
                         item = item[6:]  # Remove "data: " prefix
-
-                    # Skip [DONE] markers
-                    if item == '[DONE]':
-                        continue
-
-                    # Skip empty items after stripping
-                    if not item:
-                        continue
                     try:
                         json_lines.append(json.loads(item))
                     except json.JSONDecodeError as e:
@@ -1730,14 +1722,6 @@ def check_output_formatter_applied(response_text, expected_identifier):
 
         if line.startswith('data: '):
             line = line[6:]  # Remove "data: " prefix
-
-        # Skip [DONE] markers
-        if line == '[DONE]':
-            continue
-
-        # Skip empty lines after stripping
-        if not line:
-            continue
 
         try:
             parsed_json = json.loads(line)
