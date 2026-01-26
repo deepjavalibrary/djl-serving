@@ -529,10 +529,11 @@ vllm_model_list = {
     },
     "qwen3-8b-no-cache": {
         "option.model_id": "Qwen/Qwen3-8B",
-        "option.tensor_parallel_degree": 2,
+        "option.tensor_parallel_degree": 1,
         "option.load_format": "dummy",
         "option.max_new_tokens": 100,
         "option.enable_prefix_caching": False,
+        "option.max_model_len": 9000,
         "load_on_devices": 0,
     },
     "qwen3-8b-vllm-prefix-cache": {
@@ -637,7 +638,8 @@ vllm_model_list = {
         "option.model_id":
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
-        4,
+        1,
+        "option.max_model_len": 8192,
         "option.lmcache_config_file":
         "lmcache_local_storage.yaml",
         "option.kv_transfer_config":
