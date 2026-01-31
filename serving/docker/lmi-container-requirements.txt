@@ -1,6 +1,7 @@
 torch==2.9.1
-autoawq
 transformers==4.56.0
+huggingface-hub
+hf-transfer
 peft==0.15.1
 sentence-transformers==3.3.1
 optimum==1.23.2
@@ -8,3 +9,4 @@ llmcompressor==0.9.0.1
 mpi4py==4.0.1
 vllm==0.15.0
 lmcache
+autoawq
