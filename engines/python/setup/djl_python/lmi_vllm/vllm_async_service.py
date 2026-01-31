@@ -16,13 +16,13 @@ import types
 from typing import Optional, Union, AsyncGenerator
 
 from vllm import AsyncLLMEngine
-from vllm.entrypoints.openai.protocol import (
-    ChatCompletionRequest,
-    CompletionRequest,
-)
-from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
-from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
+from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
+from vllm.entrypoints.openai.completion.protocol import CompletionRequest
+
+from vllm.entrypoints.openai.chat_completion.serving import OpenAIServingChat
+from vllm.entrypoints.openai.completion.serving import OpenAIServingCompletion
+from vllm.entrypoints.openai.models.protocol import BaseModelPath
+from vllm.entrypoints.openai.models.serving import OpenAIServingModels
 from vllm.utils.counter import AtomicCounter
 from vllm.utils.system_utils import kill_process_tree
 
@@ -123,7 +123,7 @@ class VLLMHandler(AdapterFormatterMixin):
             async_engine=True)
         self.vllm_engine = AsyncLLMEngine.from_engine_args(
             self.vllm_engine_args)
-        self.tokenizer = await self.vllm_engine.get_tokenizer()
+        self.tokenizer = self.vllm_engine.get_tokenizer()
 
         model_names = self.vllm_engine_args.served_model_name or "lmi"
         if not isinstance(model_names, list):

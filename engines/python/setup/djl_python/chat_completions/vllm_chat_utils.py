@@ -14,11 +14,11 @@ from typing import Dict, List, Optional, Union, Any, Callable, Annotated, Tuple,
 
 from pydantic import Field
 from vllm import TokensPrompt
-from vllm.entrypoints.openai.serving_engine import RequestPrompt, TextTokensPrompt
+from vllm.entrypoints.openai.protocol import RequestPrompt, TextTokensPrompt
 from vllm.tool_parsers import ToolParser
 from vllm.tokenizers.mistral import maybe_serialize_tool_calls
 from vllm.transformers_utils.tokenizer import AnyTokenizer
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest
+from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
 from vllm.entrypoints.chat_utils import (
     apply_hf_chat_template, apply_mistral_chat_template, parse_chat_messages,
     resolve_chat_template_content_format, ChatCompletionMessageParam,

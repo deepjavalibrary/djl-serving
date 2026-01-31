@@ -90,8 +90,8 @@ RUN scripts/patch_oss_dlc.sh python \
 
 COPY lmi-container-requirements.txt ./requirements.txt
 RUN pip3 install --upgrade pip setuptools
-RUN pip3 install torch==2.9.1 torchvision \
-    && pip3 install -r requirements.txt --no-deps \
+RUN pip3 install torch==2.9.1 torchvision\
+    && pip3 install -r requirements.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 
 COPY distribution[s]/ ./

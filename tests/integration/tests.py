@@ -370,7 +370,7 @@ class TestVllm1_g6:
 
     def test_gemma_2b(self):
         with Runner("lmi", "gemma-2b") as r:
-            prepare.build_vllm_model("gemma-2b")
+            prepare.build_vllm_async_model("gemma-2b")
             r.launch()
             client.run("vllm gemma-2b".split())
 

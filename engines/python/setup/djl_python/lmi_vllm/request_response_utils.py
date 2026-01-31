@@ -12,14 +12,16 @@
 # the specific language governing permissions and limitations under the License.
 import json
 from typing import Callable, Tuple, Union, List, Dict
-from vllm.entrypoints.openai.protocol import (
+from vllm.entrypoints.openai.completion.protocol import (
     CompletionRequest,
-    ChatCompletionRequest,
     CompletionResponse,
-    ChatCompletionResponse,
-    ErrorResponse,
     CompletionLogProbs,
 )
+from vllm.entrypoints.openai.chat_completion.protocol import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+)
+from vllm.entrypoints.openai.engine.protocol import ErrorResponse
 from vllm.logprobs import Logprob
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 
