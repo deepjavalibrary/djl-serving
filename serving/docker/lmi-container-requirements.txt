@@ -1,5 +1,5 @@
 torch==2.9.1
-transformers==4.56.0
+transformers >= 4.56.0, < 5
 huggingface-hub
 hf-transfer
 peft==0.15.1
