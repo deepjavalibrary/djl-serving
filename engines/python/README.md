@@ -3,7 +3,7 @@
 ## Overview
 This module contains the Deep Java Library (DJL) EngineProvider for Python based model.
 
-DJL Python engine allows you run python model in a JVM based application. However, you still
+DJL Python engine allows you to run python models in a JVM based application. However, you still
 need to install your python environment and dependencies.
 
 Python engine is a DL library with limited support for NDArray operations.
