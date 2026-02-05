@@ -639,7 +639,8 @@ vllm_model_list = {
         "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.tensor_parallel_degree":
         1,
-        "option.max_model_len": 8192,
+        "option.max_model_len":
+        8192,
         "option.lmcache_config_file":
         "lmcache_local_storage.yaml",
         "option.kv_transfer_config":
@@ -1407,7 +1408,8 @@ supported_handler = {
     'vllm_async': build_vllm_async_model,
     'vllm_async_custom_formatters': build_vllm_async_model_custom_formatters,
     'vllm_async_custom_handler': build_vllm_async_model_with_custom_handler,
-    'vllm_async_example_formatter': build_vllm_async_model_with_example_formatter
+    'vllm_async_example_formatter':
+    build_vllm_async_model_with_example_formatter
 }
 
 if __name__ == '__main__':

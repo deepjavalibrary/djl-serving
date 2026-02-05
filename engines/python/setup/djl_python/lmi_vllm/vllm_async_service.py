@@ -162,10 +162,12 @@ class VLLMHandler(AdapterFormatterMixin):
             self.session_manager: SessionManager = SessionManager(properties)
         self.initialized = True
 
-    def _get_custom_formatter(self, adapter_name: Optional[str] = None) -> bool:
+    def _get_custom_formatter(self,
+                              adapter_name: Optional[str] = None) -> bool:
         """Check if a custom output formatter exists for the adapter or base model."""
         if adapter_name:
-            adapter_formatter = self.get_adapter_formatter_handler(adapter_name)
+            adapter_formatter = self.get_adapter_formatter_handler(
+                adapter_name)
             if adapter_formatter and adapter_formatter.output_formatter:
                 return True
         return self.output_formatter is not None
@@ -263,7 +265,9 @@ class VLLMHandler(AdapterFormatterMixin):
             logger.fatal("vLLM engine is dead, terminating process")
             kill_process_tree(os.getpid())
 
-    async def inference(self, inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
+    async def inference(
+            self,
+            inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
         await self.check_health()
         try:
             processed_request = self.preprocess_request(inputs)
@@ -281,10 +285,12 @@ class VLLMHandler(AdapterFormatterMixin):
             processed_request.vllm_request)
 
         # Check if custom formatter exists (applies to both streaming and non-streaming)
-        custom_formatter = self._get_custom_formatter(processed_request.adapter_name)
+        custom_formatter = self._get_custom_formatter(
+            processed_request.adapter_name)
 
         if isinstance(response, types.AsyncGeneratorType):
-            return self._handle_streaming_response(response, processed_request, custom_formatter)
+            return self._handle_streaming_response(response, processed_request,
+                                                   custom_formatter)
 
         # Non-streaming response
         if custom_formatter:
@@ -296,7 +302,7 @@ class VLLMHandler(AdapterFormatterMixin):
             elif hasattr(formatted_response, 'model_dump'):
                 formatted_response = formatted_response.model_dump()
             return create_non_stream_output(formatted_response)
-        
+
         # LMI formatter for non-streaming
         return processed_request.non_stream_output_formatter(
             response,
@@ -304,24 +310,26 @@ class VLLMHandler(AdapterFormatterMixin):
             tokenizer=self.tokenizer,
         )
 
-    async def _handle_streaming_response(self, response, processed_request, custom_formatter):
+    async def _handle_streaming_response(self, response, processed_request,
+                                         custom_formatter):
         """Handle streaming responses as an async generator"""
         if custom_formatter:
             # Custom formatter: apply to each chunk and yield directly
             async for chunk in response:
                 formatted_chunk = self.apply_output_formatter(
                     chunk, adapter_name=processed_request.adapter_name)
-                yield create_stream_chunk_output(formatted_chunk, last_chunk=False)
+                yield create_stream_chunk_output(formatted_chunk,
+                                                 last_chunk=False)
             yield create_stream_chunk_output("", last_chunk=True)
         else:
             # LMI formatter for streaming
             async for output in handle_streaming_response(
-                response,
-                processed_request.stream_output_formatter,
-                request=processed_request.vllm_request,
-                accumulate_chunks=processed_request.accumulate_chunks,
-                include_prompt=processed_request.include_prompt,
-                tokenizer=self.tokenizer,
+                    response,
+                    processed_request.stream_output_formatter,
+                    request=processed_request.vllm_request,
+                    accumulate_chunks=processed_request.accumulate_chunks,
+                    include_prompt=processed_request.include_prompt,
+                    tokenizer=self.tokenizer,
             ):
                 yield output
 
