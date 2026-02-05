@@ -1,3 +1,0 @@
-Package: cuda-compat-12-8
-Pin: version 570.172.08-0ubuntu1
-Pin-Priority: 1001
