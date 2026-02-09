@@ -3,6 +3,20 @@
 Below are the release notes for recent Large Model Inference (LMI) images for use on SageMaker.
 For details on historical releases, refer to the [Github Releases page](https://github.com/deepjavalibrary/djl-serving/releases).
 
+## LMI V20 (DJL-Serving 0.36.0)
+
+Meet your brand new image! 💿
+
+#### LMI (vLLM) Image - 2-9-2026
+
+```
+763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.36.0-lmi20.0.0-cu128-v1.0
+```
+
+##### What's New
+* vLLM has been upgraded to `0.15.1`
+* DeepSeek R1 0528 [Regression Fix](https://github.com/vllm-project/vllm/pull/33490)
+
 ## LMI V19 (DJL-Serving 0.36.0)
 
 #### LMI (vLLM) Image – 2-2-2026
@@ -20,7 +34,6 @@ For details on historical releases, refer to the [Github Releases page](https://
 
 ## LMI V18 (DJL-Serving 0.36.0)
 
-Meet your brand new image! 💿
 
 #### LMI (vLLM) Image – 12-15-2025
 ```
