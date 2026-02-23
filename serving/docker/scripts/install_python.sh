@@ -25,6 +25,9 @@ else
   python3 get-pip.py
   rm -rf get-pip.py
 fi
-python3 -m pip --no-cache-dir install -U pip setuptools wheel
+
+# fix fetuptools version for this else you get following error
+#  ModuleNotFoundError: No module named 'pkg_resources'
+python3 -m pip --no-cache-dir install -U pip wheel setuptools==80.9.0
 python3 -m pip --no-cache-dir install -U "numpy<2" awscli
 ln -sf /usr/bin/python3 /usr/bin/python
