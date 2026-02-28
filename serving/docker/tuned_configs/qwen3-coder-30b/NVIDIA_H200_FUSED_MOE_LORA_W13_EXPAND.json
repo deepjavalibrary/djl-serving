@@ -1,0 +1,272 @@
+{
+    "8": {
+        "2": {
+            "1": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 32
+                        }
+                    }
+                }
+            },
+            "2": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "4": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 8
+                        }
+                    }
+                }
+            },
+            "8": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 3,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "16": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "32": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "64": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "128": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "256": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 3,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "512": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "1024": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "1536": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "2048": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 32,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "4096": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 64,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "5120": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 64,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 3,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "6144": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 64,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "7168": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 64,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "8192": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 3,
+                            "GROUP_SIZE_M": 32
+                        }
+                    }
+                }
+            },
+            "10240": {
+                "32": {
+                    "2048": {
+                        "768": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 32
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

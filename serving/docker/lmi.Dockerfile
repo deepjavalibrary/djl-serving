@@ -62,6 +62,7 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 COPY scripts scripts/
+COPY tuned_configs /opt/djl/tuned_configs/
 RUN chmod -R +x scripts
 RUN mkdir -p /opt/djl/conf \
     && mkdir -p /opt/djl/deps \
@@ -89,7 +90,7 @@ RUN scripts/patch_oss_dlc.sh python \
 
 COPY lmi-container-requirements.txt ./requirements.txt
 RUN pip3 install --upgrade pip setuptools
-RUN pip3 install torch==2.9.1 torchvision\
+RUN pip3 install torch==2.9.1 torchvision --index-url https://download.pytorch.org/whl/cu129 \
     && pip3 install -r requirements.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 

@@ -1,0 +1,996 @@
+{
+    "16": {
+        "1": {
+            "1": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 64,
+                        "group_size_m": 16
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 8
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 5,
+                        "split_k": 32,
+                        "group_size_m": 64
+                    }
+                }
+            },
+            "2": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 1
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 5,
+                        "split_k": 32,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "4": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 64,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 8
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 16,
+                        "group_size_m": 32
+                    }
+                }
+            },
+            "8": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 1
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 16,
+                        "group_size_m": 8
+                    }
+                }
+            },
+            "16": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 32,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 8
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 16,
+                        "group_size_m": 64
+                    }
+                }
+            },
+            "32": {
+                "4096": {
+                    "32": {
+                        "block_m": 32,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 16,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 16,
+                        "group_size_m": 64
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 8,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "64": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 16,
+                        "group_size_m": 4
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 2,
+                        "split_k": 16,
+                        "group_size_m": 4
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 32
+                    }
+                }
+            },
+            "128": {
+                "4096": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 1
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 64
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 32,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 64
+                    }
+                }
+            },
+            "256": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 32
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 4
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "512": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 8,
+                        "group_size_m": 64
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 8,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 64
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 32,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 8
+                    }
+                }
+            },
+            "1024": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 4,
+                        "group_size_m": 1
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 4,
+                        "group_size_m": 1
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 4,
+                        "group_size_m": 32
+                    }
+                }
+            },
+            "1536": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 32
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 64
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "2048": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 64
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "4096": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 4,
+                        "group_size_m": 16
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 32
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "5120": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 8
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "6144": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 8
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 16
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "7168": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 32
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 4
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "8192": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 16
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 64
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "10240": {
+                "4096": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 64
+                    }
+                },
+                "2048": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 64
+                    }
+                },
+                "1024": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 16
+                    }
+                }
+            }
+        },
+        "3": {
+            "1": {
+                "2880": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 64,
+                        "group_size_m": 32
+                    }
+                }
+            },
+            "2": {
+                "2880": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 16,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 64
+                    }
+                }
+            },
+            "4": {
+                "2880": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 32,
+                        "group_size_m": 64
+                    }
+                }
+            },
+            "8": {
+                "2880": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 16,
+                        "group_size_m": 32
+                    }
+                }
+            },
+            "16": {
+                "2880": {
+                    "32": {
+                        "block_m": 16,
+                        "block_n": 32,
+                        "block_k": 32,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "32": {
+                "2880": {
+                    "32": {
+                        "block_m": 32,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 8,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "64": {
+                "2880": {
+                    "32": {
+                        "block_m": 32,
+                        "block_n": 16,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 8
+                    }
+                }
+            },
+            "128": {
+                "2880": {
+                    "32": {
+                        "block_m": 32,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "256": {
+                "2880": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "512": {
+                "2880": {
+                    "32": {
+                        "block_m": 64,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 8,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "1024": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 16
+                    }
+                }
+            },
+            "1536": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 4
+                    }
+                }
+            },
+            "2048": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 4,
+                        "group_size_m": 8
+                    }
+                }
+            },
+            "4096": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 128,
+                        "num_warps": 8,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 32
+                    }
+                }
+            },
+            "5120": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 8,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 64
+                    }
+                }
+            },
+            "6144": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 8,
+                        "num_ctas": 1,
+                        "num_stages": 4,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "7168": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "8192": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 4,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            },
+            "10240": {
+                "2880": {
+                    "32": {
+                        "block_m": 128,
+                        "block_n": 32,
+                        "block_k": 64,
+                        "num_warps": 8,
+                        "num_ctas": 1,
+                        "num_stages": 3,
+                        "split_k": 2,
+                        "group_size_m": 1
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,272 @@
+{
+    "8": {
+        "1": {
+            "1": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 256,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 8,
+                            "num_stages": 4,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "2": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 4
+                        }
+                    }
+                }
+            },
+            "4": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "8": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "16": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 1
+                        }
+                    }
+                }
+            },
+            "32": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 16
+                        }
+                    }
+                }
+            },
+            "64": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 32
+                        }
+                    }
+                }
+            },
+            "128": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "256": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "512": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 16,
+                            "BLOCK_SIZE_N": 128,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "1024": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 32,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "1536": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 32,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "2048": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 64,
+                            "BLOCK_SIZE_N": 256,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "4096": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "5120": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "6144": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "7168": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "8192": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            },
+            "10240": {
+                "32": {
+                    "2944": {
+                        "3072": {
+                            "BLOCK_SIZE_M": 128,
+                            "BLOCK_SIZE_N": 64,
+                            "BLOCK_SIZE_K": 16,
+                            "num_warps": 4,
+                            "num_stages": 2,
+                            "GROUP_SIZE_M": 64
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
