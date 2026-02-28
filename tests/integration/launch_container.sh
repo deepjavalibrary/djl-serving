@@ -90,10 +90,7 @@ if [[ "$(support_nvme)" == *"true"* ]] && [[ "$disable_nvme_tmp" != "true" ]]; t
 fi
 
 is_llm=false
-if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
-  runtime="nvidia"
-elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
-  runtime="nvidia"
+if [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   is_llm=true
   if [[ "$(is_p4d_or_p5)" == *"true"* || $is_multi_node ]]; then
     shm="20gb"
@@ -163,7 +160,6 @@ if $is_multi_node; then
     -e DJL_LEADER_ADDR=${leader_hostname} \
     -e DJL_WORKER_ADDR_FORMAT="${LWS_NAME}-${GROUP_INDEX}-%d.${LWS_NAME}.${NAMESPACE}" \
     ${env_file} \
-    ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
     "${docker_image}" "service ssh start; djl-serving"
@@ -185,7 +181,6 @@ if $is_multi_node; then
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     ${env_file} \
-    ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
     "${docker_image}" "service ssh start; /usr/bin/python3 /opt/djl/partition/run_multi_node_setup.py 2>&1 | tee /opt/djl/logs/lmi-worker.log; tail -f"
@@ -213,7 +208,6 @@ elif $is_sm_neo_context; then
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     ${env_file} \
-    ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
     "${docker_image}"
@@ -234,7 +228,6 @@ elif $is_partition; then
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-    ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
     "${docker_image}" \
@@ -253,7 +246,6 @@ elif [[ "$docker_image" == *"text-generation-inference"* ]]; then
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-    ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     "${docker_image}" \
     ${args})
@@ -278,7 +270,6 @@ else
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     $uid_mapping \
-    ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
     "${docker_image}" \
