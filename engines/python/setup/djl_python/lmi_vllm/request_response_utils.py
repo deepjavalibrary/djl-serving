@@ -23,7 +23,7 @@ from vllm.entrypoints.openai.chat_completion.protocol import (
 )
 from vllm.entrypoints.openai.engine.protocol import ErrorResponse
 from vllm.logprobs import Logprob
-from vllm.transformers_utils.tokenizer import AnyTokenizer
+from vllm.tokenizers import TokenizerLike
 
 from djl_python.outputs import Output
 from djl_python.async_utils import create_non_stream_output, create_stream_chunk_output
@@ -101,7 +101,7 @@ def convert_lmi_schema_to_completion_request(
 
 def convert_completion_logprobs_to_tgi_tokens(
     completion_logprobs: CompletionLogProbs,
-    tokenizer: AnyTokenizer,
+    tokenizer: TokenizerLike,
 ) -> List[dict]:
     token_logprobs = completion_logprobs.token_logprobs
     tokens = completion_logprobs.tokens
@@ -138,7 +138,7 @@ def convert_completion_response_to_lmi_schema(
     response: CompletionResponse,
     request: CompletionRequest = None,
     include_details: bool = False,
-    tokenizer: AnyTokenizer = None,
+    tokenizer: TokenizerLike = None,
 ) -> Output:
     primary_choice = response.choices[0]
     lmi_response = {"generated_text": primary_choice.text}
@@ -258,7 +258,7 @@ def convert_completion_chunk_response_to_lmi_schema(
 def lmi_with_details_non_stream_output_formatter(
     response: CompletionResponse,
     request: CompletionRequest = None,
-    tokenizer: AnyTokenizer = None,
+    tokenizer: TokenizerLike = None,
 ) -> Output:
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=True,
@@ -269,7 +269,7 @@ def lmi_with_details_non_stream_output_formatter(
 def lmi_non_stream_output_formatter(
     response: CompletionResponse,
     request: CompletionRequest = None,
-    tokenizer: AnyTokenizer = None,
+    tokenizer: TokenizerLike = None,
 ) -> Output:
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=False,
