@@ -1,12 +1,12 @@
-torch==2.9.1
+torch==2.10.0
 transformers >= 4.56.0, < 5
 huggingface-hub
 hf-transfer
-peft==0.15.1
-sentence-transformers==3.3.1
-optimum==1.23.2
-llmcompressor==0.9.0.1
-mpi4py==4.0.1
-https://djl-ai.s3.us-east-1.amazonaws.com/publish/vllm/vllm-0.16.1.dev6%2Bg369fca226-cp312-cp312-linux_x86_64.whl
-lmcache
-autoawq
+peft==0.18.1
+sentence-transformers==5.2.3
+optimum==2.1.0
+mpi4py==4.1.1
+compressed-tensors==0.13.0
+https://wheels.vllm.ai/dc6b57846686206d6d77fe788f71ab7fe8e568ab/vllm-0.17.0rc1.dev168%2Bgdc6b57846-cp38-abi3-manylinux_2_31_x86_64.whl
+autoawq==0.2.9
+https://publish.djl.ai/lmcache/lmcache-0.3.16.dev0-cp312-cp312-linux_x86_64.whl
