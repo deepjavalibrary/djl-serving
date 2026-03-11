@@ -90,7 +90,7 @@ RUN scripts/patch_oss_dlc.sh python \
 
 COPY lmi-container-requirements.txt ./requirements.txt
 RUN pip3 install --upgrade pip setuptools
-RUN pip3 install torch==2.9.1 torchvision --index-url https://download.pytorch.org/whl/cu129 \
+RUN pip3 install torch==2.10.0 torchvision --index-url https://download.pytorch.org/whl/${cuda_version} \
     && pip3 install -r requirements.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 
@@ -105,7 +105,7 @@ RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-34-0.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-36-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
