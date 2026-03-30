@@ -21,7 +21,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-    "numpy<2",
+    "numpy",
     "requests",
     "Pillow",
     "transformers",
@@ -34,7 +34,7 @@ test = [
     "yapf",
     "pydantic>=2.0",
     "objgraph",
-    "vllm==0.10.2"
+    "vllm==0.18.0"
 ]
 
 [project.scripts]

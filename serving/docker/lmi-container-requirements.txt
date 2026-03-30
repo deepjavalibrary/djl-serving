@@ -7,6 +7,6 @@ sentence-transformers==5.2.3
 optimum==2.1.0
 mpi4py==4.1.1
 compressed-tensors==0.13.0
-https://wheels.vllm.ai/dc6b57846686206d6d77fe788f71ab7fe8e568ab/vllm-0.17.0rc1.dev168%2Bgdc6b57846-cp38-abi3-manylinux_2_31_x86_64.whl
+vllm==0.18.0
 autoawq==0.2.9
 https://publish.djl.ai/lmcache/lmcache-0.3.16.dev0-cp312-cp312-linux_x86_64.whl

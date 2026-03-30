@@ -156,7 +156,7 @@ def from_nd_list(encoded: bytearray) -> list:
         data_length, idx = get_int(encoded, idx)
         data, idx = get_bytes(encoded, idx, data_length)
         nd = np.ndarray(shape, np.dtype(datatype.lower()), data)
-        nd = nd.newbyteorder(chr(order))
+        nd = nd.view(nd.dtype.newbyteorder(chr(order)))
         result.append(nd)
     return result
 
@@ -181,7 +181,7 @@ def to_nd_list(np_list) -> bytearray:
         arr.extend(set_str(str(nd.dtype).upper()))
         _shape_encode(nd.shape, arr)
         arr.append(ord('<'))  # use little endian
-        nd_bytes = nd.newbyteorder('<').tobytes("C")
+        nd_bytes = nd.view(nd.dtype.newbyteorder('<')).tobytes("C")
         arr.extend(set_int(len(nd_bytes)))
         arr.extend(nd_bytes)  # make it big endian
     return arr
