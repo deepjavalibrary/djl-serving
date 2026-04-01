@@ -11,5 +11,5 @@ if [[ -n "$github_repository" ]]; then
   fi
   pip install .
 else
-  pip install -U sagemaker
+  pip install "sagemaker>=2.0,<3.0"
 fi
