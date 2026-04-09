@@ -1,4 +1,4 @@
-torch==2.10.0
+torch==2.11.0
 transformers >= 4.56.0, < 5
 huggingface-hub
 hf-transfer
@@ -6,7 +6,7 @@ peft==0.18.1
 sentence-transformers==5.2.3
 optimum==2.1.0
 mpi4py==4.1.1
-compressed-tensors==0.13.0
-vllm==0.18.0
+compressed-tensors==0.14.0.1
+vllm @ https://wheels.vllm.ai/0d310ffbebe588972fb57b84b3ce564c0222ef4e/vllm-0.19.1rc1.dev152%2Bg0d310ffbe-cp38-abi3-manylinux_2_31_x86_64.whl
 autoawq==0.2.9
 https://publish.djl.ai/lmcache/lmcache-0.3.16.dev0-cp312-cp312-linux_x86_64.whl
