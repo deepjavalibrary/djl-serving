@@ -90,8 +90,7 @@ RUN scripts/patch_oss_dlc.sh python \
 
 COPY lmi-container-requirements.txt ./requirements.txt
 RUN pip3 install --upgrade pip setuptools
-RUN pip3 install torch==2.10.0 torchvision --index-url https://download.pytorch.org/whl/${cuda_version} \
-    && pip3 install -r requirements.txt \
+RUN pip3 install -r requirements.txt \
     && pip3 install ${djl_converter_wheel} --no-deps
 
 COPY distribution[s]/ ./
