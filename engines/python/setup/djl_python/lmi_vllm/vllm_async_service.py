@@ -149,7 +149,6 @@ class VLLMHandler(AdapterFormatterMixin):
         openai_serving_render = OpenAIServingRender(
             model_config=self.vllm_engine.model_config,
             renderer=self.vllm_engine.renderer,
-            io_processor=self.vllm_engine.io_processor,
             model_registry=self.model_registry.registry,
             request_logger=None,
             chat_template=resolved_chat_template,
