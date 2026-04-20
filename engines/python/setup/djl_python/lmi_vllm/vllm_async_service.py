@@ -83,6 +83,7 @@ class VLLMHandler(AdapterFormatterMixin):
         self.lora_requests = {}
         self.is_embedding = False
         self.embedding_service = None
+        self.normalize_embeddings = True
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -157,7 +158,8 @@ class VLLMHandler(AdapterFormatterMixin):
                 self.model_registry,
                 request_logger=None,
             )
-            logger.info(f"Embedding mode enabled (task={self.vllm_properties.task})")
+            self.normalize_embeddings = self.vllm_properties.normalize
+            logger.info(f"Embedding mode enabled (task={self.vllm_properties.task}, normalize={self.normalize_embeddings})")
         else:
             resolved_chat_template = load_chat_template(
                 self.vllm_properties.chat_template)
@@ -253,6 +255,7 @@ class VLLMHandler(AdapterFormatterMixin):
                 input=texts,
                 model=decoded_payload.get("model", self.model_name),
                 request_id=f"embd-{uuid.uuid4()}",
+                use_activation=self.normalize_embeddings,
             )
             processed_request = ProcessedRequest(
                 embedding_request,

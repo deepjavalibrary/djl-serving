@@ -81,6 +81,7 @@ class VllmRbProperties(Properties):
     device: str = 'auto'
 
     # Non engine arg properties
+    normalize: bool = True
     chat_template: Optional[str] = None
     chat_template_content_format: Literal["auto", "string", "openai"] = "auto"
 

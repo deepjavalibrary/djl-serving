@@ -302,6 +302,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
         handler = VLLMHandler()
         handler.is_embedding = True
+        handler.normalize_embeddings = True
         handler.model_name = "test-embed-model"
         handler.embedding_service = MagicMock()
         handler.output_formatter = None
@@ -317,6 +318,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         self.assertEqual(result.vllm_request.input, ["hello world"])
         self.assertEqual(result.vllm_request.model, "test-embed-model")
         self.assertTrue(result.vllm_request.request_id.startswith("embd-"))
+        self.assertTrue(result.vllm_request.use_activation)
         self.assertIs(result.inference_invoker, handler.embedding_service)
         self.assertFalse(result.accumulate_chunks)
         self.assertFalse(result.include_prompt)
@@ -325,10 +327,32 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
 
     @patch('djl_python.lmi_vllm.vllm_async_service.decode')
     @patch('djl_python.lmi_vllm.vllm_async_service._extract_lora_adapter')
+    def test_normalize_false_sets_use_activation_false(self, mock_extract_lora,
+                                                       mock_decode):
+        from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
+        handler = VLLMHandler()
+        handler.is_embedding = True
+        handler.normalize_embeddings = False
+        handler.model_name = "test-model"
+        handler.embedding_service = MagicMock()
+        handler.output_formatter = None
+        handler.session_manager = None
+
+        mock_decode.return_value = {"inputs": "test"}
+        mock_extract_lora.return_value = None
+
+        inp = _make_json_input({"inputs": "test"})
+        result = self._run_async(handler.preprocess_request(inp))
+
+        self.assertFalse(result.vllm_request.use_activation)
+
+    @patch('djl_python.lmi_vllm.vllm_async_service.decode')
+    @patch('djl_python.lmi_vllm.vllm_async_service._extract_lora_adapter')
     def test_batch_text_input(self, mock_extract_lora, mock_decode):
         from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
         handler = VLLMHandler()
         handler.is_embedding = True
+        handler.normalize_embeddings = True
         handler.model_name = "test-embed-model"
         handler.embedding_service = MagicMock()
         handler.output_formatter = None
@@ -350,6 +374,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
         handler = VLLMHandler()
         handler.is_embedding = True
+        handler.normalize_embeddings = True
         handler.model_name = "default-model"
         handler.embedding_service = MagicMock()
         handler.output_formatter = None
@@ -373,6 +398,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
         handler = VLLMHandler()
         handler.is_embedding = True
+        handler.normalize_embeddings = True
         handler.model_name = "test-model"
         handler.embedding_service = MagicMock()
         handler.output_formatter = None
@@ -393,6 +419,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
         handler = VLLMHandler()
         handler.is_embedding = True
+        handler.normalize_embeddings = True
         handler.model_name = "test-model"
         handler.embedding_service = MagicMock()
         handler.output_formatter = None
@@ -452,6 +479,7 @@ class TestEmbeddingInference(unittest.TestCase):
         from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
         handler = VLLMHandler()
         handler.is_embedding = True
+        handler.normalize_embeddings = False
         handler.model_name = "test-model"
         handler.output_formatter = None
         handler.session_manager = None
