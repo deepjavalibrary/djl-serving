@@ -13,6 +13,7 @@
 import logging
 import os
 import types
+import uuid
 from typing import Optional, Union, AsyncGenerator
 
 from vllm import AsyncLLMEngine
@@ -252,6 +253,7 @@ class VLLMHandler(AdapterFormatterMixin):
             embedding_request = EmbeddingCompletionRequest(
                 input=texts,
                 model=decoded_payload.get("model", self.model_name),
+                request_id=f"embd-{uuid.uuid4()}",
             )
             processed_request = ProcessedRequest(
                 embedding_request,
