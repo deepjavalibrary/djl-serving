@@ -290,3 +290,22 @@ def lmi_stream_output_formatter(
     **kwargs,
 ) -> Tuple[str, bool, List[str]]:
     return convert_completion_chunk_response_to_lmi_schema(chunk, **kwargs)
+
+
+def embedding_output_formatter(response, **_) -> Output:
+    if hasattr(response, 'body'):
+        body = response.body
+        if isinstance(body, bytes):
+            body = body.decode('utf-8')
+        parsed = json.loads(body)
+    elif isinstance(response, dict):
+        parsed = response
+    else:
+        return create_non_stream_output(
+            "", error=str(response), code=500)
+
+    if isinstance(parsed, dict) and "data" in parsed:
+        embeddings = [item["embedding"] for item in parsed["data"]]
+        return create_non_stream_output(json.dumps(embeddings))
+
+    return create_non_stream_output(json.dumps(parsed))
