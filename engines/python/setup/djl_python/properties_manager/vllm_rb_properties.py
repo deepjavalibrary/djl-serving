@@ -104,6 +104,7 @@ class VllmRbProperties(Properties):
 
     def _map_task_to_runner_convert(self) -> dict:
         task = self.task
+        # 'generate' includes 'text-generation' (mapped by validate_task)
         RUNNER_VALUES = {'auto', 'generate', 'pooling', 'draft'}
         CONVERT_VALUES = {'auto', 'none', 'embed', 'classify', 'reward', 'mm_encoder_only'}
 
@@ -111,8 +112,6 @@ class VllmRbProperties(Properties):
             return {'convert': task, 'runner': 'auto'}
         if task in RUNNER_VALUES:
             return {'runner': task, 'convert': 'auto'}
-        if task in ('text-generation', 'generate'):
-            return {'runner': 'generate', 'convert': 'auto'}
         if task == 'feature-extraction':
             return {'runner': 'pooling', 'convert': 'embed'}
         return {'runner': 'auto', 'convert': 'auto'}

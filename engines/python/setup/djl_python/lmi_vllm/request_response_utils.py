@@ -294,6 +294,11 @@ def lmi_stream_output_formatter(
 
 def embedding_output_formatter(response, **_) -> Output:
     if hasattr(response, 'body'):
+        if hasattr(response, 'status_code') and response.status_code >= 400:
+            body = response.body
+            error_msg = body.decode('utf-8') if isinstance(body, bytes) else body
+            return create_non_stream_output(
+                "", error=error_msg, code=response.status_code)
         body = response.body
         if isinstance(body, bytes):
             body = body.decode('utf-8')
