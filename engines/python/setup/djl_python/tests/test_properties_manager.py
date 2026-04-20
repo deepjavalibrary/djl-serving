@@ -427,6 +427,34 @@ class TestConfigManager(unittest.TestCase):
             vllm_configs = VllmRbProperties(**properties)
             engine_configs = vllm_configs.get_engine_args()
 
+        def test_task_to_runner_convert_mapping():
+            base_props = {"engine": "Python", "model_id": "some_model"}
+
+            # embed task
+            props = VllmRbProperties(**{**base_props, "task": "embed"})
+            mapping = props._map_task_to_runner_convert()
+            self.assertEqual(mapping, {"runner": "auto", "convert": "embed"})
+
+            # feature-extraction task
+            props = VllmRbProperties(**{**base_props, "task": "feature-extraction"})
+            mapping = props._map_task_to_runner_convert()
+            self.assertEqual(mapping, {"runner": "pooling", "convert": "embed"})
+
+            # generate task (explicit)
+            props = VllmRbProperties(**{**base_props, "task": "generate"})
+            mapping = props._map_task_to_runner_convert()
+            self.assertEqual(mapping, {"runner": "generate", "convert": "auto"})
+
+            # text-generation maps to generate via validator
+            props = VllmRbProperties(**{**base_props, "task": "text-generation"})
+            mapping = props._map_task_to_runner_convert()
+            self.assertEqual(mapping, {"runner": "generate", "convert": "auto"})
+
+            # auto task (default)
+            props = VllmRbProperties(**{**base_props, "task": "auto"})
+            mapping = props._map_task_to_runner_convert()
+            self.assertEqual(mapping, {"runner": "auto", "convert": "auto"})
+
         # test_vllm_default_properties()
         # test_invalid_pipeline_parallel()
         # test_invalid_engine()
@@ -435,6 +463,7 @@ class TestConfigManager(unittest.TestCase):
         # test_invalid_long_lora_scaling_factors()
         # test_conflicting_djl_vllm_conflicts()
         # test_all_vllm_engine_args()
+        test_task_to_runner_convert_mapping()
 
 
 if __name__ == '__main__':

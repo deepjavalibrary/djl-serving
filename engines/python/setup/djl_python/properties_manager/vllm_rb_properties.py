@@ -102,6 +102,21 @@ class VllmRbProperties(Properties):
             task = 'generate'
         return task
 
+    def _map_task_to_runner_convert(self) -> dict:
+        task = self.task
+        RUNNER_VALUES = {'auto', 'generate', 'pooling', 'draft'}
+        CONVERT_VALUES = {'auto', 'none', 'embed', 'classify', 'reward', 'mm_encoder_only'}
+
+        if task in CONVERT_VALUES:
+            return {'convert': task, 'runner': 'auto'}
+        if task in RUNNER_VALUES:
+            return {'runner': task, 'convert': 'auto'}
+        if task in ('text-generation', 'generate'):
+            return {'runner': 'generate', 'convert': 'auto'}
+        if task == 'feature-extraction':
+            return {'runner': 'pooling', 'convert': 'embed'}
+        return {'runner': 'auto', 'convert': 'auto'}
+
     @field_validator('dtype')
     def validate_dtype(cls, val):
         if val not in DTYPE_MAPPER:
@@ -197,6 +212,8 @@ class VllmRbProperties(Properties):
         if self.max_rolling_batch_prefill_tokens is not None:
             vllm_engine_args[
                 'max_num_batched_tokens'] = self.max_rolling_batch_prefill_tokens
+        runner_convert = self._map_task_to_runner_convert()
+        vllm_engine_args.update(runner_convert)
         vllm_engine_args.update(passthrough_vllm_engine_args)
         return vllm_engine_args
 
