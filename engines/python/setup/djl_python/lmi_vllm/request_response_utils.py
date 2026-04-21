@@ -292,14 +292,17 @@ def lmi_stream_output_formatter(
     return convert_completion_chunk_response_to_lmi_schema(chunk, **kwargs)
 
 
-def embedding_output_formatter(response, request=None, tokenizer=None,
+def embedding_output_formatter(response,
+                               request=None,
+                               tokenizer=None,
                                **_) -> Output:
     body = response.body
     if isinstance(body, bytes):
         body = body.decode('utf-8')
     if hasattr(response, 'status_code') and response.status_code != 200:
-        return create_non_stream_output(
-            "", error=body, code=response.status_code)
+        return create_non_stream_output("",
+                                        error=body,
+                                        code=response.status_code)
     parsed = json.loads(body)
     if "data" not in parsed:
         return create_non_stream_output(

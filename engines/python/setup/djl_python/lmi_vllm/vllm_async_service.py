@@ -150,7 +150,9 @@ class VLLMHandler(AdapterFormatterMixin):
             base_model_paths,
         )
 
-        self.is_embedding = self.vllm_properties.task in ("text_embedding", "text-embedding", "feature-extraction")
+        self.is_embedding = self.vllm_properties.task in ("text_embedding",
+                                                          "text-embedding",
+                                                          "feature-extraction")
 
         if self.is_embedding:
             self.embedding_service = ServingEmbedding(
@@ -159,7 +161,9 @@ class VLLMHandler(AdapterFormatterMixin):
                 request_logger=None,
             )
             self.normalize_embeddings = self.vllm_properties.normalize
-            logger.info(f"Embedding mode enabled (task={self.vllm_properties.task}, normalize={self.normalize_embeddings})")
+            logger.info(
+                f"Embedding mode enabled (task={self.vllm_properties.task}, normalize={self.normalize_embeddings})"
+            )
         else:
             resolved_chat_template = load_chat_template(
                 self.vllm_properties.chat_template)

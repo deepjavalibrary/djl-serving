@@ -58,13 +58,15 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
 
     def test_single_embedding_from_json_response(self):
         openai_response = {
-            "object": "list",
+            "object":
+            "list",
             "data": [{
                 "object": "embedding",
                 "embedding": [0.1, 0.2, 0.3],
                 "index": 0
             }],
-            "model": "test-model",
+            "model":
+            "test-model",
             "usage": {
                 "prompt_tokens": 5,
                 "total_tokens": 5
@@ -82,7 +84,8 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
 
     def test_batch_embeddings_from_json_response(self):
         openai_response = {
-            "object": "list",
+            "object":
+            "list",
             "data": [
                 {
                     "object": "embedding",
@@ -100,7 +103,8 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
                     "index": 2
                 },
             ],
-            "model": "test-model",
+            "model":
+            "test-model",
             "usage": {
                 "prompt_tokens": 15,
                 "total_tokens": 15
@@ -120,12 +124,7 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
 
     def test_high_dimensional_embedding(self):
         embedding = [float(i) / 1000 for i in range(768)]
-        openai_response = {
-            "data": [{
-                "embedding": embedding,
-                "index": 0
-            }]
-        }
+        openai_response = {"data": [{"embedding": embedding, "index": 0}]}
         mock_response = MagicMock()
         mock_response.body = json.dumps(openai_response).encode('utf-8')
         mock_response.status_code = 200
@@ -150,7 +149,9 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
 
     def test_missing_data_field_returns_error_output(self):
         mock_response = MagicMock()
-        mock_response.body = json.dumps({"error": "something went wrong"}).encode('utf-8')
+        mock_response.body = json.dumps({
+            "error": "something went wrong"
+        }).encode('utf-8')
         mock_response.status_code = 200
 
         output = self.formatter(mock_response)
@@ -167,45 +168,70 @@ class TestTaskToRunnerConvertMapping(unittest.TestCase):
         self.base_props = {"engine": "Python", "model_id": "some_model"}
 
     def test_text_embedding_task(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "text_embedding"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "auto", "convert": "embed"})
+        props = self.VllmRbProperties(
+            **{
+                **self.base_props, "task": "text_embedding"
+            })
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "auto",
+            "convert": "embed"
+        })
 
     def test_feature_extraction_task(self):
         props = self.VllmRbProperties(
-            **{**self.base_props, "task": "feature-extraction"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "pooling", "convert": "embed"})
+            **{
+                **self.base_props, "task": "feature-extraction"
+            })
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "pooling",
+            "convert": "embed"
+        })
 
     def test_generate_task(self):
-        props = self.VllmRbProperties(
-            **{**self.base_props, "task": "generate"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "generate", "convert": "auto"})
+        props = self.VllmRbProperties(**{
+            **self.base_props, "task": "generate"
+        })
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "generate",
+            "convert": "auto"
+        })
 
     def test_text_generation_maps_to_generate(self):
         props = self.VllmRbProperties(
-            **{**self.base_props, "task": "text-generation"})
+            **{
+                **self.base_props, "task": "text-generation"
+            })
         self.assertEqual(props.task, "generate")
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "generate", "convert": "auto"})
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "generate",
+            "convert": "auto"
+        })
 
     def test_auto_task(self):
         props = self.VllmRbProperties(**{**self.base_props, "task": "auto"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "auto", "convert": "auto"})
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "auto",
+            "convert": "auto"
+        })
 
     def test_classify_task(self):
-        props = self.VllmRbProperties(
-            **{**self.base_props, "task": "classify"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "auto", "convert": "classify"})
+        props = self.VllmRbProperties(**{
+            **self.base_props, "task": "classify"
+        })
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "auto",
+            "convert": "classify"
+        })
 
     def test_unknown_task_defaults_to_auto(self):
         props = self.VllmRbProperties(
-            **{**self.base_props, "task": "something_unknown"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "auto", "convert": "auto"})
+            **{
+                **self.base_props, "task": "something_unknown"
+            })
+        self.assertEqual(props._map_task_to_runner_convert(), {
+            "runner": "auto",
+            "convert": "auto"
+        })
 
     def test_default_task_is_auto(self):
         props = self.VllmRbProperties(**self.base_props)
@@ -220,22 +246,32 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
         self.base_props = {"engine": "Python", "model_id": "some_model"}
 
     def test_text_embedding_task_in_engine_arg_dict(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "text_embedding"})
+        props = self.VllmRbProperties(
+            **{
+                **self.base_props, "task": "text_embedding"
+            })
         arg_dict = props.generate_vllm_engine_arg_dict({})
         self.assertEqual(arg_dict["convert"], "embed")
         self.assertEqual(arg_dict["runner"], "auto")
 
     def test_feature_extraction_in_engine_arg_dict(self):
         props = self.VllmRbProperties(
-            **{**self.base_props, "task": "feature-extraction"})
+            **{
+                **self.base_props, "task": "feature-extraction"
+            })
         arg_dict = props.generate_vllm_engine_arg_dict({})
         self.assertEqual(arg_dict["convert"], "embed")
         self.assertEqual(arg_dict["runner"], "pooling")
 
     def test_passthrough_overrides_runner_convert(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "text_embedding"})
-        arg_dict = props.generate_vllm_engine_arg_dict(
-            {"runner": "pooling", "convert": "none"})
+        props = self.VllmRbProperties(
+            **{
+                **self.base_props, "task": "text_embedding"
+            })
+        arg_dict = props.generate_vllm_engine_arg_dict({
+            "runner": "pooling",
+            "convert": "none"
+        })
         self.assertEqual(arg_dict["runner"], "pooling")
         self.assertEqual(arg_dict["convert"], "none")
 
@@ -329,10 +365,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         handler.output_formatter = None
         handler.session_manager = None
 
-        mock_decode.return_value = {
-            "inputs": "test",
-            "model": "custom-model"
-        }
+        mock_decode.return_value = {"inputs": "test", "model": "custom-model"}
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"inputs": "test", "model": "custom-model"})
@@ -470,7 +503,10 @@ class TestEmbeddingOutputContract(unittest.TestCase):
     def test_single_input_returns_list_of_one_embedding(self):
         response = MagicMock()
         response.body = json.dumps({
-            "data": [{"embedding": [1.0, 2.0, 3.0], "index": 0}]
+            "data": [{
+                "embedding": [1.0, 2.0, 3.0],
+                "index": 0
+            }]
         }).encode('utf-8')
         response.status_code = 200
 
@@ -479,10 +515,10 @@ class TestEmbeddingOutputContract(unittest.TestCase):
 
     def test_batch_returns_list_matching_batch_size(self):
         embeddings = [[float(i)] * 4 for i in range(8)]
-        openai_data = [
-            {"embedding": emb, "index": i}
-            for i, emb in enumerate(embeddings)
-        ]
+        openai_data = [{
+            "embedding": emb,
+            "index": i
+        } for i, emb in enumerate(embeddings)]
         response = MagicMock()
         response.body = json.dumps({"data": openai_data}).encode('utf-8')
         response.status_code = 200
@@ -493,7 +529,10 @@ class TestEmbeddingOutputContract(unittest.TestCase):
     def test_output_is_json_content_type(self):
         response = MagicMock()
         response.body = json.dumps({
-            "data": [{"embedding": [1.0], "index": 0}]
+            "data": [{
+                "embedding": [1.0],
+                "index": 0
+            }]
         }).encode('utf-8')
         response.status_code = 200
 

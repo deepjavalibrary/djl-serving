@@ -431,24 +431,39 @@ class TestConfigManager(unittest.TestCase):
             base_props = {"engine": "Python", "model_id": "some_model"}
 
             # text_embedding task
-            props = VllmRbProperties(**{**base_props, "task": "text_embedding"})
+            props = VllmRbProperties(**{
+                **base_props, "task": "text_embedding"
+            })
             mapping = props._map_task_to_runner_convert()
             self.assertEqual(mapping, {"runner": "auto", "convert": "embed"})
 
             # feature-extraction task
-            props = VllmRbProperties(**{**base_props, "task": "feature-extraction"})
+            props = VllmRbProperties(**{
+                **base_props, "task": "feature-extraction"
+            })
             mapping = props._map_task_to_runner_convert()
-            self.assertEqual(mapping, {"runner": "pooling", "convert": "embed"})
+            self.assertEqual(mapping, {
+                "runner": "pooling",
+                "convert": "embed"
+            })
 
             # generate task (explicit)
             props = VllmRbProperties(**{**base_props, "task": "generate"})
             mapping = props._map_task_to_runner_convert()
-            self.assertEqual(mapping, {"runner": "generate", "convert": "auto"})
+            self.assertEqual(mapping, {
+                "runner": "generate",
+                "convert": "auto"
+            })
 
             # text-generation maps to generate via validator
-            props = VllmRbProperties(**{**base_props, "task": "text-generation"})
+            props = VllmRbProperties(**{
+                **base_props, "task": "text-generation"
+            })
             mapping = props._map_task_to_runner_convert()
-            self.assertEqual(mapping, {"runner": "generate", "convert": "auto"})
+            self.assertEqual(mapping, {
+                "runner": "generate",
+                "convert": "auto"
+            })
 
             # auto task (default)
             props = VllmRbProperties(**{**base_props, "task": "auto"})

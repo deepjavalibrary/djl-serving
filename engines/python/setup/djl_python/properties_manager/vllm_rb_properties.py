@@ -108,12 +108,30 @@ class VllmRbProperties(Properties):
         task = self.task
         # 'generate' includes 'text-generation' (mapped by validate_task)
         TASK_MAP = {
-            'auto': {'runner': 'auto', 'convert': 'auto'},
-            'generate': {'runner': 'generate', 'convert': 'auto'},
-            'text_embedding': {'runner': 'auto', 'convert': 'embed'},
-            'text-embedding': {'runner': 'auto', 'convert': 'embed'},
-            'classify': {'runner': 'auto', 'convert': 'classify'},
-            'feature-extraction': {'runner': 'pooling', 'convert': 'embed'},
+            'auto': {
+                'runner': 'auto',
+                'convert': 'auto'
+            },
+            'generate': {
+                'runner': 'generate',
+                'convert': 'auto'
+            },
+            'text_embedding': {
+                'runner': 'auto',
+                'convert': 'embed'
+            },
+            'text-embedding': {
+                'runner': 'auto',
+                'convert': 'embed'
+            },
+            'classify': {
+                'runner': 'auto',
+                'convert': 'classify'
+            },
+            'feature-extraction': {
+                'runner': 'pooling',
+                'convert': 'embed'
+            },
         }
         return TASK_MAP.get(task, {'runner': 'auto', 'convert': 'auto'})
 
@@ -215,7 +233,8 @@ class VllmRbProperties(Properties):
         runner_convert = self._map_task_to_runner_convert()
         vllm_engine_args.update(runner_convert)
         for key in ('runner', 'convert'):
-            if key in passthrough_vllm_engine_args and passthrough_vllm_engine_args[key] != runner_convert[key]:
+            if key in passthrough_vllm_engine_args and passthrough_vllm_engine_args[
+                    key] != runner_convert[key]:
                 logging.warning(
                     f"Passthrough arg '{key}={passthrough_vllm_engine_args[key]}' "
                     f"overrides computed value '{runner_convert[key]}' from task='{self.task}'"
