@@ -976,7 +976,6 @@ text_embedding_model_list = {
     "e5-small-vllm": {
         "engine": "Python",
         "option.model_id": "intfloat/e5-small",
-        "option.task": "embed",
         "option.rolling_batch": "disable",
         "option.async_mode": True,
         "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",
@@ -985,7 +984,6 @@ text_embedding_model_list = {
     "bge-base-vllm": {
         "engine": "Python",
         "option.model_id": "BAAI/bge-base-en-v1.5",
-        "option.task": "feature-extraction",
         "option.rolling_batch": "disable",
         "option.async_mode": True,
         "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",

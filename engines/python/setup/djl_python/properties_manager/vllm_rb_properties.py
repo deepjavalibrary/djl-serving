@@ -110,7 +110,8 @@ class VllmRbProperties(Properties):
         TASK_MAP = {
             'auto': {'runner': 'auto', 'convert': 'auto'},
             'generate': {'runner': 'generate', 'convert': 'auto'},
-            'embed': {'runner': 'auto', 'convert': 'embed'},
+            'text_embedding': {'runner': 'auto', 'convert': 'embed'},
+            'text-embedding': {'runner': 'auto', 'convert': 'embed'},
             'classify': {'runner': 'auto', 'convert': 'classify'},
             'feature-extraction': {'runner': 'pooling', 'convert': 'embed'},
         }

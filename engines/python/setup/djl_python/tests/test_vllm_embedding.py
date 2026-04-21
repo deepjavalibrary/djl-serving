@@ -166,8 +166,8 @@ class TestTaskToRunnerConvertMapping(unittest.TestCase):
         self.VllmRbProperties = VllmRbProperties
         self.base_props = {"engine": "Python", "model_id": "some_model"}
 
-    def test_embed_task(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "embed"})
+    def test_text_embedding_task(self):
+        props = self.VllmRbProperties(**{**self.base_props, "task": "text_embedding"})
         self.assertEqual(props._map_task_to_runner_convert(),
                          {"runner": "auto", "convert": "embed"})
 
@@ -219,8 +219,8 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
         self.VllmRbProperties = VllmRbProperties
         self.base_props = {"engine": "Python", "model_id": "some_model"}
 
-    def test_embed_task_in_engine_arg_dict(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "embed"})
+    def test_text_embedding_task_in_engine_arg_dict(self):
+        props = self.VllmRbProperties(**{**self.base_props, "task": "text_embedding"})
         arg_dict = props.generate_vllm_engine_arg_dict({})
         self.assertEqual(arg_dict["convert"], "embed")
         self.assertEqual(arg_dict["runner"], "auto")
@@ -233,7 +233,7 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
         self.assertEqual(arg_dict["runner"], "pooling")
 
     def test_passthrough_overrides_runner_convert(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "embed"})
+        props = self.VllmRbProperties(**{**self.base_props, "task": "text_embedding"})
         arg_dict = props.generate_vllm_engine_arg_dict(
             {"runner": "pooling", "convert": "none"})
         self.assertEqual(arg_dict["runner"], "pooling")

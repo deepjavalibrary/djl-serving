@@ -430,8 +430,8 @@ class TestConfigManager(unittest.TestCase):
         def test_task_to_runner_convert_mapping():
             base_props = {"engine": "Python", "model_id": "some_model"}
 
-            # embed task
-            props = VllmRbProperties(**{**base_props, "task": "embed"})
+            # text_embedding task
+            props = VllmRbProperties(**{**base_props, "task": "text_embedding"})
             mapping = props._map_task_to_runner_convert()
             self.assertEqual(mapping, {"runner": "auto", "convert": "embed"})
 
