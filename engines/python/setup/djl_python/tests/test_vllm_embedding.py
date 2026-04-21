@@ -118,67 +118,6 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
         self.assertEqual(data[1], [0.4, 0.5, 0.6])
         self.assertEqual(data[2], [0.7, 0.8, 0.9])
 
-    def test_error_status_code(self):
-        mock_response = MagicMock()
-        mock_response.body = b'{"error": "Model not found"}'
-        mock_response.status_code = 404
-
-        output = self.formatter(mock_response)
-        decoded = _decode_output(output)
-        self.assertIn("error", decoded)
-        self.assertEqual(decoded["code"], "404")
-
-    def test_server_error_status_code(self):
-        mock_response = MagicMock()
-        mock_response.body = "Internal Server Error"
-        mock_response.status_code = 500
-
-        output = self.formatter(mock_response)
-        decoded = _decode_output(output)
-        self.assertIn("error", decoded)
-        self.assertEqual(decoded["code"], "500")
-
-    def test_dict_input(self):
-        parsed = {
-            "data": [{
-                "embedding": [1.0, 2.0],
-                "index": 0
-            }]
-        }
-        output = self.formatter(parsed)
-        decoded = _decode_output(output)
-        data = json.loads(decoded["data"].strip())
-        self.assertEqual(data, [[1.0, 2.0]])
-
-    def test_dict_without_data_key(self):
-        parsed = {"embeddings": [[1.0, 2.0]]}
-        output = self.formatter(parsed)
-        decoded = _decode_output(output)
-        data = json.loads(decoded["data"].strip())
-        self.assertEqual(data, {"embeddings": [[1.0, 2.0]]})
-
-    def test_unexpected_response_type(self):
-        output = self.formatter("unexpected string response")
-        decoded = _decode_output(output)
-        self.assertIn("error", decoded)
-        self.assertEqual(decoded["code"], "500")
-
-    def test_body_as_string(self):
-        openai_response = {
-            "data": [{
-                "embedding": [0.5, -0.5],
-                "index": 0
-            }]
-        }
-        mock_response = MagicMock()
-        mock_response.body = json.dumps(openai_response)
-        mock_response.status_code = 200
-
-        output = self.formatter(mock_response)
-        decoded = _decode_output(output)
-        data = json.loads(decoded["data"].strip())
-        self.assertEqual(data, [[0.5, -0.5]])
-
     def test_high_dimensional_embedding(self):
         embedding = [float(i) / 1000 for i in range(768)]
         openai_response = {
@@ -433,38 +372,25 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
 
         self.assertEqual(result.vllm_request.input, [""])
 
+    @patch('djl_python.lmi_vllm.vllm_async_service.decode')
+    @patch('djl_python.lmi_vllm.vllm_async_service._extract_lora_adapter')
+    def test_invalid_inputs_type_raises_error(self, mock_extract_lora,
+                                              mock_decode):
+        from djl_python.lmi_vllm.vllm_async_service import VLLMHandler
+        handler = VLLMHandler()
+        handler.is_embedding = True
+        handler.normalize_embeddings = True
+        handler.model_name = "test-model"
+        handler.embedding_service = MagicMock()
+        handler.output_formatter = None
+        handler.session_manager = None
 
-class TestEmbeddingDetection(unittest.TestCase):
+        mock_decode.return_value = {"inputs": 42}
+        mock_extract_lora.return_value = None
 
-    def test_embed_task_detected(self):
-        props = MagicMock()
-        props.task = "embed"
-        is_embedding = props.task in ("embed", "feature-extraction")
-        self.assertTrue(is_embedding)
-
-    def test_feature_extraction_task_detected(self):
-        props = MagicMock()
-        props.task = "feature-extraction"
-        is_embedding = props.task in ("embed", "feature-extraction")
-        self.assertTrue(is_embedding)
-
-    def test_generate_task_not_embedding(self):
-        props = MagicMock()
-        props.task = "generate"
-        is_embedding = props.task in ("embed", "feature-extraction")
-        self.assertFalse(is_embedding)
-
-    def test_auto_task_not_embedding(self):
-        props = MagicMock()
-        props.task = "auto"
-        is_embedding = props.task in ("embed", "feature-extraction")
-        self.assertFalse(is_embedding)
-
-    def test_text_generation_not_embedding(self):
-        props = MagicMock()
-        props.task = "text-generation"
-        is_embedding = props.task in ("embed", "feature-extraction")
-        self.assertFalse(is_embedding)
+        inp = _make_json_input({"inputs": 42})
+        with self.assertRaises(ValueError):
+            self._run_async(handler.preprocess_request(inp))
 
 
 class TestEmbeddingInference(unittest.TestCase):

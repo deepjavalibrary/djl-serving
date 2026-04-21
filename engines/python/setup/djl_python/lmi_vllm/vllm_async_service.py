@@ -251,10 +251,15 @@ class VLLMHandler(AdapterFormatterMixin):
             texts = decoded_payload.get("inputs", "")
             if isinstance(texts, str):
                 texts = [texts]
+            if not isinstance(texts, list):
+                raise ValueError(
+                    f"'inputs' must be a string or list of strings, got {type(texts).__name__}"
+                )
             embedding_request = EmbeddingCompletionRequest(
                 input=texts,
                 model=decoded_payload.get("model", self.model_name),
                 request_id=f"embd-{uuid.uuid4()}",
+                # vLLM's use_activation controls L2 normalization in the pooler (vllm 0.19.x)
                 use_activation=self.normalize_embeddings,
             )
             processed_request = ProcessedRequest(
