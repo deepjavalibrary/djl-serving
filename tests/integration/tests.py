@@ -1117,6 +1117,18 @@ class TestTextEmbedding_g6:
             r.launch()
             client.run("text_embedding bge-base-onnx".split())
 
+    def test_e5_small_vllm(self):
+        with Runner("lmi", "e5-small-vllm") as r:
+            prepare.build_text_embedding_model("e5-small-vllm")
+            r.launch()
+            client.run("text_embedding e5-small-vllm".split())
+
+    def test_bge_base_vllm(self):
+        with Runner("lmi", "bge-base-vllm") as r:
+            prepare.build_text_embedding_model("bge-base-vllm")
+            r.launch()
+            client.run("text_embedding bge-base-vllm".split())
+
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
