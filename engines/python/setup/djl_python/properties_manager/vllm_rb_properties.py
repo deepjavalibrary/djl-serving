@@ -213,6 +213,12 @@ class VllmRbProperties(Properties):
                 'max_num_batched_tokens'] = self.max_rolling_batch_prefill_tokens
         runner_convert = self._map_task_to_runner_convert()
         vllm_engine_args.update(runner_convert)
+        for key in ('runner', 'convert'):
+            if key in passthrough_vllm_engine_args and passthrough_vllm_engine_args[key] != runner_convert[key]:
+                logging.warning(
+                    f"Passthrough arg '{key}={passthrough_vllm_engine_args[key]}' "
+                    f"overrides computed value '{runner_convert[key]}' from task='{self.task}'"
+                )
         vllm_engine_args.update(passthrough_vllm_engine_args)
         return vllm_engine_args
 

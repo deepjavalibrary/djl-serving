@@ -137,6 +137,27 @@ class TestEmbeddingOutputFormatter(unittest.TestCase):
         self.assertAlmostEqual(data[0][0], 0.0)
         self.assertAlmostEqual(data[0][767], 0.767)
 
+    def test_error_response_returns_error_output(self):
+        error_body = '{"error": "Model not found"}'
+        mock_response = MagicMock()
+        mock_response.body = error_body.encode('utf-8')
+        mock_response.status_code = 404
+
+        output = self.formatter(mock_response)
+        decoded = _decode_output(output)
+        self.assertIn("error", decoded)
+        self.assertEqual(decoded["code"], "404")
+
+    def test_missing_data_field_returns_error_output(self):
+        mock_response = MagicMock()
+        mock_response.body = json.dumps({"error": "something went wrong"}).encode('utf-8')
+        mock_response.status_code = 200
+
+        output = self.formatter(mock_response)
+        decoded = _decode_output(output)
+        self.assertIn("error", decoded)
+        self.assertEqual(decoded["code"], "500")
+
 
 class TestTaskToRunnerConvertMapping(unittest.TestCase):
 
@@ -222,7 +243,7 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
 class TestPreprocessRequestEmbedding(unittest.TestCase):
 
     def _run_async(self, coro):
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     @patch('djl_python.lmi_vllm.vllm_async_service.decode')
     @patch('djl_python.lmi_vllm.vllm_async_service._extract_lora_adapter')
@@ -385,7 +406,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
 class TestEmbeddingInference(unittest.TestCase):
 
     def _run_async(self, coro):
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     @patch('djl_python.lmi_vllm.vllm_async_service.decode')
     @patch('djl_python.lmi_vllm.vllm_async_service._extract_lora_adapter')

@@ -297,6 +297,12 @@ def embedding_output_formatter(response, request=None, tokenizer=None,
     body = response.body
     if isinstance(body, bytes):
         body = body.decode('utf-8')
+    if hasattr(response, 'status_code') and response.status_code != 200:
+        return create_non_stream_output(
+            "", error=body, code=response.status_code)
     parsed = json.loads(body)
+    if "data" not in parsed:
+        return create_non_stream_output(
+            "", error=f"Unexpected embedding response: {body}", code=500)
     embeddings = [item["embedding"] for item in parsed["data"]]
     return create_non_stream_output(json.dumps(embeddings))
