@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sagemaker
 import boto3
 import json
@@ -13,11 +14,21 @@ from argparse import ArgumentParser
 ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
 DEFAULT_INSTANCE_TYPE = "ml.m5.xlarge"
 DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
+ECR_REPO = "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving"
 
-CANDIDATE_IMAGES = {
-    "cpu-full":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving-cpu-full-test:latest"
-}
+
+def _get_serving_version():
+    """Read serving version from gradle/libs.versions.toml."""
+    toml_path = os.path.join(os.path.dirname(__file__), "..", "..",
+                             "gradle", "libs.versions.toml")
+    with open(toml_path) as f:
+        for line in f:
+            if line.strip().startswith("serving"):
+                return line.split("=")[1].strip().strip('"')
+    raise RuntimeError("Could not find serving version in libs.versions.toml")
+
+
+SERVING_VERSION = _get_serving_version()
 
 # Test configurations using S3 URIs
 SKLEARN_CONFIGS = {
@@ -254,9 +265,9 @@ def parse_args():
 
 def get_image_uri(image_type):
     if image_type == 'nightly':
-        return NIGHTLY_IMAGES["cpu-full"]
+        return f"{ECR_REPO}:{SERVING_VERSION}-cpu-full-nightly"
     elif image_type == 'candidate':
-        return CANDIDATE_IMAGES["cpu-full"]
+        return f"{ECR_REPO}:{SERVING_VERSION}-cpu-full"
     elif '.dkr.ecr.' in image_type or image_type.startswith(
             'deepjavalibrary/'):
         return image_type
