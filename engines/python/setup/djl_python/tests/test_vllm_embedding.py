@@ -174,22 +174,11 @@ class TestTaskToRunnerConvertMapping(unittest.TestCase):
         self.assertEqual(props._map_task_to_runner_convert(),
                          {"runner": "auto", "convert": "auto"})
 
-    def test_pooling_task(self):
-        props = self.VllmRbProperties(
-            **{**self.base_props, "task": "pooling"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "pooling", "convert": "auto"})
-
     def test_classify_task(self):
         props = self.VllmRbProperties(
             **{**self.base_props, "task": "classify"})
         self.assertEqual(props._map_task_to_runner_convert(),
                          {"runner": "auto", "convert": "classify"})
-
-    def test_reward_task(self):
-        props = self.VllmRbProperties(**{**self.base_props, "task": "reward"})
-        self.assertEqual(props._map_task_to_runner_convert(),
-                         {"runner": "auto", "convert": "reward"})
 
     def test_unknown_task_defaults_to_auto(self):
         props = self.VllmRbProperties(

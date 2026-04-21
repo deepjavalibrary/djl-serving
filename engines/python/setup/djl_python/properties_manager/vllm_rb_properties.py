@@ -104,18 +104,17 @@ class VllmRbProperties(Properties):
         return task
 
     def _map_task_to_runner_convert(self) -> dict:
+        """Translate DJL's option.task into vLLM's runner/convert engine args."""
         task = self.task
         # 'generate' includes 'text-generation' (mapped by validate_task)
-        runner_values = {'auto', 'generate', 'pooling', 'draft'}
-        convert_values = {'auto', 'none', 'embed', 'classify', 'reward', 'mm_encoder_only'}
-
-        if task in convert_values:
-            return {'convert': task, 'runner': 'auto'}
-        if task in runner_values:
-            return {'runner': task, 'convert': 'auto'}
-        if task == 'feature-extraction':
-            return {'runner': 'pooling', 'convert': 'embed'}
-        return {'runner': 'auto', 'convert': 'auto'}
+        TASK_MAP = {
+            'auto': {'runner': 'auto', 'convert': 'auto'},
+            'generate': {'runner': 'generate', 'convert': 'auto'},
+            'embed': {'runner': 'auto', 'convert': 'embed'},
+            'classify': {'runner': 'auto', 'convert': 'classify'},
+            'feature-extraction': {'runner': 'pooling', 'convert': 'embed'},
+        }
+        return TASK_MAP.get(task, {'runner': 'auto', 'convert': 'auto'})
 
     @field_validator('dtype')
     def validate_dtype(cls, val):
