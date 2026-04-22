@@ -979,7 +979,7 @@ text_embedding_model_list = {
         "option.rolling_batch": "disable",
         "option.async_mode": True,
         "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",
-        "batch_size": 8,
+        "option.max_rolling_batch_size": 8,
     },
     "bge-base-vllm": {
         "engine": "Python",
@@ -987,7 +987,7 @@ text_embedding_model_list = {
         "option.rolling_batch": "disable",
         "option.async_mode": True,
         "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",
-        "batch_size": 8,
+        "option.max_rolling_batch_size": 8,
     },
 }
 
