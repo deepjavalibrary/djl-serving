@@ -214,7 +214,7 @@ class VLLMHandler(AdapterFormatterMixin):
                 return True
         return self.output_formatter is not None
 
-    async def preprocess_request(self, inputs: Input) -> ProcessedRequest:
+    def preprocess_request(self, inputs: Input) -> ProcessedRequest:
         batch = inputs.get_batches()
         assert len(batch) == 1, "only one request per batch allowed"
         raw_request = batch[0]
@@ -339,7 +339,7 @@ class VLLMHandler(AdapterFormatterMixin):
             inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
         await self.check_health()
         try:
-            processed_request = await self.preprocess_request(inputs)
+            processed_request = self.preprocess_request(inputs)
         except CustomFormatterError as e:
             logger.exception("Custom formatter failed")
             return create_non_stream_output(

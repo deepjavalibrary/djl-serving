@@ -432,7 +432,7 @@ class TestConfigManager(unittest.TestCase):
 
             # text_embedding task
             props = VllmRbProperties(**{
-                **base_props, "task": "text_embedding"
+                **base_props, "task": "text-embedding"
             })
             mapping = props._map_task_to_runner_convert()
             self.assertEqual(mapping, {"runner": "auto", "convert": "embed"})

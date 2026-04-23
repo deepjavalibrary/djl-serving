@@ -170,7 +170,7 @@ class TestTaskToRunnerConvertMapping(unittest.TestCase):
     def test_text_embedding_task(self):
         props = self.VllmRbProperties(
             **{
-                **self.base_props, "task": "text_embedding"
+                **self.base_props, "task": "text-embedding"
             })
         self.assertEqual(props._map_task_to_runner_convert(), {
             "runner": "auto",
@@ -248,7 +248,7 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
     def test_text_embedding_task_in_engine_arg_dict(self):
         props = self.VllmRbProperties(
             **{
-                **self.base_props, "task": "text_embedding"
+                **self.base_props, "task": "text-embedding"
             })
         arg_dict = props.generate_vllm_engine_arg_dict({})
         self.assertEqual(arg_dict["convert"], "embed")
@@ -266,7 +266,7 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
     def test_passthrough_overrides_runner_convert(self):
         props = self.VllmRbProperties(
             **{
-                **self.base_props, "task": "text_embedding"
+                **self.base_props, "task": "text-embedding"
             })
         arg_dict = props.generate_vllm_engine_arg_dict({
             "runner": "pooling",
@@ -277,9 +277,6 @@ class TestRunnerConvertInEngineArgs(unittest.TestCase):
 
 
 class TestPreprocessRequestEmbedding(unittest.TestCase):
-
-    def _run_async(self, coro):
-        return asyncio.run(coro)
 
     @patch('djl_python.lmi_vllm.vllm_async_service.decode')
     @patch('djl_python.lmi_vllm.vllm_async_service._extract_lora_adapter')
@@ -297,7 +294,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"inputs": "hello world"})
-        result = self._run_async(handler.preprocess_request(inp))
+        result = handler.preprocess_request(inp)
 
         self.assertIsNotNone(result)
         self.assertEqual(result.vllm_request.input, ["hello world"])
@@ -327,7 +324,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"inputs": "test"})
-        result = self._run_async(handler.preprocess_request(inp))
+        result = handler.preprocess_request(inp)
 
         self.assertFalse(result.vllm_request.use_activation)
 
@@ -348,7 +345,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"inputs": texts})
-        result = self._run_async(handler.preprocess_request(inp))
+        result = handler.preprocess_request(inp)
 
         self.assertEqual(result.vllm_request.input, texts)
         self.assertEqual(len(result.vllm_request.input), 3)
@@ -369,7 +366,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"inputs": "test", "model": "custom-model"})
-        result = self._run_async(handler.preprocess_request(inp))
+        result = handler.preprocess_request(inp)
 
         self.assertEqual(result.vllm_request.model, "custom-model")
 
@@ -390,7 +387,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"inputs": ""})
-        result = self._run_async(handler.preprocess_request(inp))
+        result = handler.preprocess_request(inp)
 
         self.assertEqual(result.vllm_request.input, [""])
 
@@ -411,7 +408,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
         mock_extract_lora.return_value = None
 
         inp = _make_json_input({"model": "test-model"})
-        result = self._run_async(handler.preprocess_request(inp))
+        result = handler.preprocess_request(inp)
 
         self.assertEqual(result.vllm_request.input, [""])
 
@@ -433,7 +430,7 @@ class TestPreprocessRequestEmbedding(unittest.TestCase):
 
         inp = _make_json_input({"inputs": 42})
         with self.assertRaises(ValueError):
-            self._run_async(handler.preprocess_request(inp))
+            handler.preprocess_request(inp)
 
 
 class TestEmbeddingInference(unittest.TestCase):
