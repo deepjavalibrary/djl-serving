@@ -1391,7 +1391,7 @@ def build_text_embedding_model(model):
             f"{model} is not one of the supporting handler {list(text_embedding_model_list.keys())}"
         )
     options = text_embedding_model_list[model]
-    options["option.task"] = "text_embedding"
+    options["option.task"] = "text-embedding"
     options["normalize"] = False
     write_model_artifacts(options)
 

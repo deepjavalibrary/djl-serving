@@ -67,7 +67,7 @@ batch_size=32
 ```
 engine=Python
 option.model_id=BAAI/bge-base-en-v1.5
-option.task=text_embedding
+option.task=text-embedding
 option.entryPoint=djl_python.lmi_vllm.vllm_async_service
 option.rolling_batch=disable
 option.async_mode=true

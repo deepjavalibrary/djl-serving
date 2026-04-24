@@ -150,8 +150,7 @@ class VLLMHandler(AdapterFormatterMixin):
             base_model_paths,
         )
 
-        self.is_embedding = self.vllm_properties.task in ("text_embedding",
-                                                          "text-embedding",
+        self.is_embedding = self.vllm_properties.task in ("text-embedding",
                                                           "feature-extraction")
 
         if self.is_embedding:

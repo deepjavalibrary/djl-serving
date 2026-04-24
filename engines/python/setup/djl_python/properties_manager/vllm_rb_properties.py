@@ -98,7 +98,7 @@ class VllmRbProperties(Properties):
     @field_validator('task')
     def validate_task(cls, task):
         # TODO: conflicts between HF and VLLM tasks, need to separate these.
-        # for backwards compatibility, max text-generation to generate
+        # for backwards compatibility, map text-generation to generate
         if task == 'text-generation':
             task = 'generate'
         return task
@@ -115,10 +115,6 @@ class VllmRbProperties(Properties):
             'generate': {
                 'runner': 'generate',
                 'convert': 'auto'
-            },
-            'text_embedding': {
-                'runner': 'auto',
-                'convert': 'embed'
             },
             'text-embedding': {
                 'runner': 'auto',

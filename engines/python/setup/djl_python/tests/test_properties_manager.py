@@ -430,7 +430,7 @@ class TestConfigManager(unittest.TestCase):
         def test_task_to_runner_convert_mapping():
             base_props = {"engine": "Python", "model_id": "some_model"}
 
-            # text_embedding task
+            # text-embedding task
             props = VllmRbProperties(**{
                 **base_props, "task": "text-embedding"
             })
