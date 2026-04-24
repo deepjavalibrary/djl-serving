@@ -227,9 +227,9 @@ jobs:
           - test: TestMultiModalVllm_p4d
             instance: p4d
             failure-prefix: lmi
-          # - test: TestTextEmbedding_g6
-          #   instance: g6
-          #   failure-prefix: lmi
+          - test: TestTextEmbedding_g6
+            instance: g6
+            failure-prefix: lmi
           # - test: TestCorrectnessTrtLlm_g6
           #   instance: g6
           #   failure-prefix: trtllm

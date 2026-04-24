@@ -17,8 +17,9 @@ LMI supports Text Embedding Inference with the following engines:
 - PyTorch
 - Rust
 - Python
+- vLLM
 
-Currently, the Rust engine provides the best performance for text embedding in LMI. 
+Currently, the Rust engine provides the best performance for text embedding in LMI.
 
 ## Quick Start Configurations
 
@@ -51,12 +52,27 @@ to deploy a model with environment variable configuration on SageMaker.
 
 ### serving.properties
 
+**Rust**
+
 ```
 engine=Rust
 option.model_id=BAAI/bge-base-en-v1.5
 translatorFactory=ai.djl.huggingface.translator.TextEmbeddingTranslatorFactory
 # Optional
 batch_size=32
+```
+
+**vLLM**
+
+```
+engine=Python
+option.model_id=BAAI/bge-base-en-v1.5
+option.task=text-embedding
+option.entryPoint=djl_python.lmi_vllm.vllm_async_service
+option.rolling_batch=disable
+option.async_mode=true
+# Optional: disable L2 normalization (default: true)
+# option.normalize=false
 ```
 
 You can follow [this example](../deployment_guide/deploying-your-endpoint.md#option-1-configuration---servingproperties)

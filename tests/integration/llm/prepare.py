@@ -972,7 +972,23 @@ text_embedding_model_list = {
         "engine": "OnnxRuntime",
         "option.model_id": "BAAI/bge-base-en-v1.5",
         "batch_size": 8,
-    }
+    },
+    "e5-small-vllm": {
+        "engine": "Python",
+        "option.model_id": "intfloat/e5-small",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",
+        "option.max_rolling_batch_size": 8,
+    },
+    "bge-base-vllm": {
+        "engine": "Python",
+        "option.model_id": "BAAI/bge-base-en-v1.5",
+        "option.rolling_batch": "disable",
+        "option.async_mode": True,
+        "option.entryPoint": "djl_python.lmi_vllm.vllm_async_service",
+        "option.max_rolling_batch_size": 8,
+    },
 }
 
 handler_performance_model_list = {
@@ -1375,7 +1391,7 @@ def build_text_embedding_model(model):
             f"{model} is not one of the supporting handler {list(text_embedding_model_list.keys())}"
         )
     options = text_embedding_model_list[model]
-    options["option.task"] = "text_embedding"
+    options["option.task"] = "text-embedding"
     options["normalize"] = False
     write_model_artifacts(options)
 

@@ -622,7 +622,13 @@ text_embedding_model_spec = {
     },
     "bge-base-onnx": {
         "batch_size": [1, 8],
-    }
+    },
+    "e5-small-vllm": {
+        "batch_size": [1, 8],
+    },
+    "bge-base-vllm": {
+        "batch_size": [1, 8],
+    },
 }
 
 handler_performance_model_spec = {

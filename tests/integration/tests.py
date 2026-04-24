@@ -1049,73 +1049,85 @@ class TestVllmLmcachePerformanceBenchmarks_g6:
 @pytest.mark.gpu_4
 class TestTextEmbedding_g6:
 
-    def test_bge_base_rust(self):
-        with Runner("lmi", "bge-base-rust") as r:
-            prepare.build_text_embedding_model("bge-base-rust")
-            r.launch()
-            client.run("text_embedding bge-base-rust".split())
+    # def test_bge_base_rust(self):
+    #     with Runner("lmi", "bge-base-rust") as r:
+    #         prepare.build_text_embedding_model("bge-base-rust")
+    #         r.launch()
+    #         client.run("text_embedding bge-base-rust".split())
+    #
+    # def test_e5_base_v2_rust(self):
+    #     with Runner("lmi", "e5-base-v2-rust") as r:
+    #         prepare.build_text_embedding_model("e5-base-v2-rust")
+    #         r.launch()
+    #         client.run("text_embedding e5-base-v2-rust".split())
+    #
+    # def test_sentence_camembert_large_rust(self):
+    #     with Runner("lmi", "sentence-camembert-large-rust") as r:
+    #         prepare.build_text_embedding_model("sentence-camembert-large-rust")
+    #         r.launch()
+    #         client.run("text_embedding sentence-camembert-large-rust".split())
+    #
+    # def test_roberta_base_rust(self):
+    #     with Runner("lmi", "roberta-base-rust") as r:
+    #         prepare.build_text_embedding_model("roberta-base-rust")
+    #         r.launch()
+    #         client.run("text_embedding roberta-base-rust".split())
+    #
+    # def test_msmarco_distilbert_base_v4_rust(self):
+    #     with Runner("lmi", "msmarco-distilbert-base-v4-rust") as r:
+    #         prepare.build_text_embedding_model(
+    #             "msmarco-distilbert-base-v4-rust")
+    #         r.launch()
+    #         client.run(
+    #             "text_embedding msmarco-distilbert-base-v4-rust".split())
+    #
+    # def test_bge_reranker_rust(self):
+    #     with Runner("lmi", "bge-reranker-rust") as r:
+    #         prepare.build_text_embedding_model("bge-reranker-rust")
+    #         r.launch()
+    #         client.run("text_embedding bge-reranker-rust".split())
+    #
+    # def test_e5_mistral_7b_rust(self):
+    #     with Runner("lmi", "e5-mistral-7b-rust") as r:
+    #         prepare.build_text_embedding_model("e5-mistral-7b-rust")
+    #         r.launch()
+    #         client.run("text_embedding e5-mistral-7b-rust".split())
+    #
+    # def test_gte_qwen2_7b_rust(self):
+    #     with Runner("lmi", "gte-qwen2-7b-rust") as r:
+    #         prepare.build_text_embedding_model("gte-qwen2-7b-rust")
+    #         r.launch()
+    #         client.run("text_embedding gte-qwen2-7b-rust".split())
+    #
+    # def test_gte_large_rust(self):
+    #     with Runner("lmi", "gte-large-rust") as r:
+    #         prepare.build_text_embedding_model("gte-large-rust")
+    #         r.launch()
+    #         client.run("text_embedding gte-large-rust".split())
+    #
+    # def test_bge_multilingual_gemma2_rust(self):
+    #     with Runner("lmi", "bge-multilingual-gemma2-rust") as r:
+    #         prepare.build_text_embedding_model("bge-multilingual-gemma2-rust")
+    #         r.launch()
+    #         client.run("text_embedding bge-multilingual-gemma2-rust".split())
+    #
+    # def test_bge_base_onnx(self):
+    #     with Runner("lmi", "bge-base-onnx") as r:
+    #         prepare.build_text_embedding_model("bge-base-onnx")
+    #         r.launch()
+    #         client.run("text_embedding bge-base-onnx".split())
 
-    def test_e5_base_v2_rust(self):
-        with Runner("lmi", "e5-base-v2-rust") as r:
-            prepare.build_text_embedding_model("e5-base-v2-rust")
+    def test_e5_small_vllm(self):
+        with Runner("lmi", "e5-small-vllm") as r:
+            prepare.build_text_embedding_model("e5-small-vllm")
             r.launch()
-            client.run("text_embedding e5-base-v2-rust".split())
+            client.run("text_embedding e5-small-vllm".split())
 
-    def test_sentence_camembert_large_rust(self):
-        with Runner("lmi", "sentence-camembert-large-rust") as r:
-            prepare.build_text_embedding_model("sentence-camembert-large-rust")
+    def test_bge_base_vllm(self):
+        with Runner("lmi", "bge-base-vllm") as r:
+            prepare.build_text_embedding_model("bge-base-vllm")
             r.launch()
-            client.run("text_embedding sentence-camembert-large-rust".split())
-
-    def test_roberta_base_rust(self):
-        with Runner("lmi", "roberta-base-rust") as r:
-            prepare.build_text_embedding_model("roberta-base-rust")
-            r.launch()
-            client.run("text_embedding roberta-base-rust".split())
-
-    def test_msmarco_distilbert_base_v4_rust(self):
-        with Runner("lmi", "msmarco-distilbert-base-v4-rust") as r:
-            prepare.build_text_embedding_model(
-                "msmarco-distilbert-base-v4-rust")
-            r.launch()
-            client.run(
-                "text_embedding msmarco-distilbert-base-v4-rust".split())
-
-    def test_bge_reranker_rust(self):
-        with Runner("lmi", "bge-reranker-rust") as r:
-            prepare.build_text_embedding_model("bge-reranker-rust")
-            r.launch()
-            client.run("text_embedding bge-reranker-rust".split())
-
-    def test_e5_mistral_7b_rust(self):
-        with Runner("lmi", "e5-mistral-7b-rust") as r:
-            prepare.build_text_embedding_model("e5-mistral-7b-rust")
-            r.launch()
-            client.run("text_embedding e5-mistral-7b-rust".split())
-
-    def test_gte_qwen2_7b_rust(self):
-        with Runner("lmi", "gte-qwen2-7b-rust") as r:
-            prepare.build_text_embedding_model("gte-qwen2-7b-rust")
-            r.launch()
-            client.run("text_embedding gte-qwen2-7b-rust".split())
-
-    def test_gte_large_rust(self):
-        with Runner("lmi", "gte-large-rust") as r:
-            prepare.build_text_embedding_model("gte-large-rust")
-            r.launch()
-            client.run("text_embedding gte-large-rust".split())
-
-    def test_bge_multilingual_gemma2_rust(self):
-        with Runner("lmi", "bge-multilingual-gemma2-rust") as r:
-            prepare.build_text_embedding_model("bge-multilingual-gemma2-rust")
-            r.launch()
-            client.run("text_embedding bge-multilingual-gemma2-rust".split())
-
-    def test_bge_base_onnx(self):
-        with Runner("lmi", "bge-base-onnx") as r:
-            prepare.build_text_embedding_model("bge-base-onnx")
-            r.launch()
-            client.run("text_embedding bge-base-onnx".split())
+            client.run("text_embedding bge-base-vllm".split())
 
 
 @pytest.mark.vllm

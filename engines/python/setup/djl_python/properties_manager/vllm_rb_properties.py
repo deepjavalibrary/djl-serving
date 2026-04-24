@@ -81,6 +81,7 @@ class VllmRbProperties(Properties):
     device: str = 'auto'
 
     # Non engine arg properties
+    normalize: bool = True
     chat_template: Optional[str] = None
     chat_template_content_format: Literal["auto", "string", "openai"] = "auto"
 
@@ -97,10 +98,38 @@ class VllmRbProperties(Properties):
     @field_validator('task')
     def validate_task(cls, task):
         # TODO: conflicts between HF and VLLM tasks, need to separate these.
-        # for backwards compatibility, max text-generation to generate
+        # for backwards compatibility, map text-generation to generate
         if task == 'text-generation':
             task = 'generate'
         return task
+
+    def _map_task_to_runner_convert(self) -> dict:
+        """Translate DJL's option.task into vLLM's runner/convert engine args."""
+        task = self.task
+        # 'generate' includes 'text-generation' (mapped by validate_task)
+        TASK_MAP = {
+            'auto': {
+                'runner': 'auto',
+                'convert': 'auto'
+            },
+            'generate': {
+                'runner': 'generate',
+                'convert': 'auto'
+            },
+            'text-embedding': {
+                'runner': 'auto',
+                'convert': 'embed'
+            },
+            'classify': {
+                'runner': 'auto',
+                'convert': 'classify'
+            },
+            'feature-extraction': {
+                'runner': 'pooling',
+                'convert': 'embed'
+            },
+        }
+        return TASK_MAP.get(task, {'runner': 'auto', 'convert': 'auto'})
 
     @field_validator('dtype')
     def validate_dtype(cls, val):
@@ -197,6 +226,15 @@ class VllmRbProperties(Properties):
         if self.max_rolling_batch_prefill_tokens is not None:
             vllm_engine_args[
                 'max_num_batched_tokens'] = self.max_rolling_batch_prefill_tokens
+        runner_convert = self._map_task_to_runner_convert()
+        vllm_engine_args.update(runner_convert)
+        for key in ('runner', 'convert'):
+            if key in passthrough_vllm_engine_args and passthrough_vllm_engine_args[
+                    key] != runner_convert[key]:
+                logging.warning(
+                    f"Passthrough arg '{key}={passthrough_vllm_engine_args[key]}' "
+                    f"overrides computed value '{runner_convert[key]}' from task='{self.task}'"
+                )
         vllm_engine_args.update(passthrough_vllm_engine_args)
         return vllm_engine_args
 

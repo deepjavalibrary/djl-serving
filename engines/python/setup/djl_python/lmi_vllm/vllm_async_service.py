@@ -13,6 +13,7 @@
 import logging
 import os
 import types
+import uuid
 from typing import Optional, Union, AsyncGenerator
 
 from vllm import AsyncLLMEngine
@@ -25,6 +26,8 @@ from vllm.entrypoints.openai.models.protocol import BaseModelPath
 from vllm.entrypoints.openai.models.serving import OpenAIServingModels
 from vllm.entrypoints.serve.render.serving import OpenAIServingRender
 from vllm.entrypoints.chat_utils import load_chat_template
+from vllm.entrypoints.pooling.embed.serving import ServingEmbedding
+from vllm.entrypoints.pooling.embed.protocol import EmbeddingCompletionRequest
 from vllm.utils.counter import AtomicCounter
 from vllm.utils.system_utils import kill_process_tree
 
@@ -48,6 +51,7 @@ from djl_python.lmi_vllm.request_response_utils import (
     lmi_stream_output_formatter,
     lmi_with_details_non_stream_output_formatter,
     lmi_non_stream_output_formatter,
+    embedding_output_formatter,
 )
 from djl_python.session_manager import SessionManager
 from djl_python.session_utils import (create_session, close_session,
@@ -77,6 +81,9 @@ class VLLMHandler(AdapterFormatterMixin):
         self.initialized = False
         self.lora_id_counter = AtomicCounter(0)
         self.lora_requests = {}
+        self.is_embedding = False
+        self.embedding_service = None
+        self.normalize_embeddings = True
 
     async def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -143,41 +150,55 @@ class VLLMHandler(AdapterFormatterMixin):
             base_model_paths,
         )
 
-        resolved_chat_template = load_chat_template(
-            self.vllm_properties.chat_template)
+        self.is_embedding = self.vllm_properties.task in ("text-embedding",
+                                                          "feature-extraction")
 
-        openai_serving_render = OpenAIServingRender(
-            model_config=self.vllm_engine.model_config,
-            renderer=self.vllm_engine.renderer,
-            model_registry=self.model_registry.registry,
-            request_logger=None,
-            chat_template=resolved_chat_template,
-            chat_template_content_format=self.vllm_properties.
-            chat_template_content_format,
-            enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
-            tool_parser=self.vllm_properties.tool_call_parser,
-        )
+        if self.is_embedding:
+            self.embedding_service = ServingEmbedding(
+                self.vllm_engine,
+                self.model_registry,
+                request_logger=None,
+            )
+            self.normalize_embeddings = self.vllm_properties.normalize
+            logger.info(
+                f"Embedding mode enabled (task={self.vllm_properties.task}, normalize={self.normalize_embeddings})"
+            )
+        else:
+            resolved_chat_template = load_chat_template(
+                self.vllm_properties.chat_template)
 
-        self.completion_service = OpenAIServingCompletion(
-            self.vllm_engine,
-            self.model_registry,
-            openai_serving_render=openai_serving_render,
-            request_logger=None,
-        )
+            openai_serving_render = OpenAIServingRender(
+                model_config=self.vllm_engine.model_config,
+                renderer=self.vllm_engine.renderer,
+                model_registry=self.model_registry.registry,
+                request_logger=None,
+                chat_template=resolved_chat_template,
+                chat_template_content_format=self.vllm_properties.
+                chat_template_content_format,
+                enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
+                tool_parser=self.vllm_properties.tool_call_parser,
+            )
 
-        self.chat_completion_service = OpenAIServingChat(
-            self.vllm_engine,
-            self.model_registry,
-            "assistant",
-            openai_serving_render=openai_serving_render,
-            request_logger=None,
-            chat_template=resolved_chat_template,
-            chat_template_content_format=self.vllm_properties.
-            chat_template_content_format,
-            enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
-            tool_parser=self.vllm_properties.tool_call_parser,
-            reasoning_parser=self.vllm_properties.reasoning_parser or "",
-        )
+            self.completion_service = OpenAIServingCompletion(
+                self.vllm_engine,
+                self.model_registry,
+                openai_serving_render=openai_serving_render,
+                request_logger=None,
+            )
+
+            self.chat_completion_service = OpenAIServingChat(
+                self.vllm_engine,
+                self.model_registry,
+                "assistant",
+                openai_serving_render=openai_serving_render,
+                request_logger=None,
+                chat_template=resolved_chat_template,
+                chat_template_content_format=self.vllm_properties.
+                chat_template_content_format,
+                enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
+                tool_parser=self.vllm_properties.tool_call_parser,
+                reasoning_parser=self.vllm_properties.reasoning_parser or "",
+            )
         if properties.get("enable_stateful_sessions", "true") == "true":
             self.session_manager: SessionManager = SessionManager(properties)
         self.initialized = True
@@ -228,6 +249,33 @@ class VLLMHandler(AdapterFormatterMixin):
             )
             # Set the model field to the adapter name so vLLM's _maybe_get_adapters() can extract it
             decoded_payload["model"] = adapter_name
+
+        if self.is_embedding:
+            texts = decoded_payload.get("inputs", "")
+            if isinstance(texts, str):
+                texts = [texts]
+            if not isinstance(texts, list):
+                raise ValueError(
+                    f"'inputs' must be a string or list of strings, got {type(texts).__name__}"
+                )
+            embedding_request = EmbeddingCompletionRequest(
+                input=texts,
+                model=decoded_payload.get("model", self.model_name),
+                request_id=f"embd-{uuid.uuid4()}",
+                # vLLM's use_activation controls L2 normalization in the pooler (vllm 0.19.x)
+                use_activation=self.normalize_embeddings,
+            )
+            processed_request = ProcessedRequest(
+                embedding_request,
+                self.embedding_service,
+                embedding_output_formatter,
+                None,
+                False,
+                False,
+            )
+            processed_request.lora_request = lora_request
+            processed_request.adapter_name = adapter_name
+            return processed_request
 
         # completions request
         if "prompt" in decoded_payload:
