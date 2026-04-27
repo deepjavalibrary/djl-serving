@@ -14,7 +14,6 @@ from typing import Dict, List, Optional, Union, Any, Callable, Annotated, Tuple,
 
 from pydantic import Field
 from vllm import TokensPrompt
-from vllm.entrypoints.openai.protocol import RequestPrompt, TextTokensPrompt
 from vllm.tool_parsers import ToolParser
 from vllm.tokenizers.mistral import maybe_serialize_tool_calls
 from vllm.transformers_utils.tokenizer import AnyTokenizer
@@ -112,7 +111,7 @@ def _preprocess_chat(
     tool_parser: Optional[Callable[[AnyTokenizer], ToolParser]] = None,
     truncate_prompt_tokens: Optional[Annotated[int, Field(ge=1)]] = None,
     add_special_tokens: bool = False,
-) -> Tuple[List[ConversationMessage], RequestPrompt, TokensPrompt, str]:
+) -> Tuple[List[ConversationMessage], Union[str, List[int]], TokensPrompt, str]:
     resolved_content_format = resolve_chat_template_content_format(
         chat_template,
         tool_dicts,
@@ -161,7 +160,7 @@ def _preprocess_chat(
         )
     else:
         # MistralTokenizer case
-        prompt_inputs = TextTokensPrompt(
+        prompt_inputs = TokensPrompt(
             prompt=tokenizer.decode(request_prompt),
             prompt_token_ids=request_prompt)
 
@@ -180,7 +179,7 @@ def tokenize_prompt_input(request: ChatCompletionRequest,
                           max_model_len: int,
                           truncate_prompt_tokens: Optional[Annotated[
                               int, Field(ge=1)]] = None,
-                          add_special_tokens: bool = True) -> TextTokensPrompt:
+                          add_special_tokens: bool = True) -> TokensPrompt:
     if isinstance(prompt_input, str):
         return normalize_prompt_text_to_input(
             request,
@@ -207,7 +206,7 @@ def normalize_prompt_text_to_input(
     truncate_prompt_tokens: Optional[Annotated[int, Field(ge=1)]],
     add_special_tokens: bool,
     max_model_len: int,
-) -> TextTokensPrompt:
+) -> TokensPrompt:
     if truncate_prompt_tokens is None:
         encoded = tokenizer(prompt, add_special_tokens=add_special_tokens)
     else:
@@ -225,7 +224,7 @@ def normalize_prompt_tokens_to_input(
     prompt_ids: List[int],
     truncate_prompt_tokens: Optional[Annotated[int, Field(ge=1)]],
     max_model_len: int,
-) -> TextTokensPrompt:
+) -> TokensPrompt:
     if truncate_prompt_tokens is None:
         input_ids = prompt_ids
     else:
@@ -239,7 +238,7 @@ def validate_input(
     input_ids: List[int],
     input_text: str,
     max_model_len: int,
-) -> TextTokensPrompt:
+) -> TokensPrompt:
     token_num = len(input_ids)
 
     # chat completion endpoint supports max_completion_tokens
@@ -259,4 +258,4 @@ def validate_input(
             f"{max_tokens} in the completion). "
             f"Please reduce the length of the messages or completion.")
 
-    return TextTokensPrompt(prompt=input_text, prompt_token_ids=input_ids)
+    return TokensPrompt(prompt=input_text, prompt_token_ids=input_ids)
