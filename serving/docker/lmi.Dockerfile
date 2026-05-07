@@ -9,9 +9,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.9.1-devel-ubuntu24.04
+ARG version=13.0.2-devel-ubuntu24.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu129
+ARG cuda_version=cu130
 ARG djl_version
 ARG djl_serving_version
 ARG python_version=3.12
@@ -44,6 +44,7 @@ ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 # 0.6.2 is the last version that contains legacy support for beam search
 # TODO: update beam search logic and implementation in handlers
 ENV VLLM_ALLOW_DEPRECATED_BEAM_SEARCH=1
+ENV VLLM_MXFP4_USE_MARLIN=1
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
@@ -74,7 +75,7 @@ COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 COPY scripts/telemetry.sh /opt/djl/bin
 
-RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-12-9 \
+RUN apt-get update && apt-get install -yq libaio-dev libopenmpi-dev g++ unzip cuda-compat-13-0 \
     && scripts/install_openssh.sh \
     && scripts/install_python.sh ${python_version} \
     && scripts/install_s5cmd.sh x64 \
@@ -110,5 +111,5 @@ LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
-# To use the 535 CUDA driver, CUDA 12.9 can work on this one too
+# To use the 535 CUDA driver, CUDA 13.0 can work on this one too
 LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
