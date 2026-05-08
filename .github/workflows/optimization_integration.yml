@@ -139,9 +139,9 @@ jobs:
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -242,7 +242,7 @@ jobs:
           sudo rm -rf  $PWD/models
       - name: Upload test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-${{ matrix.test.test }}-logs
           path: tests/integration/all_logs/

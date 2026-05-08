@@ -62,7 +62,7 @@ jobs:
       always() && needs.create-runners.result == 'success' &&
       (needs.build-temp.result == 'success' || needs.build-temp.result == 'skipped')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -70,7 +70,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -111,7 +111,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
       - name: Upload test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-${{ inputs.test }}-logs
           path: tests/integration/all_logs/

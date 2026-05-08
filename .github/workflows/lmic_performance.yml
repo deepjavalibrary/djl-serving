@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 240
     needs: create-runners
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -49,7 +49,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -69,7 +69,7 @@ jobs:
             --profile profiles/gpt_neox_20b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: performance-gpt-neox-logs
           path: tests/integration/logs/
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -87,7 +87,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -107,7 +107,7 @@ jobs:
           --profile profiles/bloom_7b1.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: performance-bloom-7b-logs
           path: tests/integration/logs/
@@ -117,7 +117,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -125,7 +125,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -145,7 +145,7 @@ jobs:
             --profile profiles/llama_13b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: performance-llama-logs
           path: tests/integration/logs/
@@ -155,7 +155,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -163,7 +163,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -183,7 +183,7 @@ jobs:
             --profile profiles/gpt_j_6b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: performance-gpt-j-logs
           path: tests/integration/logs/
@@ -193,7 +193,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -201,7 +201,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -221,7 +221,7 @@ jobs:
             --profile profiles/opt_30b.json
       - name: Upload test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: performance-opt-30b-logs
           path: tests/integration/logs/
