@@ -107,7 +107,7 @@ jobs:
       matrix:
         arch: ${{ startsWith(inputs.arch, '[') && fromJson(inputs.arch) || fromJson(format('[{0}]', inputs.arch)) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Clean docker env
         working-directory: serving/docker
         run: |
@@ -118,7 +118,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Set up Python3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -126,7 +126,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install awscli
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
