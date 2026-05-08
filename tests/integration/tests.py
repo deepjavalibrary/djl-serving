@@ -74,11 +74,6 @@ class Runner:
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to remove container: {e}")
 
-        if os.path.exists("logs/serving.log"):
-            os.system("cat logs/serving.log")
-        else:
-            logging.warning("logs/serving.log not found")
-
         # Clean up lmcache directory after test
         os.system("rm -rf /tmp/lmcache")
 

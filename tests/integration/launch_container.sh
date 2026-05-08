@@ -108,8 +108,7 @@ if [[ -f ${PWD}/docker_env ]]; then
 fi
 
 rm -rf logs
-mkdir -p logs
-touch logs/serving.log
+mkdir logs
 
 set -ex
 
@@ -258,7 +257,7 @@ elif [[ "$docker_image" == *"text-generation-inference"* ]]; then
 else
   echo "$(whoami), UID: $UID"
   if [[ "$UID" == "1000" ]]; then
-    uid_mapping="-u djl"
+    uid_mapping="-u 1000"
   fi
   container_id=$(docker run \
     -itd \
