@@ -76,7 +76,7 @@ jobs:
         run: |
           ./install_sagemaker_pysdk.sh "$SAGEMAKER_REPOSITORY" "$REPOSITORY_BRANCH"
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: us-west-2
       - name: Test llama3-8b

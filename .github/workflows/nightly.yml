@@ -81,7 +81,7 @@ jobs:
                 arch: ${{ fromJson(needs.determine_images_to_publish.outputs.images) }}
         steps:
             - name: Configure AWS Credentials
-              uses: aws-actions/configure-aws-credentials@v4
+              uses: aws-actions/configure-aws-credentials@v6
               with:
                   role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
                   aws-region: us-east-1
