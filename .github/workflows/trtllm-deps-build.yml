@@ -58,7 +58,7 @@ jobs:
         run: |
           ./serving/docker/scripts/install_python.sh 3.10
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
