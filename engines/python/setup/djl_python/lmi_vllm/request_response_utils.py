@@ -256,10 +256,16 @@ def convert_completion_chunk_response_to_lmi_schema(
 
 
 def lmi_with_details_non_stream_output_formatter(
-    response: CompletionResponse,
+    response: Union[ErrorResponse, CompletionResponse],
     request: CompletionRequest = None,
     tokenizer: TokenizerLike = None,
 ) -> Output:
+    if isinstance(response, ErrorResponse):
+        error_msg = getattr(response, 'message', None) or getattr(
+            response, 'detail', str(response))
+        error_code = getattr(response, 'code', None) or getattr(
+            response, 'type', 500)
+        return create_non_stream_output("", error=error_msg, code=error_code)
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=True,
                                                      request=request,
@@ -267,10 +273,16 @@ def lmi_with_details_non_stream_output_formatter(
 
 
 def lmi_non_stream_output_formatter(
-    response: CompletionResponse,
+    response: Union[ErrorResponse, CompletionResponse],
     request: CompletionRequest = None,
     tokenizer: TokenizerLike = None,
 ) -> Output:
+    if isinstance(response, ErrorResponse):
+        error_msg = getattr(response, 'message', None) or getattr(
+            response, 'detail', str(response))
+        error_code = getattr(response, 'code', None) or getattr(
+            response, 'type', 500)
+        return create_non_stream_output("", error=error_msg, code=error_code)
     return convert_completion_response_to_lmi_schema(response,
                                                      include_details=False,
                                                      request=request,
