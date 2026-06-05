@@ -9,7 +9,7 @@ sentence-transformers==5.4.1
 optimum==2.1.0
 mpi4py==4.1.1
 compressed-tensors==0.15.0.1
-vllm==0.20.1
+https://djl-ai.s3.us-east-1.amazonaws.com/publish/vllm/vllm-0.22.1.dev0%2Bg0b3ba88f1.d20260605-cp312-cp312-linux_x86_64.whl
 autoawq==0.2.9
 lmcache >= 0.3.9
 nixl[cu13] >= 0.7.1, <= 0.10.1
