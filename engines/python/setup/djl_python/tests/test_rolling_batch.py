@@ -3,7 +3,7 @@ import unittest
 
 from djl_python.request import Request
 from djl_python.output_formatter import _json_output_formatter, _jsonlines_output_formatter, \
-    _jsonlines_chat_output_formatter, _json_chat_output_formatter
+    _jsonlines_chat_output_formatter, _json_chat_output_formatter, _sse_chat_output_formatter
 from djl_python.request_io import Token, TextGenerationOutput, TextInput
 
 
@@ -885,6 +885,51 @@ class TestRollingBatch(unittest.TestCase):
             "length"
         }],
                          json.loads(req.get_next_token())["choices"])
+        req.reset_next_token()
+
+    def test_sse_chat(self):
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
+                      parameters={"max_new_tokens": 256},
+                      output_formatter=_sse_chat_output_formatter))
+
+        # First token - should have data: prefix and role
+        req.set_next_token(Token(244, "He", -0.334532))
+        output = req.get_next_token()
+        self.assertTrue(output.startswith("data: "))
+        self.assertTrue(output.endswith("\n\n"))
+        payload = json.loads(output[len("data: "):].strip())
+        self.assertEqual(payload["object"], "chat.completion.chunk")
+        self.assertEqual(payload["choices"][0]["delta"]["content"], "He")
+        self.assertEqual(payload["choices"][0]["delta"]["role"], "assistant")
+        self.assertIsNone(payload["choices"][0]["finish_reason"])
+        self.assertNotIn("[DONE]", output)
+        req.reset_next_token()
+
+        # Middle token - no role, no [DONE]
+        req.set_next_token(Token(576, "llo", -0.123123))
+        output = req.get_next_token()
+        self.assertTrue(output.startswith("data: "))
+        payload = json.loads(output[len("data: "):].strip())
+        self.assertEqual(payload["choices"][0]["delta"]["content"], "llo")
+        self.assertNotIn("role", payload["choices"][0]["delta"])
+        self.assertNotIn("[DONE]", output)
+        req.reset_next_token()
+
+        # Last token - should have finish_reason and [DONE]
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        output = req.get_next_token()
+        self.assertTrue(output.startswith("data: "))
+        # Split into SSE events
+        events = output.split("\n\n")
+        # First event is the data chunk
+        data_line = events[0]
+        payload = json.loads(data_line[len("data: "):])
+        self.assertEqual(payload["choices"][0]["delta"]["content"], " world")
+        self.assertEqual(payload["choices"][0]["finish_reason"], "length")
+        # [DONE] should be present
+        self.assertIn("data: [DONE]", output)
         req.reset_next_token()
 
     def test_custom_fmt(self):

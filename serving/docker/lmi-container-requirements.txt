@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cu130
 torch==2.11.0
 torchvision==0.26.0
-transformers >= 4.56.0, != 5.0.*, != 5.1.*, != 5.2.*, != 5.3.*, != 5.4.*, != 5.5.0
+transformers >= 4.56.0, <= 5.9.0, != 5.0.*, != 5.1.*, != 5.2.*, != 5.3.*, != 5.4.*, != 5.5.0
 huggingface-hub
 hf-transfer
 peft==0.19.1

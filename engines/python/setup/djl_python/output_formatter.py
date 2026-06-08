@@ -507,6 +507,24 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
     return json_encoded_str
 
 
+def _sse_chat_output_formatter(request_output: TextGenerationOutput):
+    """
+    SSE output formatter for chat completions API (OpenAI-compatible).
+    Wraps each chunk with 'data: ' prefix and adds [DONE] at end.
+    """
+    output_str = _jsonlines_chat_output_formatter(request_output)
+    if not output_str:
+        return ""
+    # Check if this is the last token by looking at finish_reason in the output
+    result = f"data: {output_str}\n"
+    # If the json contains a non-null finish_reason, append [DONE]
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    if best_sequence.finish_reason is not None:
+        result += "data: [DONE]\n\n"
+    return result
+
+
 def sse_response_formatter(request_output: TextGenerationOutput):
     """
     Decorator that used to form as SSE
@@ -569,6 +587,8 @@ def get_output_formatter(output_formatter: Union[str, Callable], stream: bool,
         return _json_chat_output_formatter, "application/json"
     if output_formatter == "jsonlines_chat":
         return _jsonlines_chat_output_formatter, "application/jsonlines"
+    if output_formatter == "sse_chat":
+        return _sse_chat_output_formatter, "text/event-stream"
     if output_formatter == "3p":
         return _json_3p_output_formatter, "application/json"
     if output_formatter == "3p_stream":
