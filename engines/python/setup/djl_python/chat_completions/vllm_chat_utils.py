@@ -19,11 +19,12 @@ from vllm.tool_parsers import ToolParser
 from vllm.tokenizers.mistral import maybe_serialize_tool_calls
 from vllm.tokenizers import TokenizerLike
 from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
-from vllm.entrypoints.chat_utils import (
-    parse_chat_messages, ChatCompletionMessageParam,
-    ChatTemplateContentFormatOption, ConversationMessage)
-from vllm.renderers.hf import (
-    safe_apply_chat_template, resolve_chat_template_content_format)
+from vllm.entrypoints.chat_utils import (parse_chat_messages,
+                                         ChatCompletionMessageParam,
+                                         ChatTemplateContentFormatOption,
+                                         ConversationMessage)
+from vllm.renderers.hf import (safe_apply_chat_template,
+                               resolve_chat_template_content_format)
 
 from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
 
@@ -84,12 +85,11 @@ def parse_chat_completions_request_vllm(
         engine_prompt["prompt_token_ids"])
     # Use max_tokens from request if provided, otherwise use default
     max_tokens = chat_params.max_tokens or chat_params.max_completion_tokens or default_max_new_tokens
-    sampling_params = chat_params.to_sampling_params(
-        max_tokens, default_sampling_params)
+    sampling_params = chat_params.to_sampling_params(max_tokens,
+                                                     default_sampling_params)
     params = {
         "stream": chat_params.stream,
-        "output_formatter":
-        "sse_chat" if chat_params.stream else "json_chat",
+        "output_formatter": "sse_chat" if chat_params.stream else "json_chat",
         "sampling_params": sampling_params,
         "conversation": conversation,
         "request_prompts": request_prompt,
@@ -138,13 +138,11 @@ def _preprocess_chat(
     request_prompt: Union[str, List[int]]
     if rolling_batch.is_mistral_tokenizer:
         # Mistral tokenizer handles chat template application directly
-        request_prompt = tokenizer.apply_chat_template(
-            messages, **chat_template_kwargs)
+        request_prompt = tokenizer.apply_chat_template(messages,
+                                                       **chat_template_kwargs)
     else:
         request_prompt = safe_apply_chat_template(
-            rolling_batch.engine.model_config,
-            tokenizer,
-            conversation,
+            rolling_batch.engine.model_config, tokenizer, conversation,
             **chat_template_kwargs)
 
     should_parse_tools = tool_parser is not None and request.tool_choice != "none"
@@ -163,9 +161,8 @@ def _preprocess_chat(
         )
     else:
         # MistralTokenizer case
-        prompt_inputs = TokensPrompt(
-            prompt=tokenizer.decode(request_prompt),
-            prompt_token_ids=request_prompt)
+        prompt_inputs = TokensPrompt(prompt=tokenizer.decode(request_prompt),
+                                     prompt_token_ids=request_prompt)
 
     engine_prompt = TokensPrompt(
         prompt_token_ids=prompt_inputs["prompt_token_ids"])
