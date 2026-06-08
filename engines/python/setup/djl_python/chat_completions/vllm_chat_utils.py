@@ -14,21 +14,25 @@ from typing import Dict, List, Optional, Union, Any, Callable, Annotated, Tuple,
 
 from pydantic import Field
 from vllm import TokensPrompt
-from vllm.entrypoints.openai.protocol import RequestPrompt, TextTokensPrompt
+from vllm.inputs import TextPrompt
 from vllm.tool_parsers import ToolParser
 from vllm.tokenizers.mistral import maybe_serialize_tool_calls
-from vllm.transformers_utils.tokenizer import AnyTokenizer
+from vllm.tokenizers import TokenizerLike
 from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
 from vllm.entrypoints.chat_utils import (
-    apply_hf_chat_template, apply_mistral_chat_template, parse_chat_messages,
-    resolve_chat_template_content_format, ChatCompletionMessageParam,
+    parse_chat_messages, ChatCompletionMessageParam,
     ChatTemplateContentFormatOption, ConversationMessage)
+from vllm.renderers.hf import (
+    safe_apply_chat_template, resolve_chat_template_content_format)
 
 from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
 
-# The logic in this file is heavily inspired by https://github.com/vllm-project/vllm/blob/v0.7.1/vllm/entrypoints/openai/serving_chat.py#L109
-# Many of the utilities and validation logic are modified directly from vLLM's code
+# The logic in this file is heavily inspired by vLLM's chat completion serving code.
+# Many of the utilities and validation logic are modified directly from vLLM's code.
 # TODO: Figure out a way to integrate with vLLM at a higher level than we do now to avoid this code
+
+# Type aliases for backward compatibility
+RequestPrompt = Union[str, list[int]]
 
 
 def parse_chat_completions_request_vllm(
@@ -81,12 +85,11 @@ def parse_chat_completions_request_vllm(
     # Use max_tokens from request if provided, otherwise use default
     max_tokens = chat_params.max_tokens or chat_params.max_completion_tokens or default_max_new_tokens
     sampling_params = chat_params.to_sampling_params(
-        max_tokens, rolling_batch.engine.model_config.logits_processor_pattern,
-        default_sampling_params)
+        max_tokens, default_sampling_params)
     params = {
         "stream": chat_params.stream,
         "output_formatter":
-        "jsonlines_chat" if chat_params.stream else "json_chat",
+        "sse_chat" if chat_params.stream else "json_chat",
         "sampling_params": sampling_params,
         "conversation": conversation,
         "request_prompts": request_prompt,
@@ -100,7 +103,7 @@ def parse_chat_completions_request_vllm(
 
 def _preprocess_chat(
     request: ChatCompletionRequest,
-    tokenizer: AnyTokenizer,
+    tokenizer: TokenizerLike,
     messages: List[ChatCompletionMessageParam],
     chat_template: Optional[str],
     chat_template_content_format: ChatTemplateContentFormatOption,
@@ -109,7 +112,7 @@ def _preprocess_chat(
     continue_final_message: bool = False,
     tool_dicts: Optional[List[Dict[str, Any]]] = None,
     documents: Optional[List[Dict[str, str]]] = None,
-    tool_parser: Optional[Callable[[AnyTokenizer], ToolParser]] = None,
+    tool_parser: Optional[Callable[[TokenizerLike], ToolParser]] = None,
     truncate_prompt_tokens: Optional[Annotated[int, Field(ge=1)]] = None,
     add_special_tokens: bool = False,
 ) -> Tuple[List[ConversationMessage], RequestPrompt, TokensPrompt, str]:
@@ -122,7 +125,6 @@ def _preprocess_chat(
     conversation, mm_data, mm_uuids = parse_chat_messages(
         messages,
         rolling_batch.engine.model_config,
-        tokenizer,
         content_format=resolved_content_format,
     )
     chat_template_kwargs: Dict[str, Any] = dict(
@@ -135,14 +137,14 @@ def _preprocess_chat(
 
     request_prompt: Union[str, List[int]]
     if rolling_batch.is_mistral_tokenizer:
-        request_prompt = apply_mistral_chat_template(tokenizer,
-                                                     messages=messages,
-                                                     **chat_template_kwargs)
+        # Mistral tokenizer handles chat template application directly
+        request_prompt = tokenizer.apply_chat_template(
+            messages, **chat_template_kwargs)
     else:
-        request_prompt = apply_hf_chat_template(
+        request_prompt = safe_apply_chat_template(
+            rolling_batch.engine.model_config,
             tokenizer,
-            conversation=conversation,
-            model_config=rolling_batch.engine.model_config,
+            conversation,
             **chat_template_kwargs)
 
     should_parse_tools = tool_parser is not None and request.tool_choice != "none"
@@ -161,7 +163,7 @@ def _preprocess_chat(
         )
     else:
         # MistralTokenizer case
-        prompt_inputs = TextTokensPrompt(
+        prompt_inputs = TokensPrompt(
             prompt=tokenizer.decode(request_prompt),
             prompt_token_ids=request_prompt)
 
@@ -175,12 +177,12 @@ def _preprocess_chat(
 
 
 def tokenize_prompt_input(request: ChatCompletionRequest,
-                          tokenizer: AnyTokenizer,
+                          tokenizer: TokenizerLike,
                           prompt_input: Union[str, List[int]],
                           max_model_len: int,
                           truncate_prompt_tokens: Optional[Annotated[
                               int, Field(ge=1)]] = None,
-                          add_special_tokens: bool = True) -> TextTokensPrompt:
+                          add_special_tokens: bool = True) -> TokensPrompt:
     if isinstance(prompt_input, str):
         return normalize_prompt_text_to_input(
             request,
@@ -202,12 +204,12 @@ def tokenize_prompt_input(request: ChatCompletionRequest,
 
 def normalize_prompt_text_to_input(
     request: ChatCompletionRequest,
-    tokenizer: AnyTokenizer,
+    tokenizer: TokenizerLike,
     prompt: str,
     truncate_prompt_tokens: Optional[Annotated[int, Field(ge=1)]],
     add_special_tokens: bool,
     max_model_len: int,
-) -> TextTokensPrompt:
+) -> TokensPrompt:
     if truncate_prompt_tokens is None:
         encoded = tokenizer(prompt, add_special_tokens=add_special_tokens)
     else:
@@ -221,11 +223,11 @@ def normalize_prompt_text_to_input(
 
 def normalize_prompt_tokens_to_input(
     request: ChatCompletionRequest,
-    tokenizer: AnyTokenizer,
+    tokenizer: TokenizerLike,
     prompt_ids: List[int],
     truncate_prompt_tokens: Optional[Annotated[int, Field(ge=1)]],
     max_model_len: int,
-) -> TextTokensPrompt:
+) -> TokensPrompt:
     if truncate_prompt_tokens is None:
         input_ids = prompt_ids
     else:
@@ -239,7 +241,7 @@ def validate_input(
     input_ids: List[int],
     input_text: str,
     max_model_len: int,
-) -> TextTokensPrompt:
+) -> TokensPrompt:
     token_num = len(input_ids)
 
     # chat completion endpoint supports max_completion_tokens
@@ -259,4 +261,4 @@ def validate_input(
             f"{max_tokens} in the completion). "
             f"Please reduce the length of the messages or completion.")
 
-    return TextTokensPrompt(prompt=input_text, prompt_token_ids=input_ids)
+    return TokensPrompt(prompt=input_text, prompt_token_ids=input_ids)
