@@ -51,7 +51,7 @@ COPY partition /opt/djl/partition
 
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev graphviz cuda-compat-12-8 && \
+RUN apt-get update && apt-mark hold cuda-compat-12-8 && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev graphviz && \
     scripts/install_python.sh ${python_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
