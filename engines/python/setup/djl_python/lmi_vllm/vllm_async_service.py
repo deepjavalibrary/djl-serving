@@ -442,6 +442,13 @@ async def handle(
     if custom_service is None:
         custom_service = CustomHandlerService(inputs.get_properties())
 
+    # Skip custom handler for init/empty requests (no inference content)
+    if inputs.is_empty():
+        if not service.initialized and not custom_service.initialized:
+            await service.initialize(inputs.get_properties())
+            logger.info("vllm service initialized")
+        return None
+
     # Try custom handler first
     if custom_service.initialized:
         logger.info("Using custom handler for request")
@@ -453,8 +460,6 @@ async def handle(
     if not service.initialized:
         await service.initialize(inputs.get_properties())
         logger.info("vllm service initialized")
-    if inputs.is_empty():
-        return None
 
     outputs = await service.inference(inputs)
     return outputs
