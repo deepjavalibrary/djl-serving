@@ -432,15 +432,17 @@ class VLLMHandler(AdapterFormatterMixin):
 
 custom_service = None
 service = VLLMHandler()
+_init_properties = None
 
 
 async def handle(
         inputs: Input
 ) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
-    global custom_service
+    global custom_service, _init_properties
     # Initialize custom service once
     if custom_service is None:
-        custom_service = CustomHandlerService(inputs.get_properties())
+        _init_properties = inputs.get_properties().copy()
+        custom_service = CustomHandlerService(_init_properties)
 
     # Skip custom handler for init/empty requests (no inference content)
     if inputs.is_empty():
@@ -451,6 +453,10 @@ async def handle(
 
     # Try custom handler first
     if custom_service.initialized:
+        # Inject init properties (model_id, etc.) so custom handler has model config
+        for key, value in _init_properties.items():
+            if key not in inputs.properties:
+                inputs.properties[key] = value
         logger.info("Using custom handler for request")
         result = await custom_service.handle(inputs)
         if result is not None:
