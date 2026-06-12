@@ -17,9 +17,10 @@ async def handle(inputs: Input):
         print("[CUSTOM_HANDLER] Initializing vLLM engine")
         properties = inputs.get_properties()
         model_id = properties.get("model_id", "gpt2")
-        llm = LLM(model=model_id, tensor_parallel_size=1)
+        tp = int(properties.get("tensor_parallel_degree", "1"))
+        llm = LLM(model=model_id, tensor_parallel_size=tp)
         print(f"[CUSTOM_HANDLER] vLLM engine initialized with model: {model_id}")
-    
+
     # Parse input
     batch = inputs.get_batches()
     raw_request = batch[0]
