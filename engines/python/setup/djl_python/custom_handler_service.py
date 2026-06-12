@@ -12,7 +12,6 @@
 # the specific language governing permissions and limitations under the License.
 
 import logging
-import os
 from djl_python.inputs import Input
 from djl_python.service_loader import load_model_service, has_function_in_module
 from djl_python.async_utils import create_non_stream_output
@@ -38,25 +37,14 @@ class CustomHandlerService:
 
     def _initialize(self, properties: dict):
         model_dir = properties.get("model_dir", ".")
-        model_file = os.path.join(model_dir, "model.py")
-        if not os.path.exists(model_file):
-            logger.debug("No model.py found, skipping custom handler")
-            return
         try:
             service = load_model_service(model_dir, "model.py", -1)
             if has_function_in_module(service.module, "handle"):
                 self.custom_handler = service
                 logger.info("Loaded custom handler from model.py")
                 self.initialized = True
-            else:
-                logger.info(
-                    "model.py found but has no handle() function, skipping custom handler"
-                )
-        except (SyntaxError, ImportError) as e:
-            raise CustomHandlerError(
-                f"Failed to load custom handler model.py: {e}", e)
         except Exception as e:
-            logger.debug(f"Could not load custom handler from model.py: {e}")
+            logger.debug(f"No custom handler found in model.py: {e}")
 
     async def handle(self, inputs: Input):
         if self.custom_handler:
