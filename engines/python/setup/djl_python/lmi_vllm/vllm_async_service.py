@@ -444,13 +444,6 @@ async def handle(
         _init_properties = inputs.get_properties().copy()
         custom_service = CustomHandlerService(_init_properties)
 
-    # Skip custom handler for init/empty requests (no inference content)
-    if inputs.is_empty():
-        if not service.initialized and not custom_service.initialized:
-            await service.initialize(inputs.get_properties())
-            logger.info("vllm service initialized")
-        return None
-
     # Try custom handler first
     if custom_service.initialized:
         # Inject init properties (model_id, etc.) so custom handler has model config
@@ -466,6 +459,8 @@ async def handle(
     if not service.initialized:
         await service.initialize(inputs.get_properties())
         logger.info("vllm service initialized")
+    if inputs.is_empty():
+        return None
 
     outputs = await service.inference(inputs)
     return outputs
