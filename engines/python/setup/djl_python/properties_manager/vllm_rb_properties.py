@@ -37,6 +37,8 @@ def construct_vllm_args_list(vllm_engine_args: dict):
         if str(value).lower() in {'true', 'false'}:
             if str(value).lower() == 'true':
                 args_list.append("--" + key)
+            else:
+                args_list.append("--no-" + key)
         elif isinstance(value, bool):
             if value:
                 args_list.append("--" + key)
