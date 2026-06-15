@@ -1243,11 +1243,10 @@ def build_vllm_async_model_with_custom_handler(model, handler_type="success"):
     write_model_artifacts(options)
 
     # Copy custom handler from examples
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    source_file = os.path.join(base_dir, "examples", "custom_handlers",
-                               f"{handler_type}.py")
-    target_file = os.path.join(base_dir, "models", "test", "model.py")
-    shutil.copy2(source_file, target_file)
+    source_file = f"examples/custom_handlers/{handler_type}.py"
+    target_file = "models/test/model.py"
+    if os.path.exists(source_file):
+        shutil.copy2(source_file, target_file)
 
 
 def build_vllm_async_model_custom_formatters(model, error_type=None):
