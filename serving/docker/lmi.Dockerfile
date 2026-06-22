@@ -44,7 +44,6 @@ ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 # 0.6.2 is the last version that contains legacy support for beam search
 # TODO: update beam search logic and implementation in handlers
 ENV VLLM_ALLOW_DEPRECATED_BEAM_SEARCH=1
-ENV VLLM_MXFP4_USE_MARLIN=1
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
