@@ -140,6 +140,13 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.enable_chunked_prefill": "true",
+        # vLLM 0.23 reserves ~0.78 GiB more KV than 0.22 (15.41->16.19 GiB on this 8B/TP4 config),
+        # which starves the post-profiling FULL CUDA-graph capture on tight 22 GiB L4 (g6) cards:
+        # at the default max_rolling_batch_size=256 the capture needs 35 graphs / 0.64 GiB and the
+        # card OOMs by ~60-130 MiB. Pinning batch=128 halves the capture sizes (35->19 graphs,
+        # 0.64->0.44 GiB) and the test fits. Reproduced + fix validated on a g6/L4 ballasted to
+        # CI's 22.04 GiB. (base vLLM 0.23 behavior, not a regression in the v27 wheel.)
+        "option.max_rolling_batch_size": 128,
     },
     "falcon-11b-chunked-prefill": {
         "option.model_id": "s3://djl-llm/falcon-11B/",
