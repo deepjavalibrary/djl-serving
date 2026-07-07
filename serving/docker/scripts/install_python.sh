@@ -19,6 +19,7 @@ else
   else
     DEBIAN_FRONTEND=noninteractive apt-get install -y "python${PYTHON_VERSION}-dev" "python${PYTHON_VERSION}-distutils" "python${PYTHON_VERSION}-venv"
   fi
+  apt-get purge -y python3-pip python3-pip-whl
   ln -sf /usr/bin/"python${PYTHON_VERSION}" /usr/bin/python3
   ln -sf /usr/bin/"python${PYTHON_VERSION}" /usr/bin/python
   curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
