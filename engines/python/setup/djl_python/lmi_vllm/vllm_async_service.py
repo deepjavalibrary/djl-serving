@@ -24,7 +24,7 @@ from vllm.entrypoints.openai.chat_completion.serving import OpenAIServingChat
 from vllm.entrypoints.openai.completion.serving import OpenAIServingCompletion
 from vllm.entrypoints.openai.models.protocol import BaseModelPath
 from vllm.entrypoints.openai.models.serving import OpenAIServingModels
-from vllm.entrypoints.serve.render.serving import OpenAIServingRender
+from vllm.renderers.online_renderer import OnlineRenderer
 from vllm.entrypoints.chat_utils import load_chat_template, ChatTemplateConfig
 from vllm.entrypoints.pooling.embed.serving import ServingEmbedding
 from vllm.entrypoints.pooling.embed.protocol import EmbeddingCompletionRequest
@@ -168,22 +168,22 @@ class VLLMHandler(AdapterFormatterMixin):
             resolved_chat_template = load_chat_template(
                 self.vllm_properties.chat_template)
 
-            openai_serving_render = OpenAIServingRender(
+            online_renderer = OnlineRenderer(
                 model_config=self.vllm_engine.model_config,
                 renderer=self.vllm_engine.renderer,
-                model_registry=self.model_registry.registry,
                 request_logger=None,
                 chat_template=resolved_chat_template,
                 chat_template_content_format=self.vllm_properties.
                 chat_template_content_format,
                 enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
                 tool_parser=self.vllm_properties.tool_call_parser,
+                reasoning_parser=self.vllm_properties.reasoning_parser or "",
             )
 
             self.completion_service = OpenAIServingCompletion(
                 self.vllm_engine,
                 self.model_registry,
-                openai_serving_render=openai_serving_render,
+                online_renderer=online_renderer,
                 request_logger=None,
             )
 
@@ -191,7 +191,7 @@ class VLLMHandler(AdapterFormatterMixin):
                 self.vllm_engine,
                 self.model_registry,
                 "assistant",
-                openai_serving_render=openai_serving_render,
+                online_renderer=online_renderer,
                 request_logger=None,
                 chat_template=resolved_chat_template,
                 chat_template_content_format=self.vllm_properties.
