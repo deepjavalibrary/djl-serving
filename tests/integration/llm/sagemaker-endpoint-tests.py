@@ -1,3 +1,4 @@
+import os
 import sagemaker
 import boto3
 import time
@@ -32,20 +33,21 @@ DEFAULT_MULTIMODAL_PAYLOAD = {
     }]
 }
 
-NIGHTLY_IMAGES = {
-    "lmi":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:lmi-nightly",
-    "tensorrt-llm":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:tensorrt-llm-nightly",
-}
+ECR_REPO = "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving"
 
-CANDIDATE_IMAGES = {
-    # TODO: update this to new tag once lmi rename has been applied to newer release
-    "lmi":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-deepspeed",
-    "tensorrt-llm":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-tensorrt-llm",
-}
+
+def _get_serving_version():
+    """Read serving version from gradle/libs.versions.toml."""
+    toml_path = os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                             "gradle", "libs.versions.toml")
+    with open(toml_path) as f:
+        for line in f:
+            if line.strip().startswith("serving"):
+                return line.split("=")[1].strip().strip('"')
+    raise RuntimeError("Could not find serving version in libs.versions.toml")
+
+
+SERVING_VERSION = _get_serving_version()
 
 SINGLE_MODEL_ENDPOINT_CONFIGS = {
     # This tests the uncompressed model artifact SM capability (network isolation use-case)
@@ -130,10 +132,9 @@ def boolean_arg(value):
 
 def get_image_uri(image_type, framework_tag):
     if image_type == 'nightly':
-        return NIGHTLY_IMAGES[framework_tag]
+        return f"{ECR_REPO}:{SERVING_VERSION}-{framework_tag}-nightly"
     else:
-        image_uri = CANDIDATE_IMAGES[framework_tag]
-        return image_uri.format(version=image_type)
+        return f"{ECR_REPO}:{image_type}-{framework_tag}"
 
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
