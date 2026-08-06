@@ -326,13 +326,14 @@ example_no_hidden_states_request_output = [
                       prompt_token_ids=[1, 315, 837, 264],
                       prompt_logprobs=None,
                       outputs=[
-                          MockCompletionOutput(index=0,
-                                               text=' member',
-                                               token_ids=[4292],
-                                               cumulative_logprob=-4.2740092277526855,
-                                               logprobs=None,
-                                               finish_reason='length',
-                                               stop_reason=None)
+                          MockCompletionOutput(
+                              index=0,
+                              text=' member',
+                              token_ids=[4292],
+                              cumulative_logprob=-4.2740092277526855,
+                              logprobs=None,
+                              finish_reason='length',
+                              stop_reason=None)
                       ],
                       finished=True,
                       kv_transfer_params=None),
@@ -688,9 +689,8 @@ class TestVllmUtils(unittest.TestCase):
             djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
                 mock_request_cache, vllm_request_output, tokenizer)
 
-        self.assertEqual(
-            "/tmp/hidden_states/test.safetensors",
-            req.request_output.sequences[0].hidden_states_path)
+        self.assertEqual("/tmp/hidden_states/test.safetensors",
+                         req.request_output.sequences[0].hidden_states_path)
 
     @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
@@ -720,8 +720,51 @@ class TestVllmUtils(unittest.TestCase):
             djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
                 mock_request_cache, vllm_request_output, tokenizer)
 
-        self.assertIsNone(
-            req.request_output.sequences[0].hidden_states_path)
+        self.assertIsNone(req.request_output.sequences[0].hidden_states_path)
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.sampling_params': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.counter': MagicMock()})
+    def test_translate_vllm_params_routes_kv_transfer_params_to_extra_args(
+            self):
+        """kv_transfer_params is not itself a SamplingParams field, so it
+        must be moved under extra_args before filter_unused_generation_params
+        runs, or it would be silently dropped (see vllm_rolling_batch.py)."""
+        from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
+
+        parameters = {
+            "max_new_tokens": 3,
+            "kv_transfer_params": {
+                "include_output_tokens": True
+            },
+        }
+        result = VLLMRollingBatch.translate_vllm_params(Mock(), parameters)
+
+        self.assertNotIn("kv_transfer_params", result)
+        self.assertEqual({"include_output_tokens": True},
+                         result["extra_args"]["kv_transfer_params"])
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.sampling_params': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.counter': MagicMock()})
+    def test_translate_vllm_params_no_kv_transfer_params_is_noop(self):
+        """No kv_transfer_params in the request parameters (the common case)
+        must not add an extra_args key that wasn't already there."""
+        from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
+
+        parameters = {"max_new_tokens": 3}
+        result = VLLMRollingBatch.translate_vllm_params(Mock(), parameters)
+
+        self.assertNotIn("kv_transfer_params", result)
+        self.assertNotIn("extra_args", result)
 
 
 if __name__ == '__main__':
