@@ -148,6 +148,17 @@ class VLLMRollingBatch(RollingBatch):
             parameters["logprobs"] = parameters.pop("top_n_tokens")
         else:
             parameters["logprobs"] = parameters.get("logprobs", 1)
+
+        # kv_transfer_params (e.g. for vLLM's extract_hidden_states feature -
+        # see rolling_batch_vllm_utils.update_multiple_sequences) is not a
+        # SamplingParams field itself, so it must go through extra_args or
+        # filter_unused_generation_params below would silently drop it.
+        kv_transfer_params = parameters.pop("kv_transfer_params", None)
+        if kv_transfer_params is not None:
+            extra_args = parameters.get("extra_args") or {}
+            extra_args["kv_transfer_params"] = kv_transfer_params
+            parameters["extra_args"] = extra_args
+
         parameters = filter_unused_generation_params(parameters,
                                                      VLLM_GENERATION_PARAMS,
                                                      "vllm",

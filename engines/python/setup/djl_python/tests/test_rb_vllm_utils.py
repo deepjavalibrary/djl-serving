@@ -60,6 +60,7 @@ class MockRequestOutput:
         prompt_logprobs: Optional[MockPromptLogprobs],
         outputs: List[MockCompletionOutput],
         finished: bool,
+        kv_transfer_params: Optional[Dict[str, Union[str, bool]]] = None,
     ) -> None:
         self.request_id = request_id
         self.prompt = prompt
@@ -67,6 +68,7 @@ class MockRequestOutput:
         self.prompt_logprobs = prompt_logprobs
         self.outputs = outputs
         self.finished = finished
+        self.kv_transfer_params = kv_transfer_params
 
 
 example_request_output = [
@@ -294,6 +296,46 @@ example_chunked_prefill_request_output = [
                                                stop_reason=None)
                       ],
                       finished=False),
+]
+
+example_hidden_states_request_output = [
+    MockRequestOutput(
+        request_id="test_hidden_states_request_id",
+        prompt="I am a",
+        prompt_token_ids=[1, 315, 837, 264],
+        prompt_logprobs=None,
+        outputs=[
+            MockCompletionOutput(index=0,
+                                 text=' member',
+                                 token_ids=[4292],
+                                 cumulative_logprob=-4.2740092277526855,
+                                 logprobs=None,
+                                 finish_reason='length',
+                                 stop_reason=None)
+        ],
+        finished=True,
+        kv_transfer_params={
+            "hidden_states_path": "/tmp/hidden_states/test.safetensors"
+        },
+    ),
+]
+
+example_no_hidden_states_request_output = [
+    MockRequestOutput(request_id="test_no_hidden_states_request_id",
+                      prompt="I am a",
+                      prompt_token_ids=[1, 315, 837, 264],
+                      prompt_logprobs=None,
+                      outputs=[
+                          MockCompletionOutput(index=0,
+                                               text=' member',
+                                               token_ids=[4292],
+                                               cumulative_logprob=-4.2740092277526855,
+                                               logprobs=None,
+                                               finish_reason='length',
+                                               stop_reason=None)
+                      ],
+                      finished=True,
+                      kv_transfer_params=None),
 ]
 
 
@@ -618,6 +660,68 @@ class TestVllmUtils(unittest.TestCase):
         expected_sequences = {0: Sequence()}
         self.assertEqual(repr(expected_sequences),
                          repr(req.request_output.sequences))
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
+    def test_hidden_states_path_set_when_kv_transfer_params_present(self):
+        """kv_transfer_params.hidden_states_path (set by vLLM's
+        extract_hidden_states feature) should be copied onto the Sequence."""
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        parameters = {"max_new_tokens": 3}
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
+        req = Request(request_input)
+        mock_request_cache = OrderedDict({
+            "test_hidden_states_request_id": {
+                "request_output": req.request_output
+            }
+        })
+
+        for vllm_request_output in example_hidden_states_request_output:
+            djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
+                mock_request_cache, vllm_request_output, tokenizer)
+
+        self.assertEqual(
+            "/tmp/hidden_states/test.safetensors",
+            req.request_output.sequences[0].hidden_states_path)
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
+    def test_hidden_states_path_absent_when_kv_transfer_params_none(self):
+        """kv_transfer_params is None for every config that doesn't use
+        extract_hidden_states (the common case) - hidden_states_path must
+        stay None, i.e. this must be a no-op."""
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        parameters = {"max_new_tokens": 3}
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
+        req = Request(request_input)
+        mock_request_cache = OrderedDict({
+            "test_no_hidden_states_request_id": {
+                "request_output": req.request_output
+            }
+        })
+
+        for vllm_request_output in example_no_hidden_states_request_output:
+            djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
+                mock_request_cache, vllm_request_output, tokenizer)
+
+        self.assertIsNone(
+            req.request_output.sequences[0].hidden_states_path)
 
 
 if __name__ == '__main__':
