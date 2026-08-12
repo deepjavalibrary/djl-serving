@@ -3,6 +3,22 @@
 Below are the release notes for recent Large Model Inference (LMI) images for use on SageMaker.
 For details on historical releases, refer to the [Github Releases page](https://github.com/deepjavalibrary/djl-serving/releases).
 
+## LMI V27 (DJL-Serving 0.36.0)
+
+#### LMI (vLLM) Image – 7-16-2026
+```
+763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.36.0-lmi27.0.0-cu130
+```
+
+##### What's New
+* Based on OSS vLLM `0.23.0`, with additional performance optimization patches.
+* **gemma-4-26B LoRA support**: LoRA adapters can now be served on the gemma-4-26B model. LoRA adapters that target the fused MoE expert layers (rather than attention) are not yet supported and require a follow-up fix.
+
+##### Patches
+The floating `0.36.0-lmi27.0.0-cu130` tag always resolves to the latest patch below. To pin a specific patch, use its dated tag.
+* **v1.1** (2026-07-16) — adds gemma-4-26B LoRA support. `0.36.0-lmi27.0.0-cu130-v1.1-2026-07-16-04-35-12`
+* **v1.0** (2026-07-14) — initial V27 release. `0.36.0-lmi27.0.0-cu130-v1.0-2026-07-14-17-53-59`
+
 ## LMI V20 (DJL-Serving 0.36.0)
 
 Meet your brand new image! 💿
