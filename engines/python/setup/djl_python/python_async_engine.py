@@ -20,7 +20,6 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from threading import Thread
 from queue import Queue
-from asyncio.queues import Queue as AsyncQueue
 
 from djl_python.inputs import Input
 from djl_python.outputs import Output
@@ -40,7 +39,17 @@ class PythonAsyncEngine(PythonSyncEngine):
 
     def __init__(self, args, service):
         super().__init__(args, service)
-        self.output_queue = AsyncQueue()
+        # A plain thread-safe queue.Queue, not asyncio.Queue: outputs are
+        # produced on the event-loop thread (invoke_handler) and consumed on a
+        # dedicated OS thread (send_responses). queue.Queue.put_nowait/get are
+        # safe to call across threads with no event-loop involvement, unlike
+        # asyncio.Queue, which requires scheduling every access back onto the
+        # loop via run_coroutine_threadsafe - that added a cross-thread round
+        # trip (and a wakeup of whichever coroutine loses the GIL race for it)
+        # per streamed token, serializing all concurrent requests' token
+        # delivery through the event loop for no reason: the queue itself
+        # doesn't need the loop, only the blocking socket write does.
+        self.output_queue = Queue()
         self.exception_queue = Queue()
         self.loop = None
         # Todo: for async mode we should maybe consider
@@ -93,21 +102,19 @@ class PythonAsyncEngine(PythonSyncEngine):
             async for output in outputs:
                 output.add_property(REQUEST_TRACKING_ID_KEY,
                                     request_tracking_id)
-                await self.output_queue.put(output)
+                self.output_queue.put_nowait(output)
             return
         # Request tracking ID is needed always for async
         # Do this here so that users in custom handlers do not need to worry about it
         outputs.add_property(REQUEST_TRACKING_ID_KEY, request_tracking_id)
         logging.debug(f"putting result of inference to output queue")
-        await self.output_queue.put(outputs)
+        self.output_queue.put_nowait(outputs)
 
     def send_responses(self):
         logging.info("starting send responses thread")
         while True:
-            future = asyncio.run_coroutine_threadsafe(self.output_queue.get(),
-                                                      self.loop)
             logging.debug("waiting for new inference response")
-            output = future.result()
+            output = self.output_queue.get()
             output.send(self.cl_socket)
 
     def run_server(self):

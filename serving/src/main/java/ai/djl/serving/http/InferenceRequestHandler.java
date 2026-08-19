@@ -52,6 +52,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -75,6 +77,29 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final String X_NEXT_TOKEN = "x-next-token";
     private static final String X_MAX_ITEMS = "x-max-items";
     private static final String X_CUSTOM_ATTRIBUTES = "X-Amzn-SageMaker-Custom-Attributes";
+
+    /**
+     * Executor for delivering inference responses to the client.
+     *
+     * <p>Streaming (and chunked non-streaming) responses are drained by blocking on {@link
+     * ai.djl.inference.streaming.ChunkedBytesSupplier#nextChunk(long, TimeUnit)} in {@link
+     * #sendOutput(Output, ChannelHandlerContext)} for the full duration of generation. Using the
+     * default {@code whenCompleteAsync} (no-arg) would run that blocking loop on {@link
+     * java.util.concurrent.ForkJoinPool#commonPool()}, whose parallelism is capped at {@code
+     * availableProcessors() - 1} and is shared with unrelated JVM-wide async work. That caps the
+     * number of concurrent streaming responses the server can actually deliver to roughly the CPU
+     * count, regardless of how many requests the backend (e.g. vLLM rolling batch) is willing to
+     * serve concurrently, producing a sharp p99 latency cliff under load. A dedicated, unbounded
+     * cached pool removes that ceiling; threads here are almost always parked in a blocking queue
+     * poll, not doing CPU work, so pool size is not bound by core count.
+     */
+    private static final ExecutorService RESPONSE_EXECUTOR =
+            Executors.newCachedThreadPool(
+                    r -> {
+                        Thread t = new Thread(r, "inference-response-sender");
+                        t.setDaemon(true);
+                        return t;
+                    });
 
     private RequestParser requestParser;
     private int chunkReadTime;
@@ -312,7 +337,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                 if (o != null) {
                                     sendOutput(o, ctx);
                                 }
-                            })
+                            },
+                            RESPONSE_EXECUTOR)
                     .exceptionally(
                             t -> {
                                 onException(t.getCause(), ctx);
