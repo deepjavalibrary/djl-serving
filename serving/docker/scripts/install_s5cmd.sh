@@ -10,7 +10,7 @@ if ! command -v jq &> /dev/null; then
 fi
 
 # Retrieve latest patched version
-GO_MAJOR_MINOR="1.25"
+GO_MAJOR_MINOR="1.27"
 GO_VERSION=$(curl -s https://go.dev/dl/?mode=json | jq -r ".[].version" | grep "^go${GO_MAJOR_MINOR}" | head -1 | sed 's/go//')
 echo "Using Go version: ${GO_VERSION} (latest in ${GO_MAJOR_MINOR}.x series)"
 
