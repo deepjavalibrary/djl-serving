@@ -24,6 +24,7 @@ import ai.djl.util.Utils;
 
 import org.apache.commons.cli.CommandLine;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
@@ -70,8 +71,23 @@ public class WorkflowTest {
 
     @Test
     public void testFunctions() throws IOException, BadWorkflowException {
-        Path workflowFile = Paths.get("src/test/resources/workflows/functions.json");
-        runWorkflow(workflowFile, zeroInput);
+        // functions.json declares a custom WorkflowFunction that ships as a bundled .java source
+        // under workflows/libs/classes, so this test exercises compiling it at load time. That is
+        // opt-in as of DJL 0.37.0, so enable it here. The environment variable takes precedence
+        // over the system property, so an environment that pins it off would make the property
+        // below a no-op and fail the test for an unrelated reason.
+        String envOptIn = Utils.getenv("DJL_COMPILE_JAVA");
+        if (envOptIn != null && !Boolean.parseBoolean(envOptIn)) {
+            throw new SkipException(
+                    "DJL_COMPILE_JAVA is set to " + envOptIn + " in the environment");
+        }
+        System.setProperty("ai.djl.compile_java", "true");
+        try {
+            Path workflowFile = Paths.get("src/test/resources/workflows/functions.json");
+            runWorkflow(workflowFile, zeroInput);
+        } finally {
+            System.clearProperty("ai.djl.compile_java");
+        }
     }
 
     @Test
