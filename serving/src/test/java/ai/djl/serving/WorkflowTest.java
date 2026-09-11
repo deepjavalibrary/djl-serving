@@ -24,6 +24,7 @@ import ai.djl.util.Utils;
 
 import org.apache.commons.cli.CommandLine;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
@@ -70,6 +71,15 @@ public class WorkflowTest {
 
     @Test
     public void testFunctions() throws IOException, BadWorkflowException {
+        // functions.json declares a custom WorkflowFunction that ships as a bundled .java source
+        // under workflows/libs/classes, so this test needs DJL to compile it at load time. That
+        // is opt-in as of DJL 0.37.0, so skip unless the opt-in is set.
+        boolean envOptIn = Boolean.parseBoolean(Utils.getenv("DJL_COMPILE_JAVA", "false"));
+        boolean propOptIn =
+                Boolean.parseBoolean(System.getProperty("ai.djl.compile_java", "false"));
+        if (!envOptIn && !propOptIn) {
+            throw new SkipException("Java compilation is disabled");
+        }
         Path workflowFile = Paths.get("src/test/resources/workflows/functions.json");
         runWorkflow(workflowFile, zeroInput);
     }

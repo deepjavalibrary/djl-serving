@@ -45,6 +45,8 @@ jobs:
         if: ${{ matrix.format }}
         run: ./gradlew verifyPython
       - name: Build with Gradle
+        env:
+          DJL_COMPILE_JAVA: "true"
         run: ./gradlew --refresh-dependencies build :jacoco:testCodeCoverageReport --stacktrace
       - name: Upload test results
         uses: actions/upload-artifact@v7
