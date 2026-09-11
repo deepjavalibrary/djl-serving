@@ -12,7 +12,7 @@
 FROM arm64v8/ubuntu:22.04
 ARG djl_version
 ARG djl_serving_version
-ARG torch_version=2.5.1
+ARG torch_version=2.7.1
 
 EXPOSE 8080
 
@@ -20,6 +20,7 @@ COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
+ENV PYTORCH_VERSION=${torch_version}
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV HF_HOME=/tmp/.cache/huggingface
@@ -44,7 +45,7 @@ RUN mv *.deb djl-serving_all.deb || true
 RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     scripts/install_s5cmd.sh aarch64 && \
-    djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
+    djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-aarch64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_serving_version} aarch" > /opt/djl/bin/telemetry && \
     rm -f /usr/local/djl-serving-*/lib/tensorflow-* && \
