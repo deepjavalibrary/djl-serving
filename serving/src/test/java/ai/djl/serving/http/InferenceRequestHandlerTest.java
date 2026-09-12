@@ -12,23 +12,44 @@
  */
 package ai.djl.serving.http;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
+import ai.djl.serving.Arguments;
+import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.util.ConfigManager;
+import ai.djl.serving.util.NettyUtils;
+import ai.djl.serving.workflow.Workflow;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
+
+import org.apache.commons.cli.CommandLine;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
 import java.lang.reflect.Field;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-
-import org.testng.annotations.Test;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Regression coverage for {@code InferenceRequestHandler}'s streaming-response delivery
- * executor. Every streaming (or chunked non-streaming) response blocks its delivery thread on
- * {@code ChunkedBytesSupplier.nextChunk(...)} for the entire generation duration, so the executor
- * used to run that loop directly bounds how many concurrent responses the server can actually
- * deliver. The no-argument {@code CompletableFuture.whenCompleteAsync} defaults to {@code
+ * Regression coverage for {@code InferenceRequestHandler}'s streaming-response delivery executor.
+ * Every streaming (or chunked non-streaming) response blocks its delivery thread on {@code
+ * ChunkedBytesSupplier.nextChunk(...)} for the entire generation duration, so the executor used to
+ * run that loop directly bounds how many concurrent responses the server can actually deliver. The
+ * no-argument {@code CompletableFuture.whenCompleteAsync} defaults to {@code
  * ForkJoinPool.commonPool()}, whose parallelism is {@code availableProcessors() - 1}; on a small
  * host this becomes a hard concurrency ceiling regardless of backend capacity. These tests assert
  * the actual behavior that matters -- that the dedicated executor can run more concurrent blocking
@@ -37,6 +58,11 @@ import org.testng.annotations.Test;
  * another unbounded/adequately-sized executor.
  */
 public class InferenceRequestHandlerTest {
+
+    @BeforeClass
+    public void setUp() {
+        ConfigManager.init(new Arguments(CommandLine.builder().build()));
+    }
 
     @Test
     public void testResponseExecutorIsNotForkJoinCommonPool() throws Exception {
@@ -104,6 +130,47 @@ public class InferenceRequestHandlerTest {
                 isDaemon[0],
                 "response-delivery threads must be daemon threads so they never block JVM"
                         + " shutdown");
+    }
+
+    @Test
+    public void testRunJobSchedulesDeliveryOnResponseExecutor() throws Exception {
+        // Regression coverage for the completion chain itself: the previous tests only inspect
+        // RESPONSE_EXECUTOR directly, so they'd still pass even if runJob's
+        // whenCompleteAsync(callback, RESPONSE_EXECUTOR) call were accidentally reverted to the
+        // no-arg overload (which runs the callback on ForkJoinPool.commonPool() instead).
+        ModelManager modelManager = mock(ModelManager.class);
+        Workflow workflow = mock(Workflow.class);
+        Input input = new Input();
+        CompletableFuture<Output> future = new CompletableFuture<>();
+        when(modelManager.runJob(workflow, input)).thenReturn(future);
+
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        NettyUtils.requestReceived(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions"));
+        ChannelHandlerContext ctx = channel.pipeline().firstContext();
+
+        AtomicReference<Thread> deliveryThread = new AtomicReference<>();
+        CountDownLatch delivered = new CountDownLatch(1);
+        InferenceRequestHandler handler =
+                new InferenceRequestHandler() {
+                    @Override
+                    void sendOutput(Output output, ChannelHandlerContext c) {
+                        deliveryThread.set(Thread.currentThread());
+                        delivered.countDown();
+                    }
+                };
+
+        handler.runJob(modelManager, ctx, workflow, input);
+        future.complete(new Output(200, "OK"));
+
+        assertTrue(delivered.await(5, TimeUnit.SECONDS), "delivery callback never ran");
+        assertTrue(
+                deliveryThread.get().getName().startsWith("inference-response-sender"),
+                "runJob's delivery callback must be scheduled on RESPONSE_EXECUTOR (thread name"
+                        + " \"inference-response-sender-*\"), not on the completing thread or"
+                        + " ForkJoinPool.commonPool(); actual thread: "
+                        + deliveryThread.get().getName());
     }
 
     private static ExecutorService getResponseExecutor() throws Exception {

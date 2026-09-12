@@ -13,6 +13,7 @@
 package ai.djl.serving;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.bootstrap.ServerBootstrapConfig;
@@ -21,17 +22,17 @@ import io.netty.channel.ChannelOption;
 import org.testng.annotations.Test;
 
 /**
- * Regression coverage for {@link ModelServer#configureSocketOptions(ServerBootstrap)}. Calls the
- * real production method directly (rather than duplicating its option list in the test) so a
- * future edit to the socket options cannot silently drop {@code TCP_NODELAY} without failing this
- * test.
+ * Regression coverage for {@link ModelServer#configureSocketOptions(ServerBootstrap, boolean)}.
+ * Calls the real production method directly (rather than duplicating its option list in the test)
+ * so a future edit to the socket options cannot silently drop {@code TCP_NODELAY} without failing
+ * this test.
  */
 public class ModelServerSocketOptionsTest {
 
     @Test
     public void testTcpNoDelayIsEnabledOnChildChannels() {
         ServerBootstrap b = new ServerBootstrap();
-        ModelServer.configureSocketOptions(b);
+        ModelServer.configureSocketOptions(b, false);
 
         ServerBootstrapConfig config = b.config();
         assertEquals(
@@ -44,9 +45,22 @@ public class ModelServerSocketOptionsTest {
     }
 
     @Test
+    public void testTcpNoDelayIsNotSetOnUdsChannels() {
+        ServerBootstrap b = new ServerBootstrap();
+        ModelServer.configureSocketOptions(b, true);
+
+        ServerBootstrapConfig config = b.config();
+        assertNull(
+                config.childOptions().get(ChannelOption.TCP_NODELAY),
+                "TCP_NODELAY is a TCP-only option: domain-socket child channels don't support it,"
+                        + " so setting it on a unix-socket bootstrap can break UDS"
+                        + " initialization");
+    }
+
+    @Test
     public void testExistingSocketOptionsAreUnaffected() {
         ServerBootstrap b = new ServerBootstrap();
-        ModelServer.configureSocketOptions(b);
+        ModelServer.configureSocketOptions(b, false);
 
         ServerBootstrapConfig config = b.config();
         assertEquals(config.options().get(ChannelOption.SO_BACKLOG), 1024);
@@ -56,10 +70,10 @@ public class ModelServerSocketOptionsTest {
     }
 
     @Test
-    public void testConfigureSocketOptionsIsIdempotentAndReturnsSameBootstrap() {
+    public void testConfigureSocketOptionsIsIdempotent() {
         ServerBootstrap b = new ServerBootstrap();
-        ModelServer.configureSocketOptions(b);
-        ModelServer.configureSocketOptions(b);
+        ModelServer.configureSocketOptions(b, false);
+        ModelServer.configureSocketOptions(b, false);
 
         assertEquals(
                 b.config().childOptions().get(ChannelOption.TCP_NODELAY),

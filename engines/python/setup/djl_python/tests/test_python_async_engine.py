@@ -1,12 +1,13 @@
 import queue
 import threading
+import time
 import unittest
-from unittest.mock import MagicMock
-from queue import Queue
+from unittest.mock import MagicMock, patch
 
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.python_async_engine import PythonAsyncEngine, REQUEST_TRACKING_ID_KEY
+from djl_python.python_sync_engine import PythonSyncEngine
 
 
 async def fake_async_generator(items):
@@ -20,13 +21,14 @@ async def fake_async_generator(items):
 
 
 def make_engine():
-    # PythonAsyncEngine.__init__ chains into PythonSyncEngine.__init__, which
-    # opens a real socket - not needed to exercise output_queue/send_responses,
-    # so build the object without running __init__ and set only what's used.
-    engine = PythonAsyncEngine.__new__(PythonAsyncEngine)
-    engine.output_queue = Queue()
-    engine.exception_queue = Queue()
-    engine.loop = None
+    # Run the real PythonAsyncEngine.__init__ (with PythonSyncEngine.__init__
+    # stubbed out, since it opens a real socket and needs a full `args`
+    # object) so output_queue/exception_queue/loop are whatever production
+    # actually constructs. Bypassing __init__ entirely and setting
+    # output_queue = Queue() ourselves would still pass even if production
+    # reverted to asyncio.Queue.
+    with patch.object(PythonSyncEngine, "__init__", return_value=None):
+        engine = PythonAsyncEngine(MagicMock(), MagicMock())
     engine.service = MagicMock()
     engine.cl_socket = MagicMock()
     return engine
@@ -136,24 +138,22 @@ class TestSendResponsesCrossThreadHandoff(unittest.TestCase):
         for o in outputs:
             o.send = lambda sock, o=o: sent.append((o, sock))
 
-        def run_send_responses_briefly():
-            # send_responses() loops forever; run it on a background thread
-            # and stop pulling once we've observed all items, then let the
-            # thread die naturally when the test process exits (mirrors how
-            # the real engine treats this as a daemon-lifetime thread).
-            for _ in range(n_items):
-                item = engine.output_queue.get()
-                item.send(engine.cl_socket)
-
         for o in outputs:
             engine.output_queue.put_nowait(o)
 
-        t = threading.Thread(target=run_send_responses_briefly, daemon=True)
+        # Run the real production method - not a reimplementation of its
+        # loop - so a regression in send_responses() itself (e.g. reverting
+        # to the asyncio.Queue/run_coroutine_threadsafe round trip) would
+        # actually be caught here. It loops forever, so run it on a
+        # background daemon thread and just wait for it to drain everything
+        # enqueued above, rather than for it to return.
+        t = threading.Thread(target=engine.send_responses, daemon=True)
         t.start()
-        t.join(timeout=5)
 
-        self.assertFalse(t.is_alive(),
-                         "send_responses consumer did not finish in time")
+        deadline = time.time() + 5
+        while len(sent) < n_items and time.time() < deadline:
+            time.sleep(0.01)
+
         self.assertEqual(len(sent), n_items)
         self.assertEqual([o for o, _ in sent], outputs)
         self.assertTrue(all(sock is engine.cl_socket for _, sock in sent))
