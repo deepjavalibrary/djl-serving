@@ -346,6 +346,25 @@ def _compare_tokens(expected_token, actual_token):
            expected_token.log_prob == actual_token.log_prob
 
 
+def _mock_vllm_module():
+    """A `vllm` module stand-in whose `SamplingParams().__struct_fields__`
+    mirrors the real msgspec.Struct fields translate_vllm_params relies on.
+    Without this, SamplingParams is an unconfigured MagicMock and
+    VLLM_GENERATION_PARAMS (computed from __struct_fields__ at import time)
+    ends up empty, so filter_unused_generation_params silently strips every
+    field - including extra_args - and the routing it's supposed to
+    exercise is never actually tested."""
+    sampling_params = MagicMock()
+    sampling_params.__struct_fields__ = ("max_tokens", "temperature", "top_p",
+                                         "n", "best_of", "stop", "seed",
+                                         "logprobs", "prompt_logprobs",
+                                         "ignore_eos", "use_beam_search",
+                                         "output_kind", "extra_args")
+    vllm_module = MagicMock()
+    vllm_module.SamplingParams.return_value = sampling_params
+    return vllm_module
+
+
 class TestVllmUtils(unittest.TestCase):
 
     @mock.patch(
@@ -722,13 +741,14 @@ class TestVllmUtils(unittest.TestCase):
 
         self.assertIsNone(req.request_output.sequences[0].hidden_states_path)
 
-    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm': _mock_vllm_module()})
     @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.sampling_params': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.utils': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.utils.counter': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.argparse_utils': MagicMock()})
     def test_translate_vllm_params_routes_kv_transfer_params_to_extra_args(
             self):
         """kv_transfer_params is not itself a SamplingParams field, so it
@@ -748,13 +768,14 @@ class TestVllmUtils(unittest.TestCase):
         self.assertEqual({"include_output_tokens": True},
                          result["extra_args"]["kv_transfer_params"])
 
-    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm': _mock_vllm_module()})
     @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.sampling_params': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.utils': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.utils.counter': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.argparse_utils': MagicMock()})
     def test_translate_vllm_params_no_kv_transfer_params_is_noop(self):
         """No kv_transfer_params in the request parameters (the common case)
         must not add an extra_args key that wasn't already there."""
