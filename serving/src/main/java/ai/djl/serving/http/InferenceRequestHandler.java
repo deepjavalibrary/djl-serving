@@ -52,6 +52,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -75,6 +78,51 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final String X_NEXT_TOKEN = "x-next-token";
     private static final String X_MAX_ITEMS = "x-max-items";
     private static final String X_CUSTOM_ATTRIBUTES = "X-Amzn-SageMaker-Custom-Attributes";
+
+    /** System property to cap the number of threads {@link #RESPONSE_EXECUTOR} may create. */
+    private static final String RESPONSE_EXECUTOR_MAX_THREADS_PROPERTY =
+            "ai.djl.serving.responseExecutorMaxThreads";
+
+    private static final int RESPONSE_EXECUTOR_MAX_THREADS =
+            Integer.getInteger(RESPONSE_EXECUTOR_MAX_THREADS_PROPERTY, 4096);
+
+    /**
+     * Executor for delivering inference responses to the client.
+     *
+     * <p>Streaming (and chunked non-streaming) responses are drained by blocking on {@link
+     * ai.djl.inference.streaming.ChunkedBytesSupplier#nextChunk(long, TimeUnit)} in {@link
+     * #sendOutput(Output, ChannelHandlerContext)} for the full duration of generation. Using the
+     * default {@code whenCompleteAsync} (no-arg) would run that blocking loop on {@link
+     * java.util.concurrent.ForkJoinPool#commonPool()}, whose parallelism is capped at {@code
+     * availableProcessors() - 1} and is shared with unrelated JVM-wide async work. That caps the
+     * number of concurrent streaming responses the server can actually deliver to roughly the CPU
+     * count, regardless of how many requests the backend (e.g. vLLM rolling batch) is willing to
+     * serve concurrently, producing a sharp p99 latency cliff under load. A dedicated pool removes
+     * that ceiling; threads here are almost always parked in a blocking queue poll, not doing CPU
+     * work, so pool size is not bound by core count.
+     *
+     * <p>The pool is still bounded (at {@link #RESPONSE_EXECUTOR_MAX_THREADS}, overridable via the
+     * {@code ai.djl.serving.responseExecutorMaxThreads} system property) rather than unbounded like
+     * {@link java.util.concurrent.Executors#newCachedThreadPool()}: a burst of stalled or
+     * long-lived streams must not be able to create threads proportional to client concurrency and
+     * exhaust native-thread or heap limits. The {@link SynchronousQueue} hands each task straight
+     * to a thread instead of queueing it, so once the cap is hit, {@link
+     * ThreadPoolExecutor.CallerRunsPolicy} runs the response delivery on the completing thread
+     * rather than dropping it or throwing.
+     */
+    private static final ExecutorService RESPONSE_EXECUTOR =
+            new ThreadPoolExecutor(
+                    0,
+                    RESPONSE_EXECUTOR_MAX_THREADS,
+                    60L,
+                    TimeUnit.SECONDS,
+                    new SynchronousQueue<>(),
+                    r -> {
+                        Thread t = new Thread(r, "inference-response-sender");
+                        t.setDaemon(true);
+                        return t;
+                    },
+                    new ThreadPoolExecutor.CallerRunsPolicy());
 
     private RequestParser requestParser;
     private int chunkReadTime;
@@ -312,7 +360,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                 if (o != null) {
                                     sendOutput(o, ctx);
                                 }
-                            })
+                            },
+                            RESPONSE_EXECUTOR)
                     .exceptionally(
                             t -> {
                                 onException(t.getCause(), ctx);
