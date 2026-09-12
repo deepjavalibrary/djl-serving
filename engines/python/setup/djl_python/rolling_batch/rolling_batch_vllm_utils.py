@@ -92,11 +92,24 @@ def update_request_cache_with_output(request_cache: OrderedDict,
 
 
 def update_multiple_sequences(request_output, vllm_request_output):
+    # kv_transfer_params is set by vLLM's extract_hidden_states mechanism
+    # (rolling_batch=vllm + speculative_config method=extract_hidden_states +
+    # a hidden-states KV connector) - None for all other configurations, so
+    # this is a no-op for the common case.
+    hidden_states_path = None
+    kv_transfer_params = getattr(vllm_request_output, "kv_transfer_params",
+                                 None)
+    if kv_transfer_params:
+        hidden_states_path = kv_transfer_params.get("hidden_states_path")
+
     for completion_output in vllm_request_output.outputs:
         sequence_index = completion_output.index
 
         if sequence_index not in request_output.sequences:
             request_output.sequences[sequence_index] = Sequence()
+        if hidden_states_path is not None:
+            request_output.sequences[
+                sequence_index].hidden_states_path = hidden_states_path
 
         # get the newly generated token_ids
         new_token_ids = completion_output.token_ids

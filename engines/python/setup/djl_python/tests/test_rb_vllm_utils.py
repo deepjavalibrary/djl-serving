@@ -60,6 +60,7 @@ class MockRequestOutput:
         prompt_logprobs: Optional[MockPromptLogprobs],
         outputs: List[MockCompletionOutput],
         finished: bool,
+        kv_transfer_params: Optional[Dict[str, Union[str, bool]]] = None,
     ) -> None:
         self.request_id = request_id
         self.prompt = prompt
@@ -67,6 +68,7 @@ class MockRequestOutput:
         self.prompt_logprobs = prompt_logprobs
         self.outputs = outputs
         self.finished = finished
+        self.kv_transfer_params = kv_transfer_params
 
 
 example_request_output = [
@@ -296,11 +298,71 @@ example_chunked_prefill_request_output = [
                       finished=False),
 ]
 
+example_hidden_states_request_output = [
+    MockRequestOutput(
+        request_id="test_hidden_states_request_id",
+        prompt="I am a",
+        prompt_token_ids=[1, 315, 837, 264],
+        prompt_logprobs=None,
+        outputs=[
+            MockCompletionOutput(index=0,
+                                 text=' member',
+                                 token_ids=[4292],
+                                 cumulative_logprob=-4.2740092277526855,
+                                 logprobs=None,
+                                 finish_reason='length',
+                                 stop_reason=None)
+        ],
+        finished=True,
+        kv_transfer_params={
+            "hidden_states_path": "/tmp/hidden_states/test.safetensors"
+        },
+    ),
+]
+
+example_no_hidden_states_request_output = [
+    MockRequestOutput(request_id="test_no_hidden_states_request_id",
+                      prompt="I am a",
+                      prompt_token_ids=[1, 315, 837, 264],
+                      prompt_logprobs=None,
+                      outputs=[
+                          MockCompletionOutput(
+                              index=0,
+                              text=' member',
+                              token_ids=[4292],
+                              cumulative_logprob=-4.2740092277526855,
+                              logprobs=None,
+                              finish_reason='length',
+                              stop_reason=None)
+                      ],
+                      finished=True,
+                      kv_transfer_params=None),
+]
+
 
 def _compare_tokens(expected_token, actual_token):
     return expected_token.id == actual_token.id and expected_token.text == actual_token.text and \
            expected_token.special_token == actual_token.special_token and \
            expected_token.log_prob == actual_token.log_prob
+
+
+def _mock_vllm_module():
+    """A `vllm` module stand-in whose `SamplingParams().__struct_fields__`
+    mirrors the real msgspec.Struct fields translate_vllm_params relies on.
+    Without this, SamplingParams is an unconfigured MagicMock and
+    VLLM_GENERATION_PARAMS (computed from __struct_fields__ at import time)
+    ends up empty, so filter_unused_generation_params silently strips every
+    field - including extra_args - and the routing it's supposed to
+    exercise is never actually tested."""
+    sampling_params = MagicMock()
+    sampling_params.__struct_fields__ = ("max_tokens", "temperature", "top_p",
+                                         "n", "best_of", "stop", "seed",
+                                         "logprobs", "prompt_logprobs",
+                                         "ignore_eos", "use_beam_search",
+                                         "output_kind", "extra_args")
+    vllm_module = MagicMock()
+    vllm_module.SamplingParams.return_value = sampling_params
+    return vllm_module
 
 
 class TestVllmUtils(unittest.TestCase):
@@ -618,6 +680,112 @@ class TestVllmUtils(unittest.TestCase):
         expected_sequences = {0: Sequence()}
         self.assertEqual(repr(expected_sequences),
                          repr(req.request_output.sequences))
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
+    def test_hidden_states_path_set_when_kv_transfer_params_present(self):
+        """kv_transfer_params.hidden_states_path (set by vLLM's
+        extract_hidden_states feature) should be copied onto the Sequence."""
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        parameters = {"max_new_tokens": 3}
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
+        req = Request(request_input)
+        mock_request_cache = OrderedDict({
+            "test_hidden_states_request_id": {
+                "request_output": req.request_output
+            }
+        })
+
+        for vllm_request_output in example_hidden_states_request_output:
+            djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
+                mock_request_cache, vllm_request_output, tokenizer)
+
+        self.assertEqual("/tmp/hidden_states/test.safetensors",
+                         req.request_output.sequences[0].hidden_states_path)
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
+    def test_hidden_states_path_absent_when_kv_transfer_params_none(self):
+        """kv_transfer_params is None for every config that doesn't use
+        extract_hidden_states (the common case) - hidden_states_path must
+        stay None, i.e. this must be a no-op."""
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        parameters = {"max_new_tokens": 3}
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
+        req = Request(request_input)
+        mock_request_cache = OrderedDict({
+            "test_no_hidden_states_request_id": {
+                "request_output": req.request_output
+            }
+        })
+
+        for vllm_request_output in example_no_hidden_states_request_output:
+            djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
+                mock_request_cache, vllm_request_output, tokenizer)
+
+        self.assertIsNone(req.request_output.sequences[0].hidden_states_path)
+
+    @mock.patch.dict(sys.modules, {'vllm': _mock_vllm_module()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.sampling_params': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.counter': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.argparse_utils': MagicMock()})
+    def test_translate_vllm_params_routes_kv_transfer_params_to_extra_args(
+            self):
+        """kv_transfer_params is not itself a SamplingParams field, so it
+        must be moved under extra_args before filter_unused_generation_params
+        runs, or it would be silently dropped (see vllm_rolling_batch.py)."""
+        from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
+
+        parameters = {
+            "max_new_tokens": 3,
+            "kv_transfer_params": {
+                "include_output_tokens": True
+            },
+        }
+        result = VLLMRollingBatch.translate_vllm_params(Mock(), parameters)
+
+        self.assertNotIn("kv_transfer_params", result)
+        self.assertEqual({"include_output_tokens": True},
+                         result["extra_args"]["kv_transfer_params"])
+
+    @mock.patch.dict(sys.modules, {'vllm': _mock_vllm_module()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.sampling_params': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.counter': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.utils.argparse_utils': MagicMock()})
+    def test_translate_vllm_params_no_kv_transfer_params_is_noop(self):
+        """No kv_transfer_params in the request parameters (the common case)
+        must not add an extra_args key that wasn't already there."""
+        from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
+
+        parameters = {"max_new_tokens": 3}
+        result = VLLMRollingBatch.translate_vllm_params(Mock(), parameters)
+
+        self.assertNotIn("kv_transfer_params", result)
+        self.assertNotIn("extra_args", result)
 
 
 if __name__ == '__main__':
