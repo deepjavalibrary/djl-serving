@@ -53,7 +53,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -955,7 +954,12 @@ public class ModelServerTest {
         url = "/predictions/echo?delay=1000";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         reset();
-        ChannelFuture f = channel.writeAndFlush(req);
+        channel.writeAndFlush(req).sync();
+
+        // Give the single worker time to dequeue the 1st request and become
+        // busy before sending the 2nd request. The echo handler remains busy
+        // for 1000 ms.
+        Thread.sleep(500);
 
         // send 2nd request use different connection
         latch2 = new CountDownLatch(1);
@@ -965,7 +969,6 @@ public class ModelServerTest {
         Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
 
         // wait for 1st response
-        f.sync();
         Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
         if (CudaUtils.getGpuCount() <= 1) {
             // one request is not able to saturate workers in multi-GPU case
