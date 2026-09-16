@@ -85,6 +85,9 @@ class Sequence:
         cumulative_log_prob: cumulative log probability of the sequence.
         finish_reason: finish reason of the sequence.
         stop_reason: stop reason of the sequence.
+        hidden_states_path: path to a file containing extracted hidden states
+            for this sequence (rolling_batch=vllm with extract_hidden_states),
+            or None if hidden state extraction was not requested/configured.
     """
     tokens: List[Token] = field(default_factory=lambda: [])
     top_tokens: Optional[List[List[Token]]] = field(default_factory=lambda: [])
@@ -92,6 +95,7 @@ class Sequence:
     finish_reason: str = None
     _last_token_index: Optional[int] = None
     stop_reason: Optional[str] = None
+    hidden_states_path: Optional[str] = None
     _tokens_iterator: Optional[Iterator] = field(init=False, default=None)
     _top_tokens_iterator: Optional[Iterator] = field(init=False, default=None)
 
