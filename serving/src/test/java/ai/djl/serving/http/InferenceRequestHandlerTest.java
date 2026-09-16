@@ -41,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -136,8 +137,8 @@ public class InferenceRequestHandlerTest {
     public void testRunJobSchedulesDeliveryOnResponseExecutor() throws Exception {
         // Regression coverage for the completion chain itself: the previous tests only inspect
         // RESPONSE_EXECUTOR directly, so they'd still pass even if runJob's
-        // whenCompleteAsync(callback, RESPONSE_EXECUTOR) call were accidentally reverted to the
-        // no-arg overload (which runs the callback on ForkJoinPool.commonPool() instead).
+        // deliverOutput(o, RESPONSE_EXECUTOR, ctx) call were accidentally changed to call
+        // sendOutput() directly (which runs it on the completing/WLM thread instead).
         ModelManager modelManager = mock(ModelManager.class);
         Workflow workflow = mock(Workflow.class);
         Input input = new Input();
@@ -171,6 +172,56 @@ public class InferenceRequestHandlerTest {
                         + " \"inference-response-sender-*\"), not on the completing thread or"
                         + " ForkJoinPool.commonPool(); actual thread: "
                         + deliveryThread.get().getName());
+    }
+
+    @Test
+    public void testDeliverOutputThrottlesInsteadOfRunningOnCallingThreadWhenSaturated()
+            throws Exception {
+        // Regression coverage for the saturation path: if this rejection handling were removed
+        // and CallerRunsPolicy restored on RESPONSE_EXECUTOR, a saturated executor would instead
+        // run sendOutput() (standing in for the real blocking nextChunk() loop) inline on the
+        // calling thread -- i.e. on the WLM worker that completed the job future -- rather than
+        // failing fast with a throttle response.
+        ExecutorService saturated = mock(ExecutorService.class);
+        org.mockito.Mockito.doThrow(new RejectedExecutionException())
+                .when(saturated)
+                .execute(org.mockito.Mockito.any());
+
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        NettyUtils.requestReceived(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions"));
+        ChannelHandlerContext ctx = channel.pipeline().firstContext();
+
+        AtomicReference<Thread> deliveryThread = new AtomicReference<>();
+        InferenceRequestHandler handler =
+                new InferenceRequestHandler() {
+                    @Override
+                    void sendOutput(Output output, ChannelHandlerContext c) {
+                        deliveryThread.set(Thread.currentThread());
+                    }
+                };
+
+        handler.deliverOutput(new Output(200, "OK"), saturated, ctx);
+
+        assertTrue(
+                deliveryThread.get() == null,
+                "sendOutput must not run when the response executor rejects the task"
+                        + " (CallerRunsPolicy would have run it on the calling thread instead)");
+    }
+
+    @Test
+    public void testValidateMaxThreadsKeepsPositiveValue() {
+        assertTrue(InferenceRequestHandler.validateMaxThreads(128) == 128);
+    }
+
+    @Test
+    public void testValidateMaxThreadsRejectsNonPositiveValue() {
+        // Regression coverage: passing 0 or a negative value straight to ThreadPoolExecutor's
+        // constructor throws IllegalArgumentException, which would prevent the server from
+        // starting at all instead of falling back to a usable default.
+        assertTrue(InferenceRequestHandler.validateMaxThreads(0) > 0);
+        assertTrue(InferenceRequestHandler.validateMaxThreads(-1) > 0);
     }
 
     private static ExecutorService getResponseExecutor() throws Exception {
