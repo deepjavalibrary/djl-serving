@@ -131,7 +131,8 @@ class PythonAsyncEngine(PythonSyncEngine):
                     self.exception_queue.put(str(traceback.format_exc()))
 
             threads = [
-                Thread(target=partial(catch_all, self.receive_requests), daemon=True),
+                Thread(target=partial(catch_all, self.receive_requests),
+                       daemon=True),
                 Thread(target=partial(catch_all, self.send_responses)),
             ]
 
