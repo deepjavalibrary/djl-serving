@@ -133,7 +133,8 @@ class PythonAsyncEngine(PythonSyncEngine):
             threads = [
                 Thread(target=partial(catch_all, self.receive_requests),
                        daemon=True),
-                Thread(target=partial(catch_all, self.send_responses)),
+                Thread(target=partial(catch_all, self.send_responses),
+                       daemon=True),
             ]
 
             for thread in threads:
