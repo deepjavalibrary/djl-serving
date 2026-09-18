@@ -14,7 +14,9 @@ package ai.djl.python.engine;
 
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
+import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
+import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.translate.TranslateException;
@@ -60,6 +62,9 @@ class PyProcess {
     private RollingBatch rollingBatch;
     private AsyncRequestManager asyncRequestManager;
     private AtomicInteger processExitedAbruptly;
+
+    private WorkerResponseHealthTracker errorTracker;
+    private String workerErrorAction;
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
@@ -124,6 +129,54 @@ class PyProcess {
                     Collections.singletonList(
                             new Connection(
                                     pyEnv, port, -1, "127.0.0.1", responseCallback, errorCallback));
+        }
+        this.errorTracker = createErrorTracker(model);
+    }
+
+    /**
+     * Builds the response-code health tracker from configuration. Model properties take precedence
+     * over {@code SERVING_*} environment variables, mirroring how {@code retry_threshold} /
+     * {@code SERVING_RETRY_THRESHOLD} are resolved in {@code ModelInfo.getStatus}.
+     *
+     * <p>The feature is disabled by default. When {@code worker_error_threshold} is not positive and
+     * {@code worker_error_metric} is {@code false}, the tracker reports {@link
+     * WorkerResponseHealthTracker#enabled()} == false and {@link #handleResponseCode(int)} is a
+     * no-op, so behavior is byte-for-byte identical to before this feature existed.
+     */
+    private WorkerResponseHealthTracker createErrorTracker(Model model) {
+        int windowDefault =
+                parseIntOrDefault(Utils.getenv("SERVING_WORKER_ERROR_WINDOW_SECONDS", "60"), 60);
+        int windowSeconds = model.intProperty("worker_error_window_seconds", windowDefault);
+        int thresholdDefault =
+                parseIntOrDefault(Utils.getenv("SERVING_WORKER_ERROR_THRESHOLD", "0"), 0);
+        int threshold = model.intProperty("worker_error_threshold", thresholdDefault);
+        boolean metricDefault =
+                Boolean.parseBoolean(Utils.getenv("SERVING_WORKER_ERROR_METRIC", "false"));
+        boolean metricEnabled =
+                Boolean.parseBoolean(
+                        model.getProperty("worker_error_metric", String.valueOf(metricDefault)));
+        this.workerErrorAction =
+                model.getProperty(
+                        "worker_error_action",
+                        Utils.getenv("SERVING_WORKER_ERROR_ACTION", "fail"));
+        if (threshold > 0) {
+            logger.info(
+                    "Worker {} response-code circuit breaker enabled: threshold={} within {}s,"
+                            + " action={}, metric={}",
+                    workerId,
+                    threshold,
+                    windowSeconds,
+                    workerErrorAction,
+                    metricEnabled);
+        }
+        return new WorkerResponseHealthTracker(threshold, windowSeconds * 1000L, metricEnabled);
+    }
+
+    private static int parseIntOrDefault(String value, int def) {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return def;
         }
     }
 
@@ -214,6 +267,10 @@ class PyProcess {
                 }
             }
 
+            if (!initialLoad && output != null) {
+                handleResponseCode(output.getCode());
+            }
+
             return output;
         } catch (Throwable e) { // use Throwable to workaround spotbug false alarm
             logger.error("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
@@ -229,6 +286,75 @@ class PyProcess {
                 throw (EngineException) e;
             }
             throw new EngineException(e);
+        }
+    }
+
+    /**
+     * Records a live worker's response code and, when the response-code circuit breaker is
+     * configured, acts on a worker that is alive but persistently returning error codes (for example
+     * HTTP 424 on a {@code BrokenProcessPool}).
+     *
+     * <p>This closes the gap where {@link #stopPythonProcess(boolean)} only increments the {@code
+     * failed} counter on process/socket death, and {@code predictStandard} only inspects the
+     * response code during the initial load. A live worker returning 424 on every request was
+     * previously invisible to health tracking. Both the standard predict path and the rolling-batch
+     * path flow through {@code predictStandard}, so this single hook covers both without double
+     * counting.
+     *
+     * @param code the response code returned to the caller
+     */
+    private void handleResponseCode(int code) {
+        if (!errorTracker.enabled()) {
+            return;
+        }
+        boolean shouldTrip = errorTracker.record(code);
+        if (errorTracker.metricEnabled() && WorkerResponseHealthTracker.isErrorCode(code)) {
+            emitWorkerErrorMetric(code, errorTracker.windowErrorCount());
+        }
+        if (shouldTrip) {
+            tripResponseCircuitBreaker(code);
+        }
+    }
+
+    private void emitWorkerErrorMetric(int code, int windowErrorCount) {
+        Dimension modelDim = new Dimension("Model", model.getProperty("metric_dimension", "model"));
+        Dimension workerDim = new Dimension("WorkerId", String.valueOf(workerId));
+        Dimension codeDim = new Dimension("Code", String.valueOf(code));
+        MODEL_METRIC.info(
+                "{}",
+                new Metric("WorkerResponseError", 1, Unit.COUNT, modelDim, workerDim, codeDim));
+        MODEL_METRIC.info(
+                "{}",
+                new Metric(
+                        "WorkerResponseErrorWindow",
+                        windowErrorCount,
+                        Unit.COUNT,
+                        modelDim,
+                        workerDim));
+    }
+
+    private void tripResponseCircuitBreaker(int code) {
+        boolean restart = "restart".equalsIgnoreCase(workerErrorAction);
+        logger.warn(
+                "Worker {} tripped response-code circuit breaker (last code={}); action={}",
+                workerId,
+                code,
+                workerErrorAction);
+        // Reset so the next trip requires a fresh threshold-worth of errors rather than firing on
+        // every subsequent request once the window is saturated.
+        errorTracker.reset();
+        if (restart) {
+            // stopPythonProcess(true) increments the 'failed' counter and tears the worker down; the
+            // async restart mirrors the recovery path already used by predictStandard's catch block.
+            stopPythonProcess(true);
+            restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
+        } else {
+            // "fail": leave the worker running but bump the 'failed' counter so ModelInfo.getStatus
+            // (and thus SERVING_RETRY_THRESHOLD / SERVING_FAIL_FAST / SERVING_HEALTH_CHECK_OVERRIDE)
+            // reacts exactly as it does for a process/socket death.
+            int failures = model.intProperty("failed", 0);
+            model.setProperty("failed", String.valueOf(failures + 1));
+            logger.info("Failure count: {}", failures + 1);
         }
     }
 
