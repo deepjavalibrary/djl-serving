@@ -1418,6 +1418,66 @@ def build_stateful_model(model):
     write_model_artifacts(options)
 
 
+# Minimal engine=Python handler that returns HTTP 424 on demand. A request that
+# carries an "exception" form field raises (djl_python turns the handler
+# exception into a 424 response), any other request echoes back "ok" with 200.
+# This mirrors the canonical engines/python .../resources/echo fixture used by
+# the WorkerResponseHealthTracker / PyProcess unit tests, but is self-contained
+# under the integration test resources so the circuit-breaker integration test
+# needs no GPU model download.
+_PYTHON_ERROR_MODEL_PY = '''#!/usr/bin/env python
+"""On-demand 424 model used to exercise the worker response-code circuit breaker."""
+
+from djl_python import Input
+from djl_python import Output
+
+
+def handle(inputs: Input):
+    if inputs is None:
+        # During-load warmup call: return nothing so the model loads cleanly.
+        return None
+    if inputs.is_batch():
+        outputs = Output()
+        for i, item in enumerate(inputs.get_batches()):
+            if item.contains_key("exception"):
+                raise ValueError(item.get_as_string("exception"))
+            outputs.add("ok", key="data", batch_index=i)
+        return outputs
+    if inputs.contains_key("exception"):
+        # Raising here makes djl_python return a 424 (invoke handler failure),
+        # exactly like a live-but-broken worker (e.g. BrokenProcessPool).
+        raise ValueError(inputs.get_as_string("exception"))
+    outputs = Output()
+    outputs.add("ok", key="data")
+    return outputs
+'''
+
+
+def build_python_error_model(model="python-error", properties=None):
+    """Builds a minimal ``engine=Python`` model whose handler returns HTTP 424
+    on demand, used to drive the response-code worker circuit breaker
+    end-to-end.
+
+    The circuit-breaker knobs are normally supplied as ``SERVING_WORKER_ERROR_*``
+    container env vars, but any extra serving.properties (including
+    ``worker_error_*`` overrides) can be passed via ``properties``.
+    """
+    # Pin to a single worker so the per-worker rolling error count is
+    # deterministic: with multiple workers the 424s would be load-balanced and
+    # no single worker would reliably cross the threshold.
+    options = {
+        "engine": "Python",
+        "option.entryPoint": "model.py",
+        "minWorkers": 1,
+        "maxWorkers": 1,
+    }
+    if properties:
+        options.update(properties)
+    write_model_artifacts(options)
+    with open(os.path.join("models", "test", "model.py"), "w") as f:
+        f.write(_PYTHON_ERROR_MODEL_PY)
+
+
 supported_handler = {
     'huggingface': build_hf_handler_model,
     'performance': build_performance_model,

@@ -6,6 +6,7 @@ import logging
 import pytest
 import llm.prepare as prepare
 import llm.client as client
+import requests
 import time
 
 serving_version = os.environ.get("TEST_SERVING_VERSION", "0.36.0").strip()
@@ -621,6 +622,142 @@ class TestVllmCustomHandlers_g6:
                 "gpt-neox-20b-custom", "import_error")
             with pytest.raises(Exception):
                 r.launch()
+
+
+# ---------------------------------------------------------------------------
+# Response-code-based worker circuit breaker (feature b674197).
+# Tracking-ticket: 94ed7ef6-e9b9-44a6-b814-01d63faacf5f  Origin-ticket: P514382489
+# ---------------------------------------------------------------------------
+CB_PREDICT_URL = "http://127.0.0.1:8080/predictions/test"
+CB_PING_URL = "http://127.0.0.1:8080/ping"
+CB_TRIP_LOG = "tripped response-code circuit breaker"
+
+
+def _cb_send_error_request(timeout=60):
+    """Sends a request the handler turns into an HTTP 424 (invoke failure)."""
+    resp = requests.post(CB_PREDICT_URL,
+                         data={"exception": "circuit-breaker-424"},
+                         timeout=timeout)
+    return resp.status_code
+
+
+def _cb_send_ok_request(timeout=60):
+    """Sends a normal request the handler answers with 200."""
+    try:
+        return requests.post(CB_PREDICT_URL,
+                             data={"input": "hello"},
+                             timeout=timeout).status_code
+    except requests.exceptions.RequestException:
+        return None
+
+
+def _cb_ping_status(timeout=10):
+    try:
+        return requests.get(CB_PING_URL, timeout=timeout).status_code
+    except requests.exceptions.RequestException:
+        return None
+
+
+def _cb_wait_for(predicate, retries=20, delay=3):
+    """Polls `predicate()` (a no-arg callable returning a status code) until it
+    satisfies the caller's check. Returns the last observed value."""
+    last = None
+    for _ in range(retries):
+        last = predicate()
+        if last is not None and last != 200:
+            return last
+        time.sleep(delay)
+    return last
+
+
+def _cb_wait_for_ok(sender, retries=20, delay=3):
+    last = None
+    for _ in range(retries):
+        last = sender()
+        if last == 200:
+            return last
+        time.sleep(delay)
+    return last
+
+
+def _cb_serving_log():
+    try:
+        with open("logs/serving.log") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+@pytest.mark.circuit_breaker
+@pytest.mark.gpu_4
+class TestWorkerCircuitBreaker_g6:
+    """End-to-end tests for the optional response-code worker circuit breaker.
+
+    A single Python worker is driven with repeated HTTP 424 responses (a live
+    but broken worker, e.g. BrokenProcessPool). The knobs are supplied as
+    SERVING_WORKER_ERROR_* container env vars.
+    """
+
+    def test_circuit_breaker_fail(self):
+        # threshold=3 within a 1h window, action=fail. Crossing the threshold
+        # bumps the model 'failed' counter; with SERVING_RETRY_THRESHOLD=0
+        # ModelInfo.getStatus then marks the model FAILED and /ping fails.
+        with Runner("lmi", "circuit-breaker-fail") as r:
+            prepare.build_python_error_model("python-error")
+            r.launch(env_vars=[
+                "SERVING_WORKER_ERROR_THRESHOLD=3",
+                "SERVING_WORKER_ERROR_WINDOW_SECONDS=3600",
+                "SERVING_WORKER_ERROR_ACTION=fail",
+                "SERVING_RETRY_THRESHOLD=0",
+            ])
+            # Worker is healthy before any errors are driven.
+            assert _cb_ping_status() == 200
+            # Drive well past the threshold (>=3 trips) so 'failed' exceeds the
+            # retry threshold regardless of exact trip bookkeeping.
+            for _ in range(10):
+                assert _cb_send_error_request() == 424
+            # Breaker tripped with action=fail -> model FAILED -> /ping unhealthy.
+            ping = _cb_wait_for(_cb_ping_status)
+            assert ping is not None and ping != 200, \
+                f"expected /ping to report unhealthy after breaker tripped, got {ping}"
+            log = _cb_serving_log()
+            assert CB_TRIP_LOG in log, "expected circuit-breaker trip log line"
+            assert "action=fail" in log
+
+    def test_circuit_breaker_restart(self):
+        # action=restart additionally tears the worker down and restarts it. We
+        # observe the restart via the trip log line, the "Start process" restart
+        # log, and by confirming the worker serves a normal request afterwards.
+        with Runner("lmi", "circuit-breaker-restart") as r:
+            prepare.build_python_error_model("python-error")
+            r.launch(env_vars=[
+                "SERVING_WORKER_ERROR_THRESHOLD=3",
+                "SERVING_WORKER_ERROR_WINDOW_SECONDS=3600",
+                "SERVING_WORKER_ERROR_ACTION=restart",
+            ])
+            assert _cb_ping_status() == 200
+            for _ in range(3):
+                assert _cb_send_error_request() == 424
+            # Give the async restart a moment to start.
+            assert _cb_wait_for_ok(_cb_send_ok_request) == 200, \
+                "expected the worker to recover and serve a normal request after restart"
+            log = _cb_serving_log()
+            assert CB_TRIP_LOG in log, "expected circuit-breaker trip log line"
+            assert "action=restart" in log
+            assert "Start process" in log, "expected worker to be (re)started"
+
+    def test_circuit_breaker_disabled_by_default(self):
+        # Feature unset == pre-existing behavior: repeated 424s never touch the
+        # 'failed' counter, the worker stays alive and /ping stays healthy.
+        with Runner("lmi", "circuit-breaker-default-off") as r:
+            prepare.build_python_error_model("python-error")
+            r.launch()
+            assert _cb_ping_status() == 200
+            for _ in range(10):
+                assert _cb_send_error_request() == 424
+            # Never marked failed: still healthy and no trip in the log.
+            assert _cb_ping_status() == 200
+            assert CB_TRIP_LOG not in _cb_serving_log()
 
 
 @pytest.mark.vllm
