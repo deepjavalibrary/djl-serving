@@ -190,6 +190,27 @@ for arguments. See: [model configurations](configurations_model.md) for more det
 
 **Note:** per model environment will NOT override values in `serving.properties`.
 
+### Worker response-code health / circuit breaker (Python engine)
+
+By default a Python worker is only marked failed when its process or socket dies. A worker that is
+alive but returns an application error code (for example HTTP 424 on a `BrokenProcessPool`) on every
+request is not detected. The following **optional, default-off** settings add per-worker response-code
+health tracking. Each can be set as an environment variable (shown) or as the equivalent lower-cased
+model property in `serving.properties` (`worker_error_threshold`, `worker_error_window_seconds`,
+`worker_error_action`, `worker_error_metric`); the model property takes precedence, mirroring
+`SERVING_RETRY_THRESHOLD` / `retry_threshold`.
+
+| Key                                 | Type | Default | Description                                                                                                                                                                                                                                                                                             |
+|-------------------------------------|------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SERVING_WORKER_ERROR_THRESHOLD      | int  | 0       | Number of non-200 responses (code >= 300, e.g. 424 / 5xx) a single worker may return within the window before the circuit breaker fires. `0` (default) disables the breaker action entirely — behavior is unchanged.                                                                                       |
+| SERVING_WORKER_ERROR_WINDOW_SECONDS | int  | 60      | Length of the sliding window over which errors are counted.                                                                                                                                                                                                                                             |
+| SERVING_WORKER_ERROR_ACTION         | str  | fail    | Action when the breaker trips. `fail`: increment the existing `failed` counter so `ModelInfo.getStatus` reacts (respecting `SERVING_RETRY_THRESHOLD` / `SERVING_FAIL_FAST` / `SERVING_HEALTH_CHECK_OVERRIDE`), leaving the worker running. `restart`: additionally tear down and asynchronously restart the worker. |
+| SERVING_WORKER_ERROR_METRIC         | bool | false   | Emit a per-worker `WorkerResponseError` / `WorkerResponseErrorWindow` metric on each non-200 response, even when the breaker action is disabled (`threshold=0`). This is the lowest-risk first step: turn it on to alarm on worker error rate without changing routing/health behavior.                     |
+
+When enabled, the tracking hook lives in `PyProcess.predictStandard`, so it covers both the standard
+predict path and the rolling-batch path (rolling batches flow through `predictStandard`). The async
+engine path is not yet covered.
+
 ## Appendix
 
 ### How to configure logging
