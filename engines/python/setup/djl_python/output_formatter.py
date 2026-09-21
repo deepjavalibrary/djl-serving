@@ -42,15 +42,11 @@ def get_generated_text(sequence, request_output, limit=None):
 
 
 def _streaming_context(best_sequence, request_output, index):
-    """Streaming (previous_text, current_text, previous_token_ids,
-    current_token_ids) bounded by the drain position. A single engine step can
-    append several tokens before the formatter drains them one at a time, so
-    these must stop at the token being emitted, not span the whole sequence."""
-    current_text = get_generated_text(best_sequence, request_output, index + 1)
-    # current_text is previous_text plus this token's text by construction, so
-    # slice it off rather than re-concatenating the text a second time.
-    emitted = best_sequence.tokens[index].text
-    previous_text = current_text[:len(current_text) - len(emitted)]
+    """One engine step can append several tokens before the formatter drains them
+    one at a time, so these stop at the token being emitted, not span the whole
+    sequence."""
+    previous_text = get_generated_text(best_sequence, request_output, index)
+    current_text = previous_text + best_sequence.tokens[index].text
     current_token_ids = [t.id for t in best_sequence.tokens[:index + 1]]
     previous_token_ids = current_token_ids[:-1]
     return previous_text, current_text, previous_token_ids, current_token_ids
