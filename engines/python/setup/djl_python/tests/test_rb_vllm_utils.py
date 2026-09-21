@@ -12,6 +12,7 @@ import djl_python
 from djl_python.output_formatter import _json_output_formatter
 from djl_python.request import Request
 from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token
+from djl_python.rolling_batch.rolling_batch_vllm_utils import update_multiple_sequences
 '''These Mock classes are in compliance with vllm RequestOutput version 0.6.3.post1'''
 
 
@@ -786,6 +787,178 @@ class TestVllmUtils(unittest.TestCase):
 
         self.assertNotIn("kv_transfer_params", result)
         self.assertNotIn("extra_args", result)
+
+
+class TestByteFallbackSplitCharacters(unittest.TestCase):
+    """Sequence text must come from the incremental detokenizer, not from the
+    per-token logprobs decode.
+
+    When a multi-byte character's UTF-8 bytes are split across two BPE tokens and
+    the second token also continues into the following character, decoding that
+    token on its own yields U+FFFD for bytes that were in fact generated. The ids
+    below are the real Qwen3 encoding of "客单价": 8508 carries the leading byte of
+    客, 43720 carries 客's tail bytes plus 单, and 50292 is 价. Decoding 43720
+    alone gives '\ufffd单'; the detokenizer delta for that step is '客单'.
+
+    Whether a character splits at all depends on how BPE merges the text that
+    FOLLOWS it, not on the character itself, so these cases hold the character
+    fixed and vary the following tokens rather than asserting on a fixed phrase.
+    """
+
+    # (token_ids, detokenizer delta for the step, isolated per-token decodes)
+    LEAD = ([8508], "", ["\ufffd"])
+    MIXED = ([43720], "客单", ["\ufffd单"])
+
+    @staticmethod
+    def _drive(steps):
+        """Replay DELTA-mode steps through update_multiple_sequences.
+
+        input is left as None deliberately: the unit under test never touches it,
+        and this keeps the test free of a tokenizer download.
+        """
+        request_output = TextGenerationOutput(request_id=0, input=None)
+        for i, (token_ids, delta, isolated) in enumerate(steps):
+            logprobs = [{
+                tid:
+                MockLogprob(logprob=-0.5, rank=1, decoded_token=iso)
+            } for tid, iso in zip(token_ids, isolated)]
+            completion = MockCompletionOutput(
+                index=0,
+                text=delta,
+                token_ids=list(token_ids),
+                cumulative_logprob=-1.0,
+                logprobs=logprobs,
+                finish_reason="length" if i == len(steps) - 1 else None)
+            vllm_output = Mock(kv_transfer_params=None)
+            vllm_output.outputs = [completion]
+            update_multiple_sequences(request_output, vllm_output)
+        return request_output.sequences[0]
+
+    def test_split_character_is_not_replaced(self):
+        seq = self._drive([self.LEAD, self.MIXED, ([50292], "价", ["价"])])
+        text = "".join(t.text for t in seq.tokens)
+        self.assertEqual("客单价", text)
+        self.assertNotIn("\ufffd", text)
+        self.assertEqual([8508, 43720, 50292], [t.id for t in seq.tokens])
+
+    def test_split_character_with_varying_following_context(self):
+        # Real Qwen3 ids: 50292 价, 5394 " ok", 198 newline.
+        for tail_id, tail_text, expected in [(50292, "价", "客单价"),
+                                             (5394, " ok", "客单 ok"),
+                                             (198, "\n", "客单\n")]:
+            with self.subTest(tail=tail_id):
+                seq = self._drive([
+                    self.LEAD, self.MIXED, ([tail_id], tail_text, [tail_text])
+                ])
+                text = "".join(t.text for t in seq.tokens)
+                self.assertEqual(expected, text)
+                self.assertNotIn("\ufffd", text)
+
+    def test_split_multi_token_step_falls_back_to_last_token(self):
+        # A split character in a multi-token step: the decodes cannot
+        # reconstruct the delta, so the step text goes to the last token.
+        seq = self._drive([([8508, 43720,
+                             50292], "客单价", ["\ufffd", "\ufffd单", "价"])])
+        self.assertEqual(["", "", "客单价"], [t.text for t in seq.tokens])
+        self.assertEqual("客单价", "".join(t.text for t in seq.tokens))
+        self.assertEqual([8508, 43720, 50292], [t.id for t in seq.tokens])
+
+    def test_multi_token_step_without_logprobs_does_not_desync(self):
+        # A chat request may omit logprobs; a length mismatch on a multi-token
+        # step raises rather than silently dropping a token.
+        request_output = TextGenerationOutput(request_id=0, input=None)
+        completion = MockCompletionOutput(index=0,
+                                          text="客单价",
+                                          token_ids=[8508, 43720, 50292],
+                                          cumulative_logprob=-1.0,
+                                          logprobs=None,
+                                          finish_reason="length")
+        vllm_output = Mock(kv_transfer_params=None)
+        vllm_output.outputs = [completion]
+        update_multiple_sequences(request_output, vllm_output)
+        seq = request_output.sequences[0]
+        self.assertEqual([8508, 43720, 50292], [t.id for t in seq.tokens])
+        self.assertEqual("客单价", "".join(t.text for t in seq.tokens))
+
+    def test_eos_step_does_not_leak_special_token_text(self):
+        # Fires on the eos step of essentially every request: the special
+        # token decodes in logprobs but not in the delta, so it is kept out of
+        # the generated text.
+        seq = self._drive([([9707], "Hello", ["Hello"]),
+                           ([151645], "", ["<|im_end|>"])])
+        self.assertEqual(["Hello", ""], [t.text for t in seq.tokens])
+        self.assertEqual("Hello", "".join(t.text for t in seq.tokens))
+
+    def test_multi_token_step_keeps_reconstructed_prefix_before_split(self):
+        # Only the tail that fails to reconstruct the step text is lumped; the
+        # leading decodes that match keep their own text. A reasoning delimiter
+        # sharing the step with a split character must not be blanked.
+        seq = self._drive([([1001, 2002, 3003], "</think>Answer 客",
+                            ["</think>", "Answer", "\ufffd"])])
+        self.assertEqual(["</think>", "Answer", " 客"],
+                         [t.text for t in seq.tokens])
+        self.assertEqual("</think>Answer 客",
+                         "".join(t.text for t in seq.tokens))
+
+    def test_split_before_delimiter_in_step_coarsens_the_tail(self):
+        # Known limitation: decodes cannot be realigned past the first
+        # mismatch, so a delimiter after a partial byte is lumped too.
+        # generated_text stays exact; per-token attribution coarsens.
+        seq = self._drive([([3003, 2002,
+                             1001], "客单</think>", ["\ufffd", "单",
+                                                   "</think>"])])
+        self.assertEqual(["", "", "客单</think>"], [t.text for t in seq.tokens])
+        self.assertEqual("客单</think>", "".join(t.text for t in seq.tokens))
+
+    def test_clean_multi_token_step_keeps_per_token_text(self):
+        # A multi-id step with no split character: the isolated decodes
+        # reconstruct the delta, so each token keeps its own text instead of
+        # collapsing onto the last one.
+        seq = self._drive([([9707, 1879], "Hello world", ["Hello", " world"])])
+        self.assertEqual(["Hello", " world"], [t.text for t in seq.tokens])
+        self.assertEqual("Hello world", "".join(t.text for t in seq.tokens))
+
+    def test_generation_ending_mid_character_emits_no_text(self):
+        # Generation stopped after the leading byte; vLLM reports no text for
+        # a character whose bytes never arrived.
+        seq = self._drive([self.LEAD])
+        self.assertEqual("", "".join(t.text for t in seq.tokens))
+
+    def test_short_logprobs_still_raises_rather_than_losing_text(self):
+        # token_texts is sized from new_logprobs, so a logprobs list shorter than
+        # token_ids trips the existing length check. Sizing it from token_ids
+        # instead would silently drop the token carrying the step's whole text.
+        request_output = TextGenerationOutput(request_id=0, input=None)
+        completion = MockCompletionOutput(index=0,
+                                          text="客单价",
+                                          token_ids=[8508, 43720, 50292],
+                                          cumulative_logprob=-1.0,
+                                          logprobs=[{
+                                              8508:
+                                              MockLogprob(
+                                                  logprob=-0.5,
+                                                  rank=1,
+                                                  decoded_token="\ufffd")
+                                          }],
+                                          finish_reason="length")
+        vllm_output = Mock(kv_transfer_params=None)
+        vllm_output.outputs = [completion]
+        with self.assertRaises(RuntimeError):
+            update_multiple_sequences(request_output, vllm_output)
+
+    def test_text_without_split_characters_is_unchanged(self):
+        # Real Qwen3 ids for "I am a": [40, 1079, 264].
+        seq = self._drive([([40, 1079], "I am", ["I", " am"]),
+                           ([264], " a", [" a"])])
+        self.assertEqual("I am a", "".join(t.text for t in seq.tokens))
+
+    def test_top_tokens_still_carry_the_isolated_decode(self):
+        # Known limitation: top_tokens still carry the isolated decode, so
+        # U+FFFD can appear here while the sequence text is clean.
+        seq = self._drive([self.MIXED])
+        flat = [t for group in seq.top_tokens for t in group]
+        self.assertEqual(["\ufffd单"], [t.text for t in flat])
+        self.assertEqual(-0.5, flat[0].log_prob)
 
 
 if __name__ == '__main__':

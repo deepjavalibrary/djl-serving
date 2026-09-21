@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import logging
 from collections import OrderedDict
 from typing import Any, Optional
 
@@ -91,6 +92,32 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     return request_cache
 
 
+def _reconcile_token_texts(token_texts, step_text):
+    """Make the per-token decodes concatenate to the detokenizer's step text.
+
+    Faithful up to the first decode that disagrees (a split multi-byte char
+    decodes to U+FFFD, a special token the detokenizer dropped, ...); from there
+    the text is lumped onto the last token of the step.
+    """
+    acc = ""
+    kept = 0
+    for text in token_texts:
+        if step_text.startswith(acc + text):
+            acc += text
+            kept += 1
+        else:
+            break
+    reconciled = token_texts[:kept] + [""] * (len(token_texts) - kept)
+    if reconciled:
+        reconciled[-1] += step_text[len(acc):]
+    if kept < len(token_texts):
+        logging.debug(
+            "reconcile: %d of %d token decodes did not reconstruct the step "
+            "text; their text is lumped onto the last token of the step",
+            len(token_texts) - kept, len(token_texts))
+    return reconciled
+
+
 def update_multiple_sequences(request_output, vllm_request_output):
     # kv_transfer_params is set by vLLM's extract_hidden_states mechanism
     # (rolling_batch=vllm + speculative_config method=extract_hidden_states +
@@ -127,18 +154,22 @@ def update_multiple_sequences(request_output, vllm_request_output):
             for token_id, logprobs in zip(new_token_ids,
                                           completion_output.logprobs):
                 new_logprobs.append(logprobs[token_id].logprob)
-                decoded_token = logprobs[token_id].decoded_token if logprobs[
-                    token_id].decoded_token else ""
-                token_texts.append(decoded_token)
+                token_texts.append(logprobs[token_id].decoded_token or "")
                 for token_id_key, logprob in logprobs.items():
                     top_tokens.append(
                         Token(id=token_id_key,
                               text=logprob.decoded_token,
                               log_prob=logprob.logprob))
+            # completion_output.text is the step's detokenized delta (output_kind
+            # is DELTA).
+            token_texts = _reconcile_token_texts(token_texts,
+                                                 completion_output.text)
         elif new_token_ids:
-            # TODO: Test and remove this. logprobs is always set 1. This case should never happen.
+            # No decodes to reconcile: attribute the whole step delta to its last
+            # id so token_texts and new_token_ids stay the same length.
             new_logprobs = [None] * len(new_token_ids)
-            token_texts.append(completion_output.text)
+            token_texts = [""] * len(new_token_ids)
+            token_texts[-1] = completion_output.text
 
         if not output_token_texts:
             if len(token_texts) != len(new_token_ids):
