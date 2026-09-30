@@ -32,13 +32,24 @@ def output_formatter(function):
     return function
 
 
-def get_generated_text(sequence, request_output):
+def get_generated_text(sequence, request_output, limit=None):
     parameters = request_output.input.parameters
     generated_text = request_output.input.input_text if parameters.get(
         "return_full_text") else ""
-    for token in sequence.tokens:
+    for token in sequence.tokens[:limit]:
         generated_text += token.text
     return generated_text
+
+
+def _streaming_context(best_sequence, request_output, index):
+    """One engine step can append several tokens before the formatter drains them
+    one at a time, so these stop at the token being emitted, not span the whole
+    sequence."""
+    previous_text = get_generated_text(best_sequence, request_output, index)
+    current_text = previous_text + best_sequence.tokens[index].text
+    current_token_ids = [t.id for t in best_sequence.tokens[:index + 1]]
+    previous_token_ids = current_token_ids[:-1]
+    return previous_text, current_text, previous_token_ids, current_token_ids
 
 
 def get_sequence_details(request_output: TextGenerationOutput,
@@ -416,10 +427,8 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
     created = int(time.time())
 
     if reasoning_parser:
-        current_text = get_generated_text(best_sequence, request_output)
-        previous_text = current_text[0:-len(next_token.text)]
-        current_token_ids = [t.id for t in best_sequence.tokens]
-        previous_token_ids = current_token_ids[:-1]
+        previous_text, current_text, previous_token_ids, current_token_ids = \
+            _streaming_context(best_sequence, request_output, index)
         delta = reasoning_parser.extract_reasoning_content_streaming(
             previous_text=previous_text,
             current_text=current_text,
@@ -445,10 +454,8 @@ def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
     elif chat_params and chat_params.tools and (
             chat_params.tool_choice == "auto"
             or chat_params.tool_choice is None) and tool_parser:
-        current_text = get_generated_text(best_sequence, request_output)
-        previous_text = current_text[0:-len(next_token.text)]
-        current_token_ids = [t.id for t in best_sequence.tokens]
-        previous_token_ids = current_token_ids[:-1]
+        previous_text, current_text, previous_token_ids, current_token_ids = \
+            _streaming_context(best_sequence, request_output, index)
         tool_call_info = tool_parser.extract_tool_calls_streaming(
             previous_text=previous_text,
             current_text=current_text,
