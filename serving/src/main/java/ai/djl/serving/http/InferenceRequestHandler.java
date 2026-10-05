@@ -52,6 +52,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -76,6 +80,71 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final String X_MAX_ITEMS = "x-max-items";
     private static final String X_CUSTOM_ATTRIBUTES = "X-Amzn-SageMaker-Custom-Attributes";
 
+    /** System property to cap the number of threads {@link #RESPONSE_EXECUTOR} may create. */
+    private static final String RESPONSE_EXECUTOR_MAX_THREADS_PROPERTY =
+            "ai.djl.serving.responseExecutorMaxThreads";
+
+    private static final int RESPONSE_EXECUTOR_MAX_THREADS_DEFAULT = 4096;
+
+    private static final int RESPONSE_EXECUTOR_MAX_THREADS =
+            validateMaxThreads(
+                    Integer.getInteger(
+                            RESPONSE_EXECUTOR_MAX_THREADS_PROPERTY,
+                            RESPONSE_EXECUTOR_MAX_THREADS_DEFAULT));
+
+    /**
+     * Executor for delivering inference responses to the client.
+     *
+     * <p>Streaming (and chunked non-streaming) responses are drained by blocking on {@link
+     * ai.djl.inference.streaming.ChunkedBytesSupplier#nextChunk(long, TimeUnit)} in {@link
+     * #sendOutput(Output, ChannelHandlerContext)} for the full duration of generation. Using the
+     * default {@code whenCompleteAsync} (no-arg) would run that blocking loop on {@link
+     * java.util.concurrent.ForkJoinPool#commonPool()}, whose parallelism is capped at {@code
+     * availableProcessors() - 1} and is shared with unrelated JVM-wide async work. That caps the
+     * number of concurrent streaming responses the server can actually deliver to roughly the CPU
+     * count, regardless of how many requests the backend (e.g. vLLM rolling batch) is willing to
+     * serve concurrently, producing a sharp p99 latency cliff under load. A dedicated pool removes
+     * that ceiling; threads here are almost always parked in a blocking queue poll, not doing CPU
+     * work, so pool size is not bound by core count.
+     *
+     * <p>The pool is still bounded (at {@link #RESPONSE_EXECUTOR_MAX_THREADS}, overridable via the
+     * {@code ai.djl.serving.responseExecutorMaxThreads} system property) rather than unbounded like
+     * {@link java.util.concurrent.Executors#newCachedThreadPool()}: a burst of stalled or
+     * long-lived streams must not be able to create threads proportional to client concurrency and
+     * exhaust native-thread or heap limits. The {@link SynchronousQueue} hands each task straight
+     * to a thread instead of queueing it, so once the cap is hit, the default {@link
+     * ThreadPoolExecutor.AbortPolicy} makes {@link ExecutorService#execute(Runnable)} throw {@link
+     * RejectedExecutionException} immediately on the submitting (WLM worker) thread. Deliberately
+     * not {@link ThreadPoolExecutor.CallerRunsPolicy}: that would run the blocking {@link
+     * #sendOutput(Output, ChannelHandlerContext)} loop, for the full duration of the stream, on the
+     * WLM worker thread that completed the job future, starving other requests. Callers submitting
+     * through this executor must catch {@link RejectedExecutionException} and respond with explicit
+     * overload handling instead.
+     */
+    private static final ExecutorService RESPONSE_EXECUTOR =
+            new ThreadPoolExecutor(
+                    0,
+                    RESPONSE_EXECUTOR_MAX_THREADS,
+                    60L,
+                    TimeUnit.SECONDS,
+                    new SynchronousQueue<>(),
+                    r -> {
+                        Thread t = new Thread(r, "inference-response-sender");
+                        t.setDaemon(true);
+                        return t;
+                    });
+
+    /**
+     * Reused, stack-trace-free error reported for a {@link #RESPONSE_EXECUTOR} rejection.
+     *
+     * <p>A rejection can recur on every request while the executor stays saturated, i.e. precisely
+     * while these worker threads are under the most latency pressure; a fresh exception per
+     * rejection would pay for stack-trace capture on that hot path for no benefit, since the cause
+     * (the pool is full) is always the same.
+     */
+    private static final RuntimeException RESPONSE_EXECUTOR_SATURATED =
+            new NoStackTraceException("Response delivery pool is saturated");
+
     private RequestParser requestParser;
     private int chunkReadTime;
     private ConfigManager config;
@@ -86,6 +155,27 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         this.requestParser = new RequestParser();
         config = ConfigManager.getInstance();
         chunkReadTime = config.getChunkedReadTimeout();
+    }
+
+    /**
+     * Validates a configured {@link #RESPONSE_EXECUTOR_MAX_THREADS_PROPERTY} value, falling back to
+     * {@link #RESPONSE_EXECUTOR_MAX_THREADS_DEFAULT} for a non-positive value rather than letting
+     * it reach {@link ThreadPoolExecutor}'s constructor, which throws {@link
+     * IllegalArgumentException} and prevents the server from starting.
+     *
+     * @param configured the configured value
+     * @return {@code configured} if positive, otherwise the default
+     */
+    static int validateMaxThreads(int configured) {
+        if (configured <= 0) {
+            logger.warn(
+                    "Ignoring invalid {}={}, must be positive; falling back to default of {}",
+                    RESPONSE_EXECUTOR_MAX_THREADS_PROPERTY,
+                    configured,
+                    RESPONSE_EXECUTOR_MAX_THREADS_DEFAULT);
+            return RESPONSE_EXECUTOR_MAX_THREADS_DEFAULT;
+        }
+        return configured;
     }
 
     /** {@inheritDoc} */
@@ -307,10 +397,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         if (Boolean.parseBoolean(sync)) { // Synchronous
             modelManager
                     .runJob(workflow, input)
-                    .whenCompleteAsync(
+                    .whenComplete(
                             (o, t) -> {
                                 if (o != null) {
-                                    sendOutput(o, ctx);
+                                    deliverOutput(o, RESPONSE_EXECUTOR, ctx);
                                 }
                             })
                     .exceptionally(
@@ -373,6 +463,39 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("Invalid " + X_STARTING_TOKEN + ": " + startingToken);
         }
         sendOutput(output, ctx);
+    }
+
+    /**
+     * Submits {@link #sendOutput(Output, ChannelHandlerContext)} to {@code executor}, throttling
+     * the request instead of blocking the calling thread if the executor is saturated.
+     *
+     * <p>Deliberately does not go through {@link #onException(Throwable, ChannelHandlerContext)}:
+     * that method's {@code WlmException} handling trips the process-wide, never-reset {@link
+     * #exceedErrorRate} flag (which makes {@code /ping} report failure for the rest of the
+     * process's life) when {@link ConfigManager#onWlmError()} is configured. This rejection
+     * reflects HTTP response-delivery capacity -- which can be exhausted by slow-draining clients
+     * unrelated to backend health -- not a WorkLoadManager or model failure, so it must not be able
+     * to trip that breaker.
+     *
+     * @param output the output to deliver
+     * @param executor the executor to deliver it on, normally {@link #RESPONSE_EXECUTOR}
+     * @param ctx the connection context
+     */
+    void deliverOutput(Output output, ExecutorService executor, ChannelHandlerContext ctx) {
+        try {
+            executor.execute(() -> sendOutput(output, ctx));
+        } catch (RejectedExecutionException e) {
+            // Fail fast with an explicit throttle response instead of running the blocking
+            // sendOutput() loop, for the full stream duration, on this (WLM worker) thread.
+            String requestId = ctx == null ? null : NettyUtils.getRequestId(ctx.channel());
+            logger.warn("RequestId=[{}]: Response delivery pool is saturated", requestId);
+            SERVER_METRIC.info("{}", RESPONSE_5_XX);
+            if (ctx != null) {
+                HttpResponseStatus status =
+                        HttpResponseStatus.valueOf(config.getThrottleErrorHttpCode());
+                NettyUtils.sendError(ctx, status, RESPONSE_EXECUTOR_SATURATED);
+            }
+        }
     }
 
     void sendOutput(Output output, ChannelHandlerContext ctx) {
@@ -532,6 +655,16 @@ public class InferenceRequestHandler extends HttpRequestHandler {
          */
         if (ctx != null) {
             NettyUtils.sendError(ctx, status, t);
+        }
+    }
+
+    /** A {@link RuntimeException} that skips the (otherwise protected-only) stack-trace fill. */
+    private static final class NoStackTraceException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        NoStackTraceException(String message) {
+            super(message, null, false, false);
         }
     }
 }
