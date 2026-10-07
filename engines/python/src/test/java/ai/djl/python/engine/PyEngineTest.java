@@ -599,4 +599,81 @@ public class PyEngineTest {
             Assert.assertEquals(output.getCode(), 200);
         }
     }
+
+    @Test
+    public void testResponseCircuitBreakerCrossesThreshold()
+            throws IOException, ModelException, TranslateException {
+        // A live worker that returns 424 on every request must, once the configured threshold is
+        // crossed, increment the 'failed' counter so ModelInfo.getStatus / RETRY_THRESHOLD act.
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .optOption("worker_error_threshold", "3")
+                        .optOption("worker_error_window_seconds", "3600")
+                        .optOption("worker_error_action", "fail")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Assert.assertNull(model.getProperty("failed"));
+            Input input = new Input();
+            input.add("exception", "model error");
+
+            // First two 424s stay below the threshold: no failure recorded, worker stays alive.
+            Assert.assertEquals(predictor.predict(input).getCode(), 424);
+            Assert.assertNull(model.getProperty("failed"));
+            Assert.assertEquals(predictor.predict(input).getCode(), 424);
+            Assert.assertNull(model.getProperty("failed"));
+
+            // Third 424 within the window trips the breaker and bumps 'failed' exactly once.
+            Assert.assertEquals(predictor.predict(input).getCode(), 424);
+            Assert.assertEquals(model.getProperty("failed"), "1");
+        }
+    }
+
+    @Test
+    public void testResponseCircuitBreakerBelowThresholdNoAction()
+            throws IOException, ModelException, TranslateException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .optOption("worker_error_threshold", "5")
+                        .optOption("worker_error_window_seconds", "3600")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("exception", "model error");
+            for (int i = 0; i < 4; ++i) {
+                Assert.assertEquals(predictor.predict(input).getCode(), 424);
+            }
+            // 4 errors, threshold 5: breaker must not have tripped.
+            Assert.assertNull(model.getProperty("failed"));
+        }
+    }
+
+    @Test
+    public void testResponseCircuitBreakerDisabledByDefault()
+            throws IOException, ModelException, TranslateException {
+        // No worker_error_* options == feature off == pre-existing behavior: 424 returned, worker
+        // stays alive, 'failed' is never touched by a non-200 response.
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("exception", "model error");
+            for (int i = 0; i < 10; ++i) {
+                Assert.assertEquals(predictor.predict(input).getCode(), 424);
+            }
+            Assert.assertNull(model.getProperty("failed"));
+        }
+    }
 }
