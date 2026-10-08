@@ -53,6 +53,19 @@ class ProcessedRequest:
         self.adapter_name = None
 
 
+# The messages of vLLM name its command line flags, which LMI sets with options
+_FLAG_TO_OPTION = {
+    "--trust-request-mm-kwargs": "option.trust_request_mm_kwargs",
+}
+
+
+def name_lmi_options(message: str) -> str:
+    """Replace the command line flags in a message of vLLM with the options of LMI."""
+    for flag, option in _FLAG_TO_OPTION.items():
+        message = message.replace(flag, option)
+    return message
+
+
 def convert_lmi_schema_to_completion_request(
     payload: dict, ) -> Tuple[CompletionRequest, bool, bool]:
     parameters = payload.get("parameters", {})

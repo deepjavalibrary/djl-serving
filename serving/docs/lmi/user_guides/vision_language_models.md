@@ -23,6 +23,7 @@ Deploying Vision Language Models with LMI is very similar to deploying Text Gene
 
 There are some additional, optional configs that are exposed:
 * `option.limit_mm_per_prompt`: For each multimodal plugin, limit how many input instances to allow for each prompt. Expects a comma-separated list of items, e.g.: `{"image": 16, "video": 2}` allows a maximum of 16 images and 2 videos per prompt. Defaults to 1 for each modality.
+* `option.trust_request_mm_kwargs`: Whether to accept the per-request `mm_processor_kwargs` and `media_io_kwargs` fields in chat completion and completion requests. LMI v30 (vLLM 0.31.0) rejects a request that sets either field with HTTP 400 unless this is `true`, because the fields change how many resources multimodal preprocessing uses. An empty object is accepted. Only enable it when the clients of the endpoint are trusted. Defaults to `false`. Applies to the default (async) mode. Secure Mode does not allow this option.
 
 Example SageMaker deployment code:
 
