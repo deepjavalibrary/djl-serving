@@ -20,6 +20,7 @@ import os
 import socket
 import sys
 
+from djl_python import engine_metrics
 from djl_python.arg_parser import ArgParser
 from djl_python.service_loader import load_model_service
 from djl_python.sm_log_filter import SMLogFilter
@@ -46,6 +47,8 @@ def main():
         rank = os.environ.get("OMPI_COMM_WORLD_RANK")
         sock_type = args.sock_type
         sock_name = args.sock_name if rank is None else f"{args.sock_name}.{rank}"
+        if args.metrics_sock_name and rank is None:
+            engine_metrics.start(args.metrics_sock_name)
 
         entry_point = args.entry_point if args.entry_point else args.recommended_entry_point
         model_service = load_model_service(args.model_dir, entry_point,
@@ -66,6 +69,7 @@ def main():
         sys.stdout.flush()
         sys.stderr.flush()
         logging.shutdown()
+        engine_metrics.stop()
         if sock_type == 'unix':
             if os.path.exists(sock_name):
                 os.remove(sock_name)
