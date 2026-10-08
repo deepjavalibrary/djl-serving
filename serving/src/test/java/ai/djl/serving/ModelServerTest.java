@@ -21,8 +21,12 @@ import static org.testng.Assert.fail;
 
 import ai.djl.engine.Engine;
 import ai.djl.modality.Classifications.Classification;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
+import ai.djl.prometheus.MetricExporter;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
+import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.http.DescribeAdapterResponse;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.DescribeWorkflowResponse.Model;
@@ -33,12 +37,16 @@ import ai.djl.serving.http.list.ListAdaptersResponse;
 import ai.djl.serving.http.list.ListModelsResponse;
 import ai.djl.serving.http.list.ListWorkflowsResponse;
 import ai.djl.serving.http.list.ListWorkflowsResponse.WorkflowItem;
+import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.ModelStore;
+import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
+import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
@@ -60,6 +68,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.kqueue.KQueue;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -88,6 +98,7 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
@@ -110,9 +121,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -287,6 +300,7 @@ public class ModelServerTest {
             testInvalidKServeDescribeModel();
             testDescribeModelNotFound();
             testInvalidManagementUri();
+            testMetricsNotFound();
             testInvalidManagementMethod();
             testUnregisterModelNotFound();
             testScaleModelNotFound();
@@ -414,6 +428,105 @@ public class ModelServerTest {
             ConfigManagerTest.testSsl();
         } finally {
             server.stop();
+        }
+    }
+
+    @Test
+    public void testEngineMetricsWithoutWorkers()
+            throws ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
+                    IOException,
+                    InterruptedException {
+        Path modelStore = Paths.get("build/models");
+        Utils.deleteQuietly(modelStore);
+        Files.createDirectories(modelStore);
+        String prometheus = System.getProperty("SERVING_PROMETHEUS");
+        if (!Boolean.parseBoolean(prometheus)) {
+            throw new SkipException("The Gradle test task sets SERVING_PROMETHEUS to true.");
+        }
+        System.setProperty("SERVING_ENGINE_METRICS", "true");
+        try {
+            ModelServer server = initTestServer("src/test/resources/emptyStore.config.properties");
+            try {
+                assertTrue(server.isRunning());
+                Channel channel = initTestChannel();
+
+                // no worker serves engine metrics: the answer is the metrics of DJL Serving
+                for (String path : new String[] {"/server/metrics", "/metrics", "/metrics/"}) {
+                    request(channel, HttpMethod.GET, path + "?name[]=StartupLatency");
+                    assertHttpOk();
+                    assertEquals(
+                            headers.get(HttpHeaderNames.CONTENT_TYPE), MetricExporter.CONTENT_TYPE);
+                    assertTrue(result.contains("StartupLatency{Host="), path);
+                }
+
+                // and there is nothing at all when those are off too
+                System.setProperty("SERVING_PROMETHEUS", "false");
+                for (String path : new String[] {"/server/metrics", "/metrics"}) {
+                    request(channel, HttpMethod.GET, path);
+                    assertHttpOk();
+                    assertEquals(result, "", path);
+                }
+                channel.close().sync();
+
+                for (String path : new String[] {"/server/metrics", "/metrics", "/metrics/"}) {
+                    assertErrorCode(HttpMethod.POST, path, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                    assertErrorCode(HttpMethod.PUT, path, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                    assertErrorCode(HttpMethod.DELETE, path, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                }
+
+                // without the switch the paths are the ones of a server without engine metrics
+                System.clearProperty("SERVING_ENGINE_METRICS");
+                assertErrorCode(HttpMethod.GET, "/server/metrics", HttpResponseStatus.BAD_REQUEST);
+                assertErrorCode(HttpMethod.GET, "/metrics", HttpResponseStatus.NOT_FOUND);
+                System.setProperty("SERVING_PROMETHEUS", "true");
+                assertErrorCode(HttpMethod.GET, "/metrics", HttpResponseStatus.NOT_FOUND);
+                assertErrorCode(HttpMethod.GET, "/metrics/", HttpResponseStatus.NOT_FOUND);
+            } finally {
+                server.stop();
+            }
+        } finally {
+            System.clearProperty("SERVING_ENGINE_METRICS");
+            restoreProperty("SERVING_PROMETHEUS", prometheus);
+        }
+    }
+
+    @Test
+    public void testEngineMetrics()
+            throws ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
+                    IOException,
+                    InterruptedException {
+        if (!Epoll.isAvailable() && !KQueue.isAvailable()) {
+            throw new SkipException("The python workers need Unix domain sockets.");
+        }
+        if (!hasPythonModule("prometheus_client")) {
+            throw new SkipException("The python3 of this machine has no prometheus_client.");
+        }
+        String prometheus = System.getProperty("SERVING_PROMETHEUS");
+        if (!Boolean.parseBoolean(prometheus)) {
+            throw new SkipException("The Gradle test task sets SERVING_PROMETHEUS to true.");
+        }
+        System.setProperty("SERVING_ENGINE_METRICS", "true");
+        try {
+            ModelServer server =
+                    initTestServer("src/test/resources/engineMetrics.config.properties");
+            try {
+                assertTrue(server.isRunning());
+                Channel channel = initTestChannel();
+
+                testEngineMetricsOneWorker(channel);
+                testEngineMetricsSeveralWorkers(channel);
+                channel.close().sync();
+                testEngineMetricsWorkersDown();
+            } finally {
+                server.stop();
+            }
+        } finally {
+            System.clearProperty("SERVING_ENGINE_METRICS");
+            restoreProperty("SERVING_PROMETHEUS", prometheus);
         }
     }
 
@@ -941,6 +1054,342 @@ public class ModelServerTest {
         request(channel, HttpMethod.GET, url);
         assertHttpOk();
         Assert.assertTrue(result.contains("StartupLatency{Host="));
+    }
+
+    private void testEngineMetricsOneWorker(Channel channel) throws InterruptedException {
+        logTestFunction();
+        assertEquals(awaitEngineMetricsSockets(1).size(), 1);
+        for (int i = 0; i < 3; ++i) {
+            predict(channel, "engine_metrics", "payload" + i);
+        }
+
+        request(channel, HttpMethod.GET, "/server/metrics");
+        assertHttpOk();
+        assertEquals(headers.get(HttpHeaderNames.CONTENT_TYPE), MetricExporter.CONTENT_TYPE);
+        String body = result;
+        // the metrics of DJL Serving come first, then the ones of the worker
+        int djl = body.indexOf("StartupLatency{Host=");
+        int engine = body.indexOf("# HELP vllm:test_requests_total");
+        assertTrue(djl >= 0 && djl < engine, body);
+        assertEquals(
+                samples(body, "vllm:test_requests_total"),
+                List.of("{model_name=\"engine_metrics\"} 3.0"));
+        assertEquals(
+                samples(body, "vllm:test_last_batch_size"),
+                List.of("{model_name=\"engine_metrics\"} 1.0"));
+        // the worker does not serve what is not an engine metric
+        assertFalse(body.contains("test_private_requests"), body);
+        assertFalse(body.contains("python_info"), body);
+        // one worker: its text as it is, without a worker label
+        assertTrue(engineLines(body).stream().noneMatch(l -> l.contains("worker=")), body);
+        assertFamiliesOnce(body);
+
+        // /metrics is the same without a trailing slash and with one
+        List<String> expected = engineLines(body);
+        for (String path : new String[] {"/metrics", "/metrics/"}) {
+            request(channel, HttpMethod.GET, path);
+            assertHttpOk();
+            assertEquals(headers.get(HttpHeaderNames.CONTENT_TYPE), MetricExporter.CONTENT_TYPE);
+            assertEquals(engineLines(result), expected, path);
+            assertTrue(result.contains("StartupLatency{Host="), path);
+        }
+
+        // name[] selects families of the worker and of DJL Serving
+        request(channel, HttpMethod.GET, "/metrics?name[]=vllm:test_requests_total");
+        assertHttpOk();
+        assertTrue(result.contains("# TYPE vllm:test_requests_total counter"), result);
+        assertFalse(result.contains("vllm:test_last_batch_size"), result);
+        assertFalse(result.contains("StartupLatency"), result);
+        request(channel, HttpMethod.GET, "/server/metrics?name[]=StartupLatency");
+        assertHttpOk();
+        assertTrue(result.contains("StartupLatency{Host="), result);
+        assertFalse(result.contains("vllm:"), result);
+
+        // the metrics of DJL Serving can be off while the ones of the worker are on
+        System.setProperty("SERVING_PROMETHEUS", "false");
+        try {
+            for (String path : new String[] {"/server/metrics", "/metrics"}) {
+                request(channel, HttpMethod.GET, path);
+                assertHttpOk();
+                assertFalse(result.contains("StartupLatency"), result);
+                assertEquals(engineLines(result), expected, path);
+            }
+        } finally {
+            System.setProperty("SERVING_PROMETHEUS", "true");
+        }
+
+        for (String path : new String[] {"/server/metrics", "/metrics"}) {
+            assertErrorCode(HttpMethod.POST, path, HttpResponseStatus.METHOD_NOT_ALLOWED);
+            assertErrorCode(HttpMethod.PUT, path, HttpResponseStatus.METHOD_NOT_ALLOWED);
+        }
+    }
+
+    private void testEngineMetricsSeveralWorkers(Channel channel) throws InterruptedException {
+        logTestFunction();
+        request(channel, HttpMethod.PUT, "/models/engine_metrics?min_worker=2&max_worker=2");
+        assertHttpOk();
+        Map<String, String> sockets = awaitEngineMetricsSockets(2);
+        for (int i = 0; i < 2; ++i) {
+            predict(channel, "engine_metrics", "more" + i);
+        }
+
+        request(channel, HttpMethod.GET, "/metrics");
+        assertHttpOk();
+        String body = result;
+        // every sample says which worker it is from, and each family is there once
+        assertFamiliesOnce(body);
+        List<String> requests = samples(body, "vllm:test_requests_total");
+        assertEquals(requests.size(), 2, body);
+        for (String label : sockets.keySet()) {
+            assertEquals(
+                    requests.stream().filter(s -> s.contains("worker=\"" + label + "\"")).count(),
+                    1,
+                    body);
+        }
+        // the workers together handled the five requests
+        assertEquals(sum(body, "vllm:test_requests_total"), 5.0, 0.0);
+        assertEquals(samples(body, "vllm:test_last_batch_size").size(), 2, body);
+        assertFalse(body.contains("test_private_requests"), body);
+    }
+
+    private void testEngineMetricsWorkersDown() throws InterruptedException {
+        logTestFunction();
+        Map<String, String> sockets = engineMetricsSockets();
+        assertEquals(sockets.size(), 2);
+        List<String> labels = new ArrayList<>(sockets.keySet());
+        String lost = labels.get(1);
+        String survivor = labels.get(0);
+
+        // a worker that is gone is left out, the others are still there
+        killWorker(sockets.get(lost));
+        awaitScrape("/metrics", HttpResponseStatus.OK, "worker=\"" + lost + "\"", false);
+        assertTrue(result.contains("worker=\"" + survivor + "\""), result);
+        assertFamiliesOnce(result);
+
+        // all workers gone: the scrape fails, like it does when the engine is down
+        killWorker(sockets.get(survivor));
+        for (String path : new String[] {"/metrics", "/server/metrics"}) {
+            awaitScrape(path, HttpResponseStatus.SERVICE_UNAVAILABLE, "", true);
+            ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
+            assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+            assertEquals(resp.getType(), "ServiceUnavailableException");
+        }
+
+        // a model that is unregistered has no workers to ask
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        request(channel, HttpMethod.DELETE, "/models/engine_metrics");
+        assertHttpOk();
+        channel.close().sync();
+        assertTrue(engineMetricsSockets().isEmpty());
+        awaitScrape("/metrics", HttpResponseStatus.OK, "vllm:", false);
+    }
+
+    private void testMetricsNotFound() throws InterruptedException {
+        logTestFunction();
+        // without SERVING_ENGINE_METRICS there is no /metrics
+        assertErrorCode(HttpMethod.GET, "/metrics", HttpResponseStatus.NOT_FOUND);
+        assertErrorCode(HttpMethod.GET, "/metrics/", HttpResponseStatus.NOT_FOUND);
+        assertErrorCode(HttpMethod.POST, "/metrics", HttpResponseStatus.NOT_FOUND);
+    }
+
+    private void assertErrorCode(HttpMethod method, String url, HttpResponseStatus status)
+            throws InterruptedException {
+        // the server closes the connection after an error
+        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+        request(channel, method, url);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        if (!System.getProperty("os.name").startsWith("Win")) {
+            ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
+            assertEquals(resp.getCode(), status.code(), method + " " + url);
+            if (status == HttpResponseStatus.NOT_FOUND) {
+                assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
+            } else if (status == HttpResponseStatus.METHOD_NOT_ALLOWED) {
+                assertEquals(resp.getMessage(), ERROR_METHOD_NOT_ALLOWED);
+            }
+        }
+    }
+
+    /**
+     * Scrapes until the answer has the expected status and the text does (or does not) contain a
+     * string. A scrape is reused for one second, so each attempt waits a little longer than that.
+     */
+    private void awaitScrape(String path, HttpResponseStatus status, String text, boolean contains)
+            throws InterruptedException {
+        for (int i = 0; i < 30; ++i) {
+            Thread.sleep(1100);
+            Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
+            request(channel, HttpMethod.GET, path);
+            channel.close().sync();
+            if (httpStatus.equals(status) && result.contains(text) == contains) {
+                return;
+            }
+        }
+        fail(
+                "No "
+                        + status
+                        + " for "
+                        + path
+                        + " that has "
+                        + contains
+                        + " for "
+                        + text
+                        + ": "
+                        + httpStatus
+                        + ", "
+                        + result);
+    }
+
+    private void predict(Channel channel, String model, String payload)
+            throws InterruptedException {
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/" + model);
+        req.content().writeBytes(payload.getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        assertHttpOk();
+        assertEquals(result, payload);
+    }
+
+    /** Returns the sockets that the workers of the loaded models registered, by worker label. */
+    private static Map<String, String> engineMetricsSockets() {
+        String prefix = "engine_metrics_socket.";
+        Map<String, String> sockets = new TreeMap<>();
+        for (Endpoint endpoint : ModelManager.getInstance().getEndpoints().values()) {
+            for (Workflow workflow : endpoint.getWorkflows()) {
+                for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+                    if (wpc instanceof ModelInfo) {
+                        ModelInfo<Input, Output> info = (ModelInfo<Input, Output>) wpc;
+                        for (ZooModel<Input, Output> model : info.getModels().values()) {
+                            for (Map.Entry<String, String> entry :
+                                    model.getProperties().entrySet()) {
+                                if (entry.getKey().startsWith(prefix)) {
+                                    sockets.put(
+                                            entry.getKey().substring(prefix.length()),
+                                            entry.getValue());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return sockets;
+    }
+
+    private static Map<String, String> awaitEngineMetricsSockets(int count)
+            throws InterruptedException {
+        for (int i = 0; i < 600; ++i) {
+            Map<String, String> sockets = engineMetricsSockets();
+            if (sockets.size() == count) {
+                return sockets;
+            }
+            Thread.sleep(100);
+        }
+        throw new AssertionError(
+                "Expected " + count + " engine metrics sockets, found " + engineMetricsSockets());
+    }
+
+    private static void killWorker(String metricsSocket) {
+        // The arguments of a process end at its first empty one, and the metrics socket comes
+        // after one. The request socket of the same python process comes before.
+        String socket = metricsSocket.substring(0, metricsSocket.length() - ".metrics".length());
+        List<ProcessHandle> workers =
+                ProcessHandle.current()
+                        .descendants()
+                        .filter(
+                                p ->
+                                        p.info()
+                                                .arguments()
+                                                .map(a -> contains(a, socket))
+                                                .orElse(false))
+                        .collect(Collectors.toList());
+        assertEquals(workers.size(), 1, "python workers with " + socket + ": " + descendants());
+        workers.get(0).destroyForcibly();
+    }
+
+    private static boolean contains(String[] array, String value) {
+        return Arrays.asList(array).contains(value);
+    }
+
+    private static String descendants() {
+        return ProcessHandle.current()
+                .descendants()
+                .map(p -> p.pid() + " " + p.info())
+                .collect(Collectors.joining("; "));
+    }
+
+    private static boolean hasPythonModule(String module) {
+        try {
+            Process process =
+                    new ProcessBuilder("python3", "-c", "import " + module)
+                            .redirectErrorStream(true)
+                            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                            .start();
+            if (process.waitFor(60, TimeUnit.SECONDS)) {
+                return process.exitValue() == 0;
+            }
+            process.destroyForcibly();
+        } catch (IOException e) {
+            logger.info("No python3 to import {}: {}", module, e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return false;
+    }
+
+    private static void restoreProperty(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
+    }
+
+    /** Returns the lines of the engine metrics (the ones named vllm:...) of an exposition. */
+    private static List<String> engineLines(String text) {
+        List<String> lines = new ArrayList<>();
+        for (String line : text.split("\n")) {
+            if (line.startsWith("vllm:")
+                    || line.startsWith("# HELP vllm:")
+                    || line.startsWith("# TYPE vllm:")) {
+                lines.add(line);
+            }
+        }
+        return lines;
+    }
+
+    /** Returns what follows the metric name in each sample line of the metric. */
+    private static List<String> samples(String text, String metric) {
+        List<String> samples = new ArrayList<>();
+        for (String line : text.split("\n")) {
+            if (line.startsWith(metric + "{")) {
+                samples.add(line.substring(metric.length()));
+            }
+        }
+        return samples;
+    }
+
+    private static double sum(String text, String metric) {
+        double sum = 0;
+        for (String sample : samples(text, metric)) {
+            sum += Double.parseDouble(sample.substring(sample.lastIndexOf(' ') + 1));
+        }
+        return sum;
+    }
+
+    private static void assertFamiliesOnce(String text) {
+        Set<String> headers = new HashSet<>();
+        for (String line : text.split("\n")) {
+            if (line.startsWith("# HELP ") || line.startsWith("# TYPE ")) {
+                String[] tokens = line.split(" ", 4);
+                assertTrue(headers.add(tokens[1] + ' ' + tokens[2]), "Repeated: " + line);
+            }
+        }
     }
 
     private void testThrottle() throws InterruptedException {

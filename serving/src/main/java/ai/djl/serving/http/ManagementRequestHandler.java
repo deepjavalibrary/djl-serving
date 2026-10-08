@@ -58,6 +58,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
     private static final Pattern INVOKE_PATTERN = Pattern.compile("^/models/.+/invoke$");
     private static final Pattern SERVER_PATTERN = Pattern.compile("^/server/.+");
+    private static final Pattern METRICS_PATTERN = Pattern.compile("^/metrics/?([?].*)?$");
 
     /** {@inheritDoc} */
     @Override
@@ -71,6 +72,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 return false;
             } else if (MODELS_PATTERN.matcher(uri).matches()) {
                 return req.method() != HttpMethod.POST || !INVOKE_PATTERN.matcher(uri).matches();
+            } else if (METRICS_PATTERN.matcher(uri).matches()) {
+                return EngineMetrics.isEnabled();
             }
         }
         return false;
@@ -85,6 +88,13 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         HttpMethod method = req.method();
+        if ("metrics".equals(segments[1]) && segments.length == 2) {
+            if (!HttpMethod.GET.equals(method)) {
+                throw new MethodNotAllowedException();
+            }
+            PrometheusExporter.handle(ctx, decoder);
+            return;
+        }
         if ("server".equals(segments[1])) {
             if ("logging".equals(segments[2])) {
                 handleConfigLogs(ctx, decoder);
