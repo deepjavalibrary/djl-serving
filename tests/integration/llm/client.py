@@ -142,12 +142,14 @@ vllm_model_spec = {
     "llama-68m-speculative-medusa": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "JackFram/llama-68m"
+        "tokenizer": "JackFram/llama-68m",
+        "speculative_decoding": True
     },
     "llama3-1-8b-speculative-eagle": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "unsloth/Meta-Llama-3.1-8B"
+        "tokenizer": "unsloth/Meta-Llama-3.1-8B",
+        "speculative_decoding": True
     },
     "llama-7b-unmerged-lora": {
         "batch_size": [3],
@@ -1613,7 +1615,247 @@ def response_checker(res, message):
             )
 
 
-def test_handler_rolling_batch(model, model_spec):
+ENGINE_METRICS_URL = "http://127.0.0.1:8080"
+# Both paths serve the engine metrics of the vLLM workers
+ENGINE_METRICS_PATHS = ["/server/metrics", "/metrics"]
+# Families that every vLLM version LMI supports registers. Counters are listed by the name in
+# the exposition (with _total), gauges and histograms by their name.
+ENGINE_METRICS_TYPES = {
+    "vllm:request_success_total": "counter",
+    "vllm:prompt_tokens_total": "counter",
+    "vllm:generation_tokens_total": "counter",
+    "vllm:num_requests_running": "gauge",
+    "vllm:num_requests_waiting": "gauge",
+    "vllm:kv_cache_usage_perc": "gauge",
+    "vllm:time_to_first_token_seconds": "histogram",
+    "vllm:inter_token_latency_seconds": "histogram",
+    "vllm:e2e_request_latency_seconds": "histogram",
+    "vllm:request_queue_time_seconds": "histogram",
+    "vllm:request_prompt_tokens": "histogram",
+    "vllm:request_generation_tokens": "histogram",
+}
+# vLLM registers these only when speculative decoding is configured
+SPECULATIVE_DECODING_METRICS = [
+    "vllm:spec_decode_num_drafts_total",
+    "vllm:spec_decode_num_draft_tokens_total",
+    "vllm:spec_decode_num_accepted_tokens_total",
+    "vllm:spec_decode_num_accepted_tokens_per_pos_total",
+]
+# Counters that must have counted at least the requests the test sent
+ENGINE_METRICS_COUNTS = [
+    "vllm:request_success_total", "vllm:prompt_tokens_total",
+    "vllm:generation_tokens_total", "vllm:time_to_first_token_seconds_count",
+    "vllm:e2e_request_latency_seconds_count"
+]
+METRIC_SAMPLE_PATTERN = re.compile(
+    r'^([a-zA-Z_:][a-zA-Z0-9_:]*)(\{.*\})?\s+(\S+)(\s+-?\d+)?$')
+METRIC_LABEL_PATTERN = re.compile(
+    r'([a-zA-Z_][a-zA-Z0-9_]*)="((?:[^"\\]|\\.)*)"')
+
+
+def parse_engine_metrics(text):
+    """
+    Parses the vllm: families of a Prometheus text exposition.
+
+    Returns the type of each family, the samples as (name, labels, value) and the problems found.
+    """
+    types, helps, samples, problems, seen = {}, set(), [], [], set()
+    for number, line in enumerate(text.splitlines(), 1):
+        line = line.strip()
+        if line.startswith("# HELP ") or line.startswith("# TYPE "):
+            parts = line.split(" ", 3)
+            if len(parts) < 3 or not parts[2].startswith("vllm:"):
+                continue
+            name = parts[2]
+            if parts[1] == "HELP":
+                if name in helps:
+                    problems.append(
+                        f"line {number}: second HELP line for {name}")
+                helps.add(name)
+            else:
+                if name in types:
+                    problems.append(
+                        f"line {number}: second TYPE line for {name}")
+                types[name] = parts[3] if len(parts) > 3 else ""
+        elif line.startswith("vllm:"):
+            match = METRIC_SAMPLE_PATTERN.match(line)
+            if not match:
+                problems.append(f"line {number}: cannot parse {line[:120]!r}")
+                continue
+            name, label_text, value = match.group(
+                1), match.group(2) or "", match.group(3)
+            labels = dict(METRIC_LABEL_PATTERN.findall(label_text))
+            try:
+                value = float(value)
+            except ValueError:
+                problems.append(f"line {number}: {value!r} is not a number")
+                continue
+            key = (name, tuple(sorted(labels.items())))
+            if key in seen:
+                problems.append(
+                    f"line {number}: series {name}{labels} appears twice")
+            seen.add(key)
+            samples.append((name, labels, value))
+    return types, samples, problems
+
+
+def get_worker_count():
+    endpoint = f"{ENGINE_METRICS_URL}/models/{get_model_name()}"
+    res = requests.get(endpoint).json()
+    return sum(
+        len(group["workers"]) for model in res[0]["models"]
+        for group in model["workerGroups"])
+
+
+def check_engine_metric_families(path, types, samples, workers, speculative,
+                                 min_requests):
+    problems = []
+    expected = dict(ENGINE_METRICS_TYPES)
+    if speculative:
+        expected.update(
+            {name: "counter"
+             for name in SPECULATIVE_DECODING_METRICS})
+    for name, metric_type in expected.items():
+        if name not in types:
+            problems.append(f"{path}: family {name} is missing")
+        elif types[name] != metric_type:
+            problems.append(
+                f"{path}: {name} has type {types[name]}, expected {metric_type}"
+            )
+
+    # the +Inf bucket of a histogram holds every observation
+    for name in [n for n, t in types.items() if t == "histogram"]:
+        counts, infinite = {}, {}
+        for sample_name, labels, value in samples:
+            key = tuple(sorted((k, v) for k, v in labels.items() if k != "le"))
+            if sample_name == name + "_count":
+                counts[key] = value
+            elif sample_name == name + "_bucket" and labels.get(
+                    "le") == "+Inf":
+                infinite[key] = value
+        if counts != infinite:
+            problems.append(
+                f"{path}: {name}: the +Inf buckets {infinite} differ from the counts {counts}"
+            )
+
+    # one series per worker when there are several workers, none of them labeled otherwise
+    labeled = [labels for _, labels, _ in samples if "worker" in labels]
+    if workers > 1:
+        running = {
+            labels.get("worker")
+            for name, labels, _ in samples
+            if name == "vllm:num_requests_running"
+        }
+        if len(labeled) != len(samples) or len(running) != workers:
+            problems.append(
+                f"{path}: expected the worker label on every sample and {workers} workers, "
+                f"got {len(labeled)} of {len(samples)} samples labeled and "
+                f"vllm:num_requests_running for {sorted(str(w) for w in running)}"
+            )
+    elif labeled:
+        problems.append(
+            f"{path}: the worker label {labeled[0]['worker']!r} is set, but there is one worker"
+        )
+
+    for name in ENGINE_METRICS_COUNTS:
+        total = sum(value for sample_name, _, value in samples
+                    if sample_name == name)
+        if total < min_requests:
+            problems.append(
+                f"{path}: {name} is {total}, expected at least {min_requests}")
+    return problems
+
+
+def engine_metrics_problems(spec, min_requests):
+    problems = []
+    series = {}
+    try:
+        workers = get_worker_count()
+    except (requests.RequestException, LookupError, ValueError) as e:
+        return [f"cannot read the number of workers: {e!r}"]
+    speculative = spec.get("speculative_decoding", False)
+    for path in ENGINE_METRICS_PATHS:
+        try:
+            res = requests.get(ENGINE_METRICS_URL + path, timeout=30)
+        except requests.RequestException as e:
+            problems.append(f"GET {path} failed: {e}")
+            continue
+        if res.status_code != 200:
+            problems.append(
+                f"GET {path} returned {res.status_code}, expected 200")
+            continue
+        content_type = res.headers.get("content-type", "")
+        if not content_type.startswith("text/plain"):
+            problems.append(
+                f"GET {path} returned content type {content_type!r}, expected text/plain"
+            )
+        types, samples, parse_problems = parse_engine_metrics(res.text)
+        problems.extend(f"GET {path}: {p}" for p in parse_problems)
+        problems.extend(
+            check_engine_metric_families(path, types, samples, workers,
+                                         speculative, min_requests))
+        series[path] = {(name, tuple(sorted(labels.items())))
+                        for name, labels, _ in samples}
+
+    if len(series) == len(ENGINE_METRICS_PATHS):
+        first, second = [series[path] for path in ENGINE_METRICS_PATHS]
+        if first != second:
+            problems.append(
+                f"{ENGINE_METRICS_PATHS[0]} and {ENGINE_METRICS_PATHS[1]} serve different series: "
+                f"{sorted(first ^ second)[:3]}")
+
+    # name[] keeps only the matching families
+    try:
+        res = requests.get(ENGINE_METRICS_URL + ENGINE_METRICS_PATHS[0],
+                           params={"name[]": "vllm:request_success_total"},
+                           timeout=30)
+        _, samples, _ = parse_engine_metrics(res.text)
+        names = {name for name, _, _ in samples}
+        if res.status_code != 200 or not names or any(
+                not name.startswith("vllm:request_success") for name in names):
+            problems.append(
+                f"name[]=vllm:request_success_total gave {res.status_code} with {sorted(names)}"
+            )
+    except requests.RequestException as e:
+        problems.append(f"GET with name[] failed: {e}")
+    return problems
+
+
+def check_engine_metrics(spec, min_requests=1, attempts=3, delay=5):
+    """
+    Checks that the model server serves the metrics of the vLLM engines it runs.
+
+    The check reads GET /server/metrics and GET /metrics: both must answer 200 with the same
+    series, the common vllm: families must be present with their type, histograms must be
+    consistent, the counters must have counted min_requests requests (workers answer
+    asynchronously, so a check that fails is repeated), name[] must filter, and the worker label
+    must be set when, and only when, the server runs more than one worker. The model spec can set
+    speculative_decoding to expect the speculative decoding families.
+
+    Set SKIP_ENGINE_METRICS_CHECK=1 to skip the check, for images that do not serve engine
+    metrics.
+    """
+    if os.environ.get("SKIP_ENGINE_METRICS_CHECK",
+                      "").lower() in ["1", "true", "yes"]:
+        LOGGER.info(
+            "SKIP_ENGINE_METRICS_CHECK is set, skipping the engine metrics check"
+        )
+        return
+    for attempt in range(1, attempts + 1):
+        problems = engine_metrics_problems(spec, min_requests)
+        if not problems:
+            LOGGER.info("Engine metrics check passed")
+            return
+        LOGGER.warning(
+            f"Engine metrics check failed, attempt {attempt} of {attempts}: {problems}"
+        )
+        if attempt < attempts:
+            time.sleep(delay)
+    raise AssertionError("Engine metrics check failed:\n" +
+                         "\n".join(problems))
+
+
+def test_handler_rolling_batch(model, model_spec, engine_metrics=True):
     modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
@@ -1647,6 +1889,10 @@ def test_handler_rolling_batch(model, model_spec):
                 )
                 req["parameters"]["max_new_tokens"] = seq_length
                 awscurl_run(req, spec.get("tokenizer", None), batch_size)
+
+    if engine_metrics:
+        # every request above was validated: one per stream value
+        check_engine_metrics(spec, min_requests=len(stream_values))
 
 
 def test_custom_handler_async(model, model_spec):
@@ -2106,7 +2352,7 @@ def test_handler_adapters_chat(model, model_spec):
                 res, spec.get("option.model_id", "unknown"))
 
 
-def test_handler_rolling_batch_chat(model, model_spec):
+def test_handler_rolling_batch_chat(model, model_spec, engine_metrics=True):
     modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
@@ -2136,6 +2382,10 @@ def test_handler_rolling_batch_chat(model, model_spec):
                 )
                 req["max_tokens"] = seq_length
                 awscurl_run(req, spec.get("tokenizer", None), batch_size)
+
+    if engine_metrics:
+        # every dryrun request above succeeded: one per stream value
+        check_engine_metrics(spec, min_requests=len(stream_values))
 
 
 def test_handler_rolling_batch_tool(model, model_spec):
@@ -2640,13 +2890,22 @@ def run(raw_args):
         test_performance()
 
     elif args.handler == "trtllm":
-        test_handler_rolling_batch(args.model, trtllm_model_spec)
+        test_handler_rolling_batch(args.model,
+                                   trtllm_model_spec,
+                                   engine_metrics=False)
     elif args.handler == "trtllm_chat":
-        test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
+        test_handler_rolling_batch_chat(args.model,
+                                        trtllm_chat_model_spec,
+                                        engine_metrics=False)
     elif args.handler == "trtllm_neo":
-        test_handler_rolling_batch(args.model, trtllm_neo_model_spec)
+        test_handler_rolling_batch(args.model,
+                                   trtllm_neo_model_spec,
+                                   engine_metrics=False)
     elif args.handler == "no_code":
-        test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
+        # runs against the TensorRT-LLM and the LMI image
+        test_handler_rolling_batch(args.model,
+                                   no_code_rolling_batch_spec,
+                                   engine_metrics=False)
     elif args.handler == "correctness":
         test_correctness(args.model, correctness_model_spec)
     elif args.handler == "multimodal":
@@ -2655,6 +2914,10 @@ def run(raw_args):
         test_text_embedding_model(args.model, text_embedding_model_spec)
     elif args.handler == "stateful":
         test_handler_stateful(args.model, stateful_model_spec)
+    elif args.handler == "engine_metrics":
+        # against a running server, after args.count requests
+        check_engine_metrics(vllm_model_spec.get(args.model, {}),
+                             min_requests=args.count or 1)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

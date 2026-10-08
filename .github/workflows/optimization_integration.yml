@@ -88,6 +88,9 @@ jobs:
       - ${{ matrix.test.instance }}
     timeout-minutes: 120
     needs: create-optimization-runners
+    env:
+      # The workers of a multi-node deployment do not serve engine metrics
+      SKIP_ENGINE_METRICS_CHECK: ${{ contains(matrix.test.test_model_config, 'multi-node') && '1' || '' }}
     strategy:
       fail-fast: false
       matrix:

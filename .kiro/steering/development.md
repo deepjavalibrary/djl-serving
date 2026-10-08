@@ -87,6 +87,11 @@ OVERRIDE_TEST_CONTAINER=<image_name> python -m pytest tests.py::<TestClass>::<te
 OVERRIDE_TEST_CONTAINER=deepjavalibrary/djl-serving:lmi python -m pytest tests.py::TestVllm1_g6::test_gemma_2b
 ```
 
+The vLLM handler tests end by checking the engine metrics on `/server/metrics` and `/metrics`
+(`check_engine_metrics` in `tests/integration/llm/client.py`). Set `SKIP_ENGINE_METRICS_CHECK=1` when the
+image under test predates the engine metrics, or when its workers do not serve them (multi-node, which
+`optimization_integration.yml` sets for its multi-node entry).
+
 Full test suite: `tests/integration/tests.py`
 
 ## Key Development Areas (Priority Order)
