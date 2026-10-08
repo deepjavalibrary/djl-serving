@@ -7,10 +7,11 @@ LMI supports deploying the following types of Vision Language Models through the
 * llava_next (e.g. llava-hf/llava-v1.6-mistral-7b-hf)
 * phi3_v (e.g. microsoft/Phi-3-vision-128k-instruct)
 * paligemma (e.g. google/paligemma-3b-mix-224)
-* chameleon (facebook/chameleon-7b etc.)
 * fuyu (adept/fuyu-8b etc.)
 * pixtral (mistralai/Pixtral-12B-2409)
 * mLlama (meta-llama/Llama-3.2-11B-Vision-Instruct)
+
+vLLM does not support the chameleon architecture anymore (last supported in vLLM 0.28.0).
 
 ## Request Format
 
