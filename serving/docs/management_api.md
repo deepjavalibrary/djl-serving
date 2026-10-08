@@ -257,11 +257,33 @@ curl -X POST "http://localhost:8080/server/logging?level=debug"
 
 ### Get metrics
 
-`POST /server/metrics`
+`GET /server/metrics`
+
+`GET /metrics`
 
 * name[] - metric name filters. Multiple `name[]` HTTP parameters are allowed
 
-Use the get metrics to get metrics in prometheus format.
+Use the get metrics to get metrics in prometheus text format. The metrics come from two sources, and
+each one has its own switch:
+
+| Environment variable      | Metrics                                                                                       |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `SERVING_PROMETHEUS`      | The metrics of DJL Serving itself, see the [metrics list](../../prometheus/README.md).        |
+| `SERVING_ENGINE_METRICS`  | The metrics that an inference engine records inside the Python workers, for example vLLM's.   |
+
+Both are off unless you set them to `true`. The `lmi` container image sets `SERVING_ENGINE_METRICS` to `true`.
+
+| `SERVING_ENGINE_METRICS` | `SERVING_PROMETHEUS` | `GET /server/metrics`                           | `GET /metrics` |
+|--------------------------|----------------------|-------------------------------------------------|----------------|
+| not `true`               | not `true`           | `400`                                           | `404`          |
+| not `true`               | `true`               | `200`, the metrics of DJL Serving               | `404`          |
+| `true`                   | not `true`           | `200`, the engine metrics                       | same as `/server/metrics` |
+| `true`                   | `true`               | `200`, the metrics of DJL Serving, then the engine metrics | same as `/server/metrics` |
+
+On `/server/metrics`, any method other than `GET` gets `405`. On `/metrics` the same holds when
+`SERVING_ENGINE_METRICS` is `true`; otherwise `/metrics` is `404` for every method. `/metrics` is
+served on the management address, like `/server/metrics`. If `management_address` differs from
+`inference_address`, both paths are only on the management address.
 
 ```
 curl "http://localhost:8080/server/metrics?name[]=DJLServingStart&name[]=StartupLatency"
@@ -273,3 +295,52 @@ DJLServingStart_total{Version="0.27.0-SNAPSHOT"} 1.0
 # TYPE StartupLatency gauge
 StartupLatency{Host="localhost"} 425941.0
 ```
+
+#### Engine metrics
+
+With `SERVING_ENGINE_METRICS=true`, each Python worker serves the metric families whose name starts
+with `vllm:` on a Unix domain socket in the temporary directory, and DJL Serving fetches them when
+you call `/server/metrics` or `/metrics`. Nothing listens on a new network port.
+
+```
+curl "http://localhost:8080/metrics?name[]=vllm:num_requests_running"
+
+# HELP vllm:num_requests_running Number of requests in model execution batches.
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{engine="0",model_name="facebook/opt-125m"} 0.0
+```
+
+* The answer is always the Prometheus text format, whatever the `Accept` header says.
+* The answer is sent when the workers have answered, so a client has to keep its side of the
+  connection open until it has read the answer. A client that closes its sending side right after the
+  request (for example `nc -N`) gets no answer. `/ping` behaves the same.
+* The workers export only the `vllm:` families of their `prometheus_client` registry. Metrics that
+  your own `model.py` registers, and the `python_*` and `process_*` families, are not exported.
+* The `model_name` label is the served model name: `option.served_model_name` when it is set (the
+  example above sets it to `facebook/opt-125m`), and otherwise the path of the model files in the
+  container.
+* `name[]` also selects engine families. A name matches a family by its name, by its name plus
+  `_total`, or by the name of one of its samples, for example `vllm:request_success_total` or
+  `vllm:e2e_request_latency_seconds_bucket`.
+* One worker: the text of the worker as it is. More than one worker (for example
+  `tensor_parallel_degree` below the number of GPUs): the families are merged, and every sample gets
+  a `worker` label with the device of its worker (`gpu0`, `gpu1`, or `gpu0-1` for a second worker on
+  the same device). With `SAGEMAKER_MULTI_MODEL=true` every sample has the label, even with one
+  worker. Without it the label appears when a second worker starts and goes away when only one is
+  left, so the series change their labels at that moment. A worker that restarts keeps its label,
+  and its counters start again at zero.
+* A worker that does not answer within 2 seconds, or whose answer is larger than 4 MiB, is left out
+  and a warning is logged, at most once every five minutes for each worker. If workers are
+  registered and none of them answers, the answer is `503`.
+* An identical request (the same `name[]` filters) is answered from the previous fetch for one
+  second, so scraping the same way more often does not add load on the workers. A request with
+  other filters starts its own fetch, and only the most recent one is kept. At most 32 fetches can be
+  unfinished at once. A request that would start another one gets `503` at once, so a burst of
+  requests with many different filters does not queue up behind a slow worker. A warning is logged
+  for that, at most once every five minutes.
+* The answer follows the worker process. If the engine process inside a running worker dies, the
+  worker still answers, with the values it recorded last, for as long as the worker process lives.
+* The workers need `prometheus_client`, which vLLM installs. A worker without it serves nothing.
+  Workers that run under MPI (for example TensorRT-LLM), on several nodes, or without Unix domain
+  sockets (Windows) do not serve engine metrics, and the answer has no engine families.
+* The setting is read when the server and its workers start.
