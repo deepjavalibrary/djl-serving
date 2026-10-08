@@ -22,6 +22,7 @@ import ai.djl.repository.zoo.ZooModel;
 import ai.djl.util.Utils;
 
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -72,5 +73,27 @@ public class PyEnvTest {
 
         System.setProperty("DJL_VENV_DIR", "/COM1"); // invalid path
         Assert.assertThrows(EngineException.class, criteria::loadModel);
+    }
+
+    @Test
+    public void testEngineMetricsSwitch() {
+        String name = "SERVING_ENGINE_METRICS";
+        if (System.getenv(name) != null) {
+            throw new SkipException(name + " is set in the environment.");
+        }
+        try {
+            // off unless it is set to true
+            Assert.assertFalse(PyEnv.isEngineMetricsEnabled());
+            for (String value : new String[] {"", "false", "0", "1", "yes", "tru"}) {
+                System.setProperty(name, value);
+                Assert.assertFalse(PyEnv.isEngineMetricsEnabled(), value);
+            }
+            for (String value : new String[] {"true", "TRUE", "True"}) {
+                System.setProperty(name, value);
+                Assert.assertTrue(PyEnv.isEngineMetricsEnabled(), value);
+            }
+        } finally {
+            System.clearProperty(name);
+        }
     }
 }

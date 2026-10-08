@@ -69,6 +69,7 @@ class Connection {
 
     private int port;
     private SocketAddress socketAddress;
+    private String metricsSocketPath;
     private Channel channel;
     private RequestHandler requestHandler;
 
@@ -82,6 +83,9 @@ class Connection {
         requestHandler = new RequestHandler(responseCallback, errorCallback);
         port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank, hostname);
+        if (!pyEnv.isMpiMode() && socketAddress instanceof DomainSocketAddress) {
+            metricsSocketPath = getMetricsSocketPath(port);
+        }
     }
 
     static Process startPython(PyEnv pyEnv, Model model, int workerId, int port, String[] hosts)
@@ -108,6 +112,10 @@ class Connection {
         }
         File modelPath = model.getModelPath().toFile();
         String[] args = getPythonStartCmd(pyEnv, model, workerId, port, hosts);
+        if (PyEnv.isEngineMetricsEnabled()) {
+            // a socket that is left over must not be taken for the one of the new python process
+            Utils.deleteQuietly(Paths.get(getMetricsSocketPath(port)));
+        }
         String[] envp = pyEnv.getEnvironmentVars(model);
         logger.debug("cmd: {}", (Object) args);
 
@@ -297,7 +305,8 @@ class Connection {
             logger.info("Set OMP_NUM_THREADS={}", neuronThreads);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
-        String[] args = new String[19];
+        boolean engineMetrics = uds && PyEnv.isEngineMetricsEnabled();
+        String[] args = new String[engineMetrics ? 21 : 19];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
@@ -317,6 +326,10 @@ class Connection {
         args[16] = "--log-level";
         args[17] = pythonLogLevel;
         args[18] = pyEnv.isAsyncMode() ? "--async-mode" : "--no-async-mode";
+        if (engineMetrics) {
+            args[19] = "--metrics-sock-name";
+            args[20] = getMetricsSocketPath(port);
+        }
         return args;
     }
 
@@ -396,10 +409,28 @@ class Connection {
             String path = ((DomainSocketAddress) socketAddress).path();
             Utils.deleteQuietly(Paths.get(path));
         }
+        if (metricsSocketPath != null) {
+            // a python process that was killed cannot remove its engine metrics socket
+            Utils.deleteQuietly(Paths.get(metricsSocketPath));
+        }
     }
 
     private static String getSocketPath(int port) {
         return System.getProperty("java.io.tmpdir") + "/djl_sock." + port;
+    }
+
+    private static String getMetricsSocketPath(int port) {
+        return getSocketPath(port) + ".metrics";
+    }
+
+    /**
+     * Returns the Unix socket on which the python process serves the metrics of its engine.
+     *
+     * @return the socket path, or {@code null} if the python process is not started with Unix
+     *     sockets or is part of an MPI or multi-node group
+     */
+    String getMetricsSocketPath() {
+        return metricsSocketPath;
     }
 
     private SocketAddress getSocketAddress(boolean mpiMode, int rank, String hostname) {

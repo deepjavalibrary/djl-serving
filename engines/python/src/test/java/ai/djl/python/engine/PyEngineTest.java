@@ -12,6 +12,7 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
@@ -31,30 +32,43 @@ import ai.djl.translate.NoopTranslator;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.RandomUtils;
+import ai.djl.util.Utils;
 
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.kqueue.KQueue;
+
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class PyEngineTest {
+
+    private static final String ENGINE_METRICS_SWITCH = "SERVING_ENGINE_METRICS";
+    private static final String ENGINE_METRICS_PREFIX = "engine_metrics_socket.";
 
     @BeforeClass
     public void setUp() {
@@ -64,6 +78,11 @@ public class PyEngineTest {
     @AfterClass
     public void tierDown() {
         System.clearProperty("ENGINE_CACHE_DIR");
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void clearEngineMetricsSwitch() {
+        System.clearProperty(ENGINE_METRICS_SWITCH);
     }
 
     @Test
@@ -597,6 +616,217 @@ public class PyEngineTest {
             }
             Assert.assertNotNull(output);
             Assert.assertEquals(output.getCode(), 200);
+        }
+    }
+
+    @Test
+    public void testEngineMetricsOffByDefault() throws IOException, ModelException {
+        skipIfEngineMetricsSwitchIsSet();
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Assert.assertTrue(engineMetricsSockets(model).isEmpty());
+            Assert.assertNotNull(predictor);
+        }
+    }
+
+    @Test
+    public void testEngineMetricsSocketLifecycle()
+            throws IOException, ModelException, InterruptedException {
+        skipIfEngineMetricsExporterIsMissing();
+        System.setProperty(ENGINE_METRICS_SWITCH, "true");
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel()) {
+            Path socket;
+            try (Predictor<Input, Output> predictor = model.newPredictor()) {
+                Assert.assertNotNull(predictor);
+                String label = EngineMetricsSources.deviceLabel(model.getNDManager().getDevice());
+                Map<String, String> sockets = engineMetricsSockets(model);
+                Assert.assertEquals(sockets.keySet().toArray(), new String[] {label});
+                socket = Paths.get(sockets.get(label));
+                Assert.assertTrue(
+                        socket.startsWith(Paths.get(System.getProperty("java.io.tmpdir"))));
+                Assert.assertTrue(socket.getFileName().toString().endsWith(".metrics"));
+                // a socket, not a regular file
+                Assert.assertTrue(
+                        Files.readAttributes(socket, BasicFileAttributes.class).isOther());
+                Assert.assertEquals(
+                        Files.getPosixFilePermissions(socket),
+                        PosixFilePermissions.fromString("rw-------"));
+            }
+            Assert.assertTrue(engineMetricsSockets(model).isEmpty());
+            Assert.assertFalse(Files.exists(socket));
+        }
+    }
+
+    @Test
+    public void testEngineMetricsSocketSurvivesRestart()
+            throws IOException, ModelException, InterruptedException {
+        skipIfEngineMetricsExporterIsMissing();
+        System.setProperty(ENGINE_METRICS_SWITCH, "true");
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Map<String, String> before = engineMetricsSockets(model);
+            Assert.assertEquals(before.size(), 1);
+            Path socket = Paths.get(before.values().iterator().next());
+            Assert.assertTrue(Files.exists(socket));
+
+            Input input = new Input();
+            input.add("exit", "true");
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(input));
+            // the worker restarts with the same identity
+            Assert.assertEquals(engineMetricsSockets(model), before);
+
+            Input input2 = new Input();
+            input2.add("data", "input");
+            Output output = null;
+            for (int i = 0; i < 10 && output == null; ++i) {
+                Thread.sleep(1000);
+                try {
+                    output = predictor.predict(input2);
+                } catch (TranslateException ignore) {
+                    // ignore
+                }
+            }
+            Assert.assertNotNull(output);
+            Assert.assertEquals(engineMetricsSockets(model), before);
+            Assert.assertTrue(Files.exists(socket));
+        }
+    }
+
+    @Test
+    public void testEngineMetricsSocketsOfSeveralWorkers()
+            throws IOException, ModelException, InterruptedException {
+        skipIfEngineMetricsExporterIsMissing();
+        System.setProperty(ENGINE_METRICS_SWITCH, "true");
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel()) {
+            String device = EngineMetricsSources.deviceLabel(model.getNDManager().getDevice());
+            String[] both = {device, device + "-1"};
+            Predictor<Input, Output> p1 = model.newPredictor();
+            try (Predictor<Input, Output> p2 = model.newPredictor()) {
+                Assert.assertNotNull(p2);
+                // the workers of one device are told apart by a number
+                Map<String, String> sockets = engineMetricsSockets(model);
+                Assert.assertEquals(sockets.keySet().toArray(), both);
+                Path first = Paths.get(sockets.get(device));
+                Path second = Paths.get(sockets.get(device + "-1"));
+                Assert.assertNotEquals(first, second);
+                Assert.assertTrue(Files.exists(first));
+                Assert.assertTrue(Files.exists(second));
+
+                // the first worker goes away, the second one keeps its label
+                p1.close();
+                sockets = engineMetricsSockets(model);
+                Assert.assertEquals(sockets.keySet().toArray(), new String[] {device + "-1"});
+                Assert.assertEquals(sockets.get(device + "-1"), second.toString());
+                Assert.assertFalse(Files.exists(first));
+                Assert.assertTrue(Files.exists(second));
+
+                // a new worker takes the free label
+                try (Predictor<Input, Output> p3 = model.newPredictor()) {
+                    Assert.assertNotNull(p3);
+                    sockets = engineMetricsSockets(model);
+                    Assert.assertEquals(sockets.keySet().toArray(), both);
+                    Assert.assertEquals(sockets.get(device + "-1"), second.toString());
+                    Assert.assertTrue(Files.exists(Paths.get(sockets.get(device))));
+                }
+                Assert.assertEquals(
+                        engineMetricsSockets(model).keySet().toArray(),
+                        new String[] {device + "-1"});
+            } finally {
+                // does nothing if the predictor is closed already
+                p1.close();
+            }
+            Assert.assertTrue(engineMetricsSockets(model).isEmpty());
+        }
+    }
+
+    @Test
+    public void testEngineMetricsSocketNotPublishedWhenStartFails()
+            throws IOException, ModelException {
+        skipIfEngineMetricsSwitchIsSet();
+        System.setProperty(ENGINE_METRICS_SWITCH, "true");
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/oom"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel()) {
+            Assert.assertThrows(EngineException.class, model::newPredictor);
+            Assert.assertTrue(engineMetricsSockets(model).isEmpty());
+
+            // the failed worker did not keep the label of its device
+            String label = EngineMetricsSources.deviceLabel(model.getNDManager().getDevice());
+            Assert.assertEquals(EngineMetricsSources.publish(model, "/tmp/probe.metrics"), label);
+            EngineMetricsSources.withdraw(model, label);
+        }
+    }
+
+    private static Map<String, String> engineMetricsSockets(Model model) {
+        Map<String, String> sockets = new TreeMap<>();
+        for (Map.Entry<String, String> entry : model.getProperties().entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith(ENGINE_METRICS_PREFIX)) {
+                sockets.put(key.substring(ENGINE_METRICS_PREFIX.length()), entry.getValue());
+            }
+        }
+        return sockets;
+    }
+
+    private static void skipIfEngineMetricsSwitchIsSet() {
+        if (System.getenv(ENGINE_METRICS_SWITCH) != null) {
+            throw new SkipException(ENGINE_METRICS_SWITCH + " is set in the environment.");
+        }
+    }
+
+    private static void skipIfEngineMetricsExporterIsMissing()
+            throws IOException, InterruptedException {
+        skipIfEngineMetricsSwitchIsSet();
+        if (!Epoll.isAvailable() && !KQueue.isAvailable()) {
+            throw new SkipException("Unix sockets are not available.");
+        }
+        // PyEnv.init() extracts the python files of the engine
+        Engine.getEngine("Python");
+        Path exporter = Paths.get(PyEnv.getEngineCacheDir(), "djl_python", "engine_metrics.py");
+        if (Files.notExists(exporter)) {
+            throw new SkipException(
+                    "The python engine in this build has no engine metrics exporter.");
+        }
+        Process process =
+                new ProcessBuilder(
+                                new PyEnv(false).getPythonExecutable(),
+                                "-c",
+                                "import prometheus_client")
+                        .redirectErrorStream(true)
+                        .start();
+        try (InputStream is = process.getInputStream()) {
+            Utils.toString(is);
+        }
+        if (!process.waitFor(60, TimeUnit.SECONDS) || process.exitValue() != 0) {
+            throw new SkipException("prometheus_client is not installed.");
         }
     }
 }

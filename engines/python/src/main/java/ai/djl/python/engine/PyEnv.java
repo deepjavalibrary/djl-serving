@@ -145,6 +145,18 @@ public class PyEnv {
         return clusterSize > 1;
     }
 
+    /**
+     * Returns whether the python workers serve the metrics of their engine.
+     *
+     * <p>Off unless the environment variable or system property {@code SERVING_ENGINE_METRICS} is
+     * {@code true}.
+     *
+     * @return {@code true} if the python workers serve the metrics of their engine
+     */
+    static boolean isEngineMetricsEnabled() {
+        return Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_ENGINE_METRICS"));
+    }
+
     static String getVersion() {
         return version;
     }
