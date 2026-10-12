@@ -1152,7 +1152,7 @@ public class ModelServerTest {
         assertFalse(body.contains("test_private_requests"), body);
     }
 
-    private void testEngineMetricsWorkersDown() throws InterruptedException {
+    private void testEngineMetricsWorkersDown() throws InterruptedException, IOException {
         logTestFunction();
         Map<String, String> sockets = engineMetricsSockets();
         assertEquals(sockets.size(), 2);
@@ -1294,26 +1294,21 @@ public class ModelServerTest {
                 "Expected " + count + " engine metrics sockets, found " + engineMetricsSockets());
     }
 
-    private static void killWorker(String metricsSocket) {
-        // The arguments of a process end at its first empty one, and the metrics socket comes
-        // after one. The request socket of the same python process comes before.
+    private static void killWorker(String metricsSocket) throws IOException {
+        // The python process writes its pid next to its request socket. The arguments of a
+        // process are not available on every operating system (macOS gives none), so they are
+        // not used to find it.
         String socket = metricsSocket.substring(0, metricsSocket.length() - ".metrics".length());
+        Path pidFile = Paths.get(socket + ".pid");
+        assertTrue(Files.exists(pidFile), "No " + pidFile + ": " + descendants());
+        long pid = Long.parseLong(Files.readString(pidFile).trim());
         List<ProcessHandle> workers =
                 ProcessHandle.current()
                         .descendants()
-                        .filter(
-                                p ->
-                                        p.info()
-                                                .arguments()
-                                                .map(a -> contains(a, socket))
-                                                .orElse(false))
+                        .filter(p -> p.pid() == pid)
                         .collect(Collectors.toList());
-        assertEquals(workers.size(), 1, "python workers with " + socket + ": " + descendants());
+        assertEquals(workers.size(), 1, "python worker " + pid + ": " + descendants());
         workers.get(0).destroyForcibly();
-    }
-
-    private static boolean contains(String[] array, String value) {
-        return Arrays.asList(array).contains(value);
     }
 
     private static String descendants() {
