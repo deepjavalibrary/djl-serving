@@ -281,7 +281,9 @@ final class EngineMetricsClient {
         /** {@inheritDoc} */
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            result.completeExceptionally(new ClosedChannelException());
+            if (!result.isDone()) {
+                result.completeExceptionally(new ClosedChannelException());
+            }
             ctx.fireChannelInactive();
         }
 

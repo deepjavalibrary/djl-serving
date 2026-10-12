@@ -32,8 +32,11 @@ import org.testng.Assert;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -718,6 +721,36 @@ public class EngineMetricsTest {
             Assert.assertTrue(
                     uri.matches("/metrics\\?worker=gpu[01]&name%5B%5D=vllm%3Aa_b&name%5B%5D=z"),
                     uri);
+        }
+    }
+
+    @Test
+    public void testFetchRefusesALinkThatLeavesTheTempDirectory() throws IOException {
+        Path tmp = Paths.get(System.getProperty("java.io.tmpdir")).toRealPath();
+        Path outsideDir = Paths.get("build", "engine-metrics-outside").toAbsolutePath();
+        Files.createDirectories(outsideDir);
+        if (outsideDir.toRealPath().startsWith(tmp)) {
+            throw new SkipException("the build directory is inside the temporary directory");
+        }
+        Path target = outsideDir.resolve("djl_sock.0.metrics");
+        Files.write(target, new byte[0]);
+        Path link = tmp.resolve("djl_sock.link-" + System.nanoTime() + ".metrics");
+        try {
+            Files.createSymbolicLink(link, target);
+        } catch (IOException | UnsupportedOperationException e) {
+            throw new SkipException("symbolic links are not available", e);
+        }
+        try {
+            CompletableFuture<String> fetched = EngineMetrics.fetch(link.toString(), "/metrics");
+            ExecutionException e =
+                    Assert.expectThrows(ExecutionException.class, () -> fetched.get());
+            Assert.assertTrue(e.getCause() instanceof IOException, String.valueOf(e.getCause()));
+            Assert.assertTrue(
+                    e.getCause().getMessage().contains("outside the temporary directory"),
+                    e.getCause().getMessage());
+        } finally {
+            Files.deleteIfExists(link);
+            Files.deleteIfExists(target);
         }
     }
 

@@ -25,6 +25,7 @@ import ai.djl.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -334,11 +335,30 @@ final class EngineMetrics {
         return null;
     }
 
+    /**
+     * Fetches one source. Symbolic links are resolved first, and the request goes to the resolved
+     * path only if it is still inside the temporary directory, so a link placed there cannot point
+     * the server at another socket.
+     */
     static CompletableFuture<String> fetch(String socketPath, String uri) {
-        if (!Files.exists(Paths.get(socketPath))) {
+        Path path = Paths.get(socketPath);
+        if (!Files.exists(path)) {
             return CompletableFuture.failedFuture(new NoSuchFileException(socketPath));
         }
-        return EngineMetricsClient.get(socketPath, uri, MAX_BODY_BYTES, TIMEOUT_MS);
+        Path real;
+        try {
+            real = path.toRealPath();
+            Path tmp = Paths.get(System.getProperty("java.io.tmpdir")).toRealPath();
+            if (!real.startsWith(tmp)) {
+                return CompletableFuture.failedFuture(
+                        new IOException(
+                                "Engine metrics socket resolves outside the temporary directory: "
+                                        + socketPath));
+            }
+        } catch (IOException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+        return EngineMetricsClient.get(real.toString(), uri, MAX_BODY_BYTES, TIMEOUT_MS);
     }
 
     CompletableFuture<Result> scrapeSources(List<String> names) {
