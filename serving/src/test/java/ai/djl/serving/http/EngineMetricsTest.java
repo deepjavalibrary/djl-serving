@@ -711,13 +711,26 @@ public class EngineMetricsTest {
         Harness h = new Harness(sources("gpu0", "gpu1"), false);
         h.fetcher.bodies.put(path("gpu0"), W0);
         h.fetcher.bodies.put(path("gpu1"), W1);
-        h.scrape(Arrays.asList("z", "vllm:a b"));
+        h.scrape(Arrays.asList("z", "vllm:a_b", "vllm:a b"));
+        Assert.assertEquals(h.fetcher.calls.size(), 2);
         for (String call : h.fetcher.calls) {
             String uri = call.substring(call.indexOf(' ') + 1);
             Assert.assertTrue(
-                    uri.matches("/metrics\\?worker=gpu[01]&name%5B%5D=vllm%3Aa\\+b&name%5B%5D=z"),
+                    uri.matches("/metrics\\?worker=gpu[01]&name%5B%5D=vllm%3Aa_b&name%5B%5D=z"),
                     uri);
         }
+    }
+
+    @Test
+    public void testOnlyInvalidNamesFetchNothing() {
+        Harness h = new Harness(sources("gpu0", "gpu1"), false);
+        h.fetcher.bodies.put(path("gpu0"), W0);
+        h.fetcher.bodies.put(path("gpu1"), W1);
+        Result result = h.scrape(Arrays.asList("vllm:a b", "x{y}"));
+        Assert.assertTrue(h.fetcher.calls.isEmpty(), String.valueOf(h.fetcher.calls));
+        Assert.assertEquals(result.body, "");
+        Assert.assertEquals(result.registered, 0);
+        Assert.assertEquals(result.ok, 0);
     }
 
     @Test

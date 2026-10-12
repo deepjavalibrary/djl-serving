@@ -350,6 +350,10 @@ final class EngineMetrics {
         } catch (RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
+        if (key.names.isEmpty() && names.stream().anyMatch(Objects::nonNull)) {
+            // Every requested name was invalid: nothing can match, so do not fetch at all.
+            return CompletableFuture.completedFuture(new Result("", 0, 0));
+        }
         Flight flight;
         boolean start = false;
         int reportRefused = 0;
