@@ -93,6 +93,9 @@ final class EngineMetrics {
 
     private static final Pattern LABEL = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
+    private static final Pattern METRIC_NAME_PATTERN =
+            Pattern.compile("^[a-zA-Z_:][a-zA-Z0-9_:]*$");
+
     private static final EngineMetrics INSTANCE =
             new EngineMetrics(
                     EngineMetrics::sources,
@@ -546,7 +549,7 @@ final class EngineMetrics {
             this.workerLabel = workerLabel;
             this.names = new TreeSet<>();
             for (String name : names) {
-                if (name != null) {
+                if (name != null && METRIC_NAME_PATTERN.matcher(name).matches()) {
                     this.names.add(name);
                 }
             }
