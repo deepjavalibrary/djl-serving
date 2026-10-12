@@ -244,7 +244,7 @@ public class EngineMetricsSourcesTest {
                 process.registerEngineMetrics();
                 Map<String, String> sources = engineMetricsProperties(model);
                 Assert.assertEquals(sources.size(), 1);
-                Assert.assertEquals(sources.get(PREFIX + "gpu9108"), socket.toString());
+                Assert.assertEquals(Paths.get(sources.get(PREFIX + "gpu9108")), socket);
 
                 // registering again does not take a second label
                 process.registerEngineMetrics();

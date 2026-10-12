@@ -740,7 +740,7 @@ public class PyEngineTest {
                 p1.close();
                 sockets = engineMetricsSockets(model);
                 Assert.assertEquals(sockets.keySet().toArray(), new String[] {device + "-1"});
-                Assert.assertEquals(sockets.get(device + "-1"), second.toString());
+                Assert.assertEquals(Paths.get(sockets.get(device + "-1")), second);
                 Assert.assertFalse(Files.exists(first));
                 Assert.assertTrue(Files.exists(second));
 
@@ -749,7 +749,7 @@ public class PyEngineTest {
                     Assert.assertNotNull(p3);
                     sockets = engineMetricsSockets(model);
                     Assert.assertEquals(sockets.keySet().toArray(), both);
-                    Assert.assertEquals(sockets.get(device + "-1"), second.toString());
+                    Assert.assertEquals(Paths.get(sockets.get(device + "-1")), second);
                     Assert.assertTrue(Files.exists(Paths.get(sockets.get(device))));
                 }
                 Assert.assertEquals(
