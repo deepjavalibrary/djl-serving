@@ -95,6 +95,9 @@ jobs:
     runs-on: [ self-hosted, p4d ]
     timeout-minutes: 120
     needs: create-runners-p4d
+    env:
+      # A released image can be older than the engine metrics check in client.py
+      SKIP_ENGINE_METRICS_CHECK: ${{ github.event.inputs.serving-version != '' && '1' || '' }}
     steps:
       - uses: actions/checkout@v6
       - name: Clean env

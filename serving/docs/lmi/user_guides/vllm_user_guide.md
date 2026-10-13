@@ -187,6 +187,64 @@ For example, if you want to enable the `speculative_config`, you can do:
 * `OPTION_SPECULATIVE_CONFIG='{"model": "meta-llama/Llama3.2-1B-Instruct", "num_speculative_tokens": 5}'`
 
 
+## Metrics
+
+LMI serves the Prometheus metrics that vLLM records. Scrape either path on the port of the model
+server, 8080 in the LMI container:
+
+* `GET /server/metrics`
+* `GET /metrics`
+
+```
+curl "http://localhost:8080/metrics?name[]=vllm:time_to_first_token_seconds"
+```
+
+The `vllm:` families (for example `vllm:time_to_first_token_seconds`, `vllm:e2e_request_latency_seconds`,
+`vllm:num_requests_running`, `vllm:kv_cache_usage_perc`, and `vllm:spec_decode_*` when speculative
+decoding is configured) have the same names, types, help texts and label keys as the ones that
+`vllm serve` exposes for the same vLLM version. The differences from `vllm serve` are:
+
+* The `http_*`, `python_*` and `process_*` families, families of other libraries (for example
+  `lmcache:`), and metrics that your own code registers are not served. The families that vLLM
+  registers in its own web server instead of in the engine are not served either, for example
+  `vllm:tool_call_parser_invocations_total`, because LMI does not run that web server.
+* The answer is always the Prometheus text format, whatever the `Accept` header says, and its
+  `Content-Type` is `text/plain; version=0.0.4; charset=utf-8` where `vllm serve` says
+  `version=1.0.0`.
+* `name[]` filters the answer. `vllm serve` ignores it and returns every family.
+* Without `option.served_model_name`, the `model_name` label is the path of the model files in the
+  container, where `vllm serve` uses the model name that you give it. Set the option (for example
+  to the Hugging Face model id) to get a label that does not change with the location or the
+  snapshot of the model.
+* With more than one worker (for example `option.tensor_parallel_degree` below the number of GPUs),
+  every sample has a `worker` label that names the device of its worker. With
+  `SAGEMAKER_MULTI_MODEL=true` the label is there with one worker too. Otherwise it appears when a
+  second worker starts and goes away when only one is left, so the series change their labels at
+  that moment.
+* The latency histograms start when a request reaches vLLM inside the worker. Time that a request
+  spends in the queue of the model server is not in them.
+* LMI does not stop a request in vLLM when its client disconnects. The request runs to its end and
+  counts as completed, and it stays in `vllm:num_requests_running` and in the token counters until
+  then, where `vllm serve` aborts it.
+* The defaults of some engine arguments differ from `vllm serve` (for example `max_num_seqs`,
+  `max_num_batched_tokens` and `max_loras`). A gauge or histogram with the same name can therefore
+  come from another operating point than in `vllm serve` with its defaults.
+* The answer follows the worker process. If the vLLM engine process inside a running worker dies,
+  the worker still answers, with the values it recorded last, for as long as the worker process
+  lives. `vllm serve` exits in that case.
+
+The LMI container image sets `SERVING_ENGINE_METRICS=true`, which turns this on. To turn it off, set
+the environment variable `SERVING_ENGINE_METRICS=false` when you deploy the container. The model
+server reads it when it starts, so on a hosted endpoint the change needs a new model or endpoint
+configuration, which replaces the instances. `SERVING_PROMETHEUS=true` is a separate setting that
+adds the metrics of the model server itself. See the
+[get metrics REST API](../../management_api.md#get-metrics) for the details.
+
+vLLM's own `option.disable_log_stats=true` (`OPTION_DISABLE_LOG_STATS=true`) also stops vLLM from
+recording these metrics. Do not use it in a deployment that runs in Secure Mode: Secure Mode rejects
+every `option.*` key that is not on its allowlist, so the model does not load.
+`SERVING_ENGINE_METRICS` is not an `option.*` key and Secure Mode does not check it.
+
 ## Custom Handlers
 
 **Note: Custom handler support is only available in async mode.**

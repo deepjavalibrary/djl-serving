@@ -54,6 +54,14 @@ class ArgParser(object):
             help=
             'If \'sock-type\' is \'unix\', sock-name is expected to be a string. '
             'Eg: --sock-name \"test_sock\"')
+        parser.add_argument(
+            '--metrics-sock-name',
+            required=False,
+            dest="metrics_sock_name",
+            type=str,
+            help=
+            'Path of the unix domain-socket on which the engine metrics are served. '
+            'The engine metrics are not served if this is not set')
         parser.add_argument('--device-id',
                             type=str,
                             dest='device_id',

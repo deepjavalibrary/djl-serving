@@ -298,6 +298,7 @@ public class PyModel extends BaseModel {
         }
         PyProcess worker = new PyProcess(this, pyEnv, -1);
         worker.startPythonProcess();
+        worker.registerEngineMetrics();
         return new PyPredictor<>(this, worker, timeout, translator, device);
     }
 

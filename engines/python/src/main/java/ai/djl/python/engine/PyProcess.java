@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -60,6 +62,9 @@ class PyProcess {
     private RollingBatch rollingBatch;
     private AsyncRequestManager asyncRequestManager;
     private AtomicInteger processExitedAbruptly;
+    // not this: startPythonProcess keeps the monitor of this while the model loads
+    private final Object engineMetricsLock = new Object();
+    private String engineMetricsLabel;
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
@@ -319,6 +324,36 @@ class PyProcess {
         }
     }
 
+    /**
+     * Publishes the engine metrics socket of the started python process on the model.
+     *
+     * <p>Does nothing unless engine metrics are enabled, the python process runs on Unix sockets
+     * outside of an MPI or multi-node group, and its metrics socket exists. A python process that
+     * cannot serve the metrics, for example because prometheus_client is not installed, never
+     * creates the socket. The registration is kept while the python process restarts, and removed
+     * by {@link #cleanUp()}.
+     */
+    void registerEngineMetrics() {
+        if (!PyEnv.isEngineMetricsEnabled()) {
+            return;
+        }
+        String path = connections.get(0).getMetricsSocketPath();
+        if (path == null) {
+            return;
+        }
+        if (Files.notExists(Paths.get(path))) {
+            logger.info("The python process does not serve engine metrics: no socket {}", path);
+            return;
+        }
+        synchronized (engineMetricsLock) {
+            if (engineMetricsLabel == null) {
+                engineMetricsLabel = EngineMetricsSources.publish(model, path);
+                logger.info(
+                        "Serving engine metrics of the python process as {}", engineMetricsLabel);
+            }
+        }
+    }
+
     synchronized void stopPythonProcess(boolean error) {
         restartCount.getAndIncrement();
         logger.info("Stop process: {}:{}, failure={}", workerId, pid, error);
@@ -369,9 +404,19 @@ class PyProcess {
     }
 
     void cleanUp() {
+        withdrawEngineMetrics();
         stopPythonProcess(false);
         if (rollingBatch != null) {
             rollingBatch.shutdown();
+        }
+    }
+
+    private void withdrawEngineMetrics() {
+        synchronized (engineMetricsLock) {
+            if (engineMetricsLabel != null) {
+                EngineMetricsSources.withdraw(model, engineMetricsLabel);
+                engineMetricsLabel = null;
+            }
         }
     }
 
