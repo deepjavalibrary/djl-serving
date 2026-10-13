@@ -641,10 +641,35 @@ public class EngineMetricsTest {
         Assert.assertEquals(h.scrape().body, MERGED);
         Assert.assertEquals(h.fetcher.calls.size(), 4);
 
-        // a caller 1.1 s after the last fetch started causes a new one
+        // a caller 1.1 s after the last fetch finished causes a new one
         h.clock.addAndGet(SECOND + SECOND / 10);
         Assert.assertEquals(h.scrape().body, MERGED);
         Assert.assertEquals(h.fetcher.calls.size(), 6);
+    }
+
+    @Test
+    public void testReuseWindowStartsWhenTheFetchFinishes() throws Exception {
+        Harness h = new Harness(sources("gpu0", "gpu1"), false);
+        h.fetcher.hold = true;
+        CompletableFuture<Result> slow = h.metrics.scrapeSources(Collections.emptyList());
+        Assert.assertEquals(h.fetcher.calls.size(), 2);
+
+        // the fetch takes 1.5 s, longer than the reuse window
+        h.clock.addAndGet(SECOND + SECOND / 2);
+        h.fetcher.complete(path("gpu0"), W0);
+        h.fetcher.complete(path("gpu1"), W1);
+        Assert.assertEquals(slow.get(10, TimeUnit.SECONDS).body, MERGED);
+
+        h.fetcher.hold = false;
+        h.fetcher.bodies.put(path("gpu0"), W0);
+        h.fetcher.bodies.put(path("gpu1"), W1);
+        h.clock.addAndGet(SECOND - 1);
+        Assert.assertEquals(h.scrape().body, MERGED);
+        Assert.assertEquals(h.fetcher.calls.size(), 2);
+
+        h.clock.addAndGet(1);
+        Assert.assertEquals(h.scrape().body, MERGED);
+        Assert.assertEquals(h.fetcher.calls.size(), 4);
     }
 
     @Test

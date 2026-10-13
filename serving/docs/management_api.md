@@ -333,7 +333,7 @@ vllm:num_requests_running{engine="0",model_name="facebook/opt-125m"} 0.0
   and a warning is logged, at most once every five minutes for each worker. If workers are
   registered and none of them answers, the answer is `503`.
 * An identical request (the same `name[]` filters) is answered from the previous fetch for one
-  second, so scraping the same way more often does not add load on the workers. A request with
+  second after that fetch finishes, so scraping the same way more often does not add load on the workers. A request with
   other filters starts its own fetch, and only the most recent one is kept. At most 32 fetches can be
   unfinished at once. A request that would start another one gets `503` at once, so a burst of
   requests with many different filters does not queue up behind a slow worker. A warning is logged

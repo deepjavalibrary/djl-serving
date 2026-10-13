@@ -46,6 +46,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -412,6 +413,7 @@ final class EngineMetrics {
                 fetchAll(flight);
             } catch (Throwable t) {
                 // A flight that never completes would keep every caller with the same key waiting.
+                flight.completedAt.set(clock.getAsLong());
                 flight.done.completeExceptionally(t);
                 throw t;
             }
@@ -458,6 +460,7 @@ final class EngineMetrics {
                             try {
                                 report(key.sources.keySet(), fetched);
                             } finally {
+                                flight.completedAt.set(clock.getAsLong());
                                 flight.done.complete(fetched);
                             }
                         });
@@ -608,17 +611,24 @@ final class EngineMetrics {
         final long startedAt;
         final CompletableFuture<List<Fetched>> done = new CompletableFuture<>();
 
+        /** When {@link #done} completed, set before it completes. */
+        final AtomicLong completedAt = new AtomicLong();
+
         Flight(Key key, long startedAt) {
             this.key = key;
             this.startedAt = startedAt;
         }
 
         /**
-         * Returns {@code true} if a caller must not share this flight: it is finished and older
-         * than the reuse window, or it is lost.
+         * Returns {@code true} if a caller must not share this flight: it finished longer ago than
+         * the reuse window, or it is lost. The window starts when the fetch finishes, so a slow
+         * fetch is still reused for the whole window.
          */
         boolean expired(long now) {
-            return now - startedAt >= REUSE_NANOS && (done.isDone() || lost(now));
+            if (done.isDone()) {
+                return now - completedAt.get() >= REUSE_NANOS;
+            }
+            return lost(now);
         }
 
         /**
