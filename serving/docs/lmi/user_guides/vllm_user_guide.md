@@ -8,11 +8,11 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 **Text Generation Models**
 
-Here is the list of text generation models supported in [vLLM 0.11.1](https://docs.vllm.ai/en/v0.11.1/models/supported_models.html#decoder-only-language-models).
+Here is the list of text generation models supported in [vLLM 0.31.0](https://docs.vllm.ai/en/v0.31.0/models/supported_models/#list-of-text-only-language-models).
 
 **Multi Modal Models**
 
-Here is the list of multi-modal models supported in [vLLM 0.11.1](https://docs.vllm.ai/en/v0.11.1/models/supported_models.html#decoder-only-language-models).
+Here is the list of multi-modal models supported in [vLLM 0.31.0](https://docs.vllm.ai/en/v0.31.0/models/supported_models/#list-of-multimodal-language-models).
 
 ### Model Coverage in CI
 
@@ -34,7 +34,7 @@ The following set of models are tested in our nightly tests
 
 ## Quantization Support
 
-The quantization techniques supported in vLLM 0.11.1 are listed [here](https://docs.vllm.ai/en/latest/features/quantization/).
+The quantization techniques supported in vLLM 0.31.0 are listed [here](https://docs.vllm.ai/en/v0.31.0/features/quantization/).
 
 We recommend that regardless of which quantization technique you are using that you pre-quantize the model.
 Runtime quantization adds additional overhead to the endpoint startup time.
@@ -53,7 +53,7 @@ The following quantization techniques are supported for runtime quantization:
 You can leverage these techniques by specifying `option.quantize=<fp8|bitsandbytes>` in serving.properties, or `OPTION_QUANTIZE=<fp8|bitsandbytes>` environment variable.
 
 Other quantization techniques supported by vLLM require ahead of time quantization to be served with LMI.
-You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.10.2/quantization/supported_hardware.html).
+You can find details on how to leverage those quantization techniques from the vLLM docs [here](https://docs.vllm.ai/en/v0.31.0/features/quantization/).
 
 ### Ahead of time (AOT) quantization
 
@@ -65,6 +65,13 @@ The engine will determine if it can use the Marlin kernels at runtime, and use t
 For example, let's say you are deploying an AWQ quantized model on a g6.12xlarge instance (GPUs support marlin).
 If you explicitly specify `option.quantize=awq`, the engine will not apply Marlin as it is explicitly instructed to only use `awq`.
 If you omit the `option.quantize` configuration, then the engine will determine it can use marlin and leverage that for optimized performance.
+
+GPTQ checkpoints that were quantized with activation ordering (`desc_act` is `true` in the quantization configuration of the checkpoint and the `group_size` is not -1) do not load.
+vLLM removed activation ordering in 0.30.0, and the engine fails with `GPTQ group activation ordering (desc_act=True) is no longer supported`.
+Use a GPTQ checkpoint that was quantized with `desc_act` set to `false`, or an AWQ or FP8 checkpoint.
+
+Compressed-tensors checkpoints that were quantized with `group` or `dynamic` activation ordering (`actorder` in the weight quantization configuration of the checkpoint) do not load either, and the engine fails with `Compressed-tensors group/dynamic activation ordering (actorder=...) is no longer supported`.
+Use a checkpoint with `weight` or `static` activation ordering, or without activation ordering.
 
 ## Quick Start Configurations 
 
@@ -145,10 +152,11 @@ Those situations will be called out specifically.
 | option.quantize                         | \>= 0.23.0  | option.quantization           | awq           | None                                       | The quantization algorithm to use. See "Quantization Support" for more details                               |
 | option.max_rolling_batch_prefill_tokens | \>= 0.24.0  | option.max_num_batched_tokens | 32768         | None                                       | Maximum number of tokens that the engine can process in a single batch iteration (includes prefill + decode) |
 | option.cpu_offload_gb_per_gpu           | \>= 0.29.0  | option.cpu_offload_gb | 4 (GB)        | 0                                          | The space in GiB to offload to CPU, per GPU. Default is 0, which means no offloading. |
+| option.trust_request_mm_kwargs          | \>= LMI v30 | None                          | true          | false                                      | Whether to accept the per-request `mm_processor_kwargs` and `media_io_kwargs` of chat completion and completion requests. A request that sets them is rejected with HTTP 400 by default. See [Vision Language Models](vision_language_models.md). Applies to the default (async) mode. Secure Mode does not allow this option. |
 
 In addition to the configurations specified in the table above, LMI supports all additional vLLM EngineArguments in Pass-Through mode.
 Pass-Through configurations are not processed or validated by LMI.
-You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.10.2_a/serving/engine_args.html).
+You can find the set of EngineArguments supported by vLLM [here](https://docs.vllm.ai/en/v0.31.0/configuration/engine_args/).
 
 You can specify these pass-through configurations in the serving.properties file by prefixing the configuration with `option.<config>`,
 or as environment variables by prefixing the configuration with `OPTION_<CONFIG>`.

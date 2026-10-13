@@ -7,10 +7,11 @@ LMI supports deploying the following types of Vision Language Models through the
 * llava_next (e.g. llava-hf/llava-v1.6-mistral-7b-hf)
 * phi3_v (e.g. microsoft/Phi-3-vision-128k-instruct)
 * paligemma (e.g. google/paligemma-3b-mix-224)
-* chameleon (facebook/chameleon-7b etc.)
 * fuyu (adept/fuyu-8b etc.)
 * pixtral (mistralai/Pixtral-12B-2409)
 * mLlama (meta-llama/Llama-3.2-11B-Vision-Instruct)
+
+vLLM does not support the chameleon architecture anymore (last supported in vLLM 0.28.0).
 
 ## Request Format
 
@@ -23,6 +24,7 @@ Deploying Vision Language Models with LMI is very similar to deploying Text Gene
 
 There are some additional, optional configs that are exposed:
 * `option.limit_mm_per_prompt`: For each multimodal plugin, limit how many input instances to allow for each prompt. Expects a comma-separated list of items, e.g.: `{"image": 16, "video": 2}` allows a maximum of 16 images and 2 videos per prompt. Defaults to 1 for each modality.
+* `option.trust_request_mm_kwargs`: Whether to accept the per-request `mm_processor_kwargs` and `media_io_kwargs` fields in chat completion and completion requests. LMI v30 (vLLM 0.31.0) rejects a request that sets either field with HTTP 400 unless this is `true`, because the fields change how many resources multimodal preprocessing uses. An empty object is accepted. Only enable it when the clients of the endpoint are trusted. Defaults to `false`. Applies to the default (async) mode. Secure Mode does not allow this option.
 
 Example SageMaker deployment code:
 

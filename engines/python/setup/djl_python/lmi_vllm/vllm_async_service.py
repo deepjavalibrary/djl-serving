@@ -17,6 +17,7 @@ import uuid
 from typing import Optional, Union, AsyncGenerator
 
 from vllm import AsyncLLMEngine
+from vllm.exceptions import VLLMValidationError
 from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
 from vllm.entrypoints.openai.completion.protocol import CompletionRequest
 
@@ -47,6 +48,7 @@ from djl_python.lmi_vllm.request_response_utils import (
     vllm_stream_output_formatter,
     vllm_non_stream_output_formatter,
     convert_lmi_schema_to_completion_request,
+    name_lmi_options,
     lmi_with_details_stream_output_formatter,
     lmi_stream_output_formatter,
     lmi_with_details_non_stream_output_formatter,
@@ -62,6 +64,9 @@ from djl_python.adapter_formatter_mixin import AdapterFormatterMixin
 logger = logging.getLogger(__name__)
 
 SESSION_REQUESTS = {"NEW_SESSION": create_session, "CLOSE": close_session}
+
+# The request fields that vLLM refuses unless option.trust_request_mm_kwargs is set
+MM_KWARGS_PARAMETERS = ("mm_processor_kwargs", "media_io_kwargs")
 
 
 class VLLMHandler(AdapterFormatterMixin):
@@ -158,7 +163,9 @@ class VLLMHandler(AdapterFormatterMixin):
                 self.vllm_engine,
                 self.model_registry,
                 request_logger=None,
-                chat_template_config=ChatTemplateConfig(),
+                chat_template_config=ChatTemplateConfig(
+                    trust_request_mm_kwargs=self.vllm_properties.
+                    trust_request_mm_kwargs),
             )
             self.normalize_embeddings = self.vllm_properties.normalize
             logger.info(
@@ -175,6 +182,8 @@ class VLLMHandler(AdapterFormatterMixin):
                 chat_template=resolved_chat_template,
                 chat_template_content_format=self.vllm_properties.
                 chat_template_content_format,
+                trust_request_mm_kwargs=self.vllm_properties.
+                trust_request_mm_kwargs,
                 enable_auto_tools=self.vllm_properties.enable_auto_tool_choice,
                 tool_parser=self.vllm_properties.tool_call_parser,
                 reasoning_parser=self.vllm_properties.reasoning_parser or "",
@@ -350,8 +359,19 @@ class VLLMHandler(AdapterFormatterMixin):
                 "", error=f"Input parsing failed: {str(e)}", code=424)
 
         # vLLM will extract the adapter from the request object via _maybe_get_adapters()
-        response = await processed_request.inference_invoker(
-            processed_request.vllm_request)
+        try:
+            response = await processed_request.inference_invoker(
+                processed_request.vllm_request)
+        except VLLMValidationError as e:
+            if e.parameter not in MM_KWARGS_PARAMETERS:
+                raise
+            # vLLM raises this for mm_processor_kwargs and media_io_kwargs without
+            # option.trust_request_mm_kwargs, and its web server answers 400 with the message.
+            # Without this the client gets a generic 424 and the reason is only in the log.
+            logger.warning(f"Request rejected: {e}")
+            return create_non_stream_output("",
+                                            error=name_lmi_options(str(e)),
+                                            code=400)
 
         # Check if custom formatter exists (applies to both streaming and non-streaming)
         custom_formatter = self._get_custom_formatter(

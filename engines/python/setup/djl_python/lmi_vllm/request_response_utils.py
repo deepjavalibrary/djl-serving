@@ -21,7 +21,7 @@ from vllm.entrypoints.openai.chat_completion.protocol import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
-from vllm.entrypoints.openai.engine.protocol import ErrorResponse
+from vllm.entrypoints.serve.engine.protocol import ErrorResponse
 from vllm.logprobs import Logprob
 from vllm.tokenizers import TokenizerLike
 
@@ -51,6 +51,19 @@ class ProcessedRequest:
         self.include_prompt = include_prompt
         self.lora_request = None
         self.adapter_name = None
+
+
+# The messages of vLLM name its command line flags, which LMI sets with options
+_FLAG_TO_OPTION = {
+    "--trust-request-mm-kwargs": "option.trust_request_mm_kwargs",
+}
+
+
+def name_lmi_options(message: str) -> str:
+    """Replace the command line flags in a message of vLLM with the options of LMI."""
+    for flag, option in _FLAG_TO_OPTION.items():
+        message = message.replace(flag, option)
+    return message
 
 
 def convert_lmi_schema_to_completion_request(

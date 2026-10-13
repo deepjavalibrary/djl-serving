@@ -86,6 +86,10 @@ class VllmRbProperties(Properties):
     normalize: bool = True
     chat_template: Optional[str] = None
     chat_template_content_format: Literal["auto", "string", "openai"] = "auto"
+    # vLLM >= 0.31.0 rejects per-request mm_processor_kwargs and media_io_kwargs
+    # unless the serving layer opts in. This is not an EngineArgs field, so the
+    # pass-through of undeclared properties would drop it.
+    trust_request_mm_kwargs: bool = False
 
     # This allows generic vllm engine args to be passed in and set with vllm
     model_config = ConfigDict(extra='allow', populate_by_name=True)

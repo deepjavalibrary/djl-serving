@@ -321,6 +321,9 @@ vLLMRollingBatchParameters : {
 
 Decoding methods supported in vLLM : Greedy (Default), Sampling, and Beam search.
 
+In the default (async) mode, and for chat completion requests in rolling batch mode, a sampling parameter that the request does not set takes the value from the model's `generation_config.json` when it has one, and the default above otherwise.
+Since vLLM 0.31.0 this includes `presence_penalty` and `frequency_penalty`.
+
 #### Additional TensorRT-LLM Generation Parameters 
 
 For TensorRTLLM handler, some of the common parameters have different default values. 
