@@ -172,6 +172,131 @@ public class SecureModePluginTest {
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testPySuffixEntryPointIsNotABuiltIn() throws IOException, ModelException {
+        // The djl_python prefix is not enough: the Python worker loads any entry point ending in
+        // .py as a file from the model directory. No model.py here, so this can only throw from
+        // the entry-point check.
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.evil.py");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTraversalEntryPointIsNotABuiltIn() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.../../../tmp/evil.py");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testAllowlistedEntryPointWithModelPy() throws IOException, ModelException {
+        // Naming a built-in entry point does not stop the Python worker importing model.py at
+        // startup, so the file is prohibited whichever entry point is set.
+        createFileWithContent(TEST_MODEL_DIR.resolve("model.py"), "foo");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testAllowlistedEntryPointWithTorchServeManifest() throws IOException, ModelException {
+        // service_loader ignores the entry point when a manifest is present and loads the handler
+        // the manifest names, so a built-in entry point and no model.py is not enough.
+        createFileWithContent(
+                TEST_MODEL_DIR.resolve("MAR-INF/MANIFEST.json"),
+                "{\"model\":{\"modelName\":\"m\",\"handler\":\"evil.py\"}}");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelectableSourceModuleIsRefused() throws IOException, ModelException {
+        // Nothing configures an entry point, so the entry-point check never runs: PyModel resolves
+        // the prefix to the extension-less file and service_loader imports that name.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("custom.py"),
+                "import os");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelectableBytecodeModuleIsRefused() throws IOException, ModelException {
+        // Same selection, no source file: import_module loads sourceless bytecode just as happily.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("custom.pyc"),
+                "bytecode");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelectableExtensionModuleIsRefused() throws IOException, ModelException {
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("custom.so"),
+                "native");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelectableTaggedExtensionModuleIsRefused() throws IOException, ModelException {
+        // The interpreter tag sits between the module name and the suffix, so matching the suffix
+        // against the whole name would let every tagged build through.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("custom.cpython-311-x86_64-linux-gnu.so"),
+                "native");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelectableAbi3ExtensionModuleIsRefused() throws IOException, ModelException {
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("custom.abi3.so"),
+                "native");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelfNamedModuleIsRefused() throws IOException, ModelException {
+        // The model directory is build/mock/model, so a file named "model" is what the engine
+        // resolves the prefix to, and its name becomes the entry point.
+        createFileWithContent(TEST_MODEL_DIR.resolve("model"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelfNamedScriptIsRefused() throws IOException {
+        // A .py prefix is selected the same way and loaded as a file rather than imported, which
+        // neither model.py nor the importable-sibling check covers.
+        Path dir = Paths.get("build/mock/evil.py");
+        createFileWithContent(dir.resolve("evil.py"), "import os");
+        SecureModeUtils.checkSelfNamedModule(dir, "model directory");
+    }
+
+    @Test
+    void testUnpairedFilesAreAllowed() throws IOException, ModelException {
+        // An extension-less file on its own is not importable, and a .py with no bare twin is not
+        // what the prefix selects, so neither is refused by this check.
+        createFileWithContent(TEST_MODEL_DIR.resolve("README"), "");
+        createFileWithContent(TEST_MODEL_DIR.resolve("modeling_qwen.py"), "import os");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testUntrustedEntryPointPyFile() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,

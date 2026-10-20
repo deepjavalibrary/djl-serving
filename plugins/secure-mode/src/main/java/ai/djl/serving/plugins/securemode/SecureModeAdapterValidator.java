@@ -72,9 +72,10 @@ public final class SecureModeAdapterValidator {
                     "Adapter path " + adapterPath + " is not a valid directory.");
         }
 
-        // Check for custom inference scripts (model.py)
+        // Check for custom inference scripts (model.py or a manifest-named handler)
         if (controls.contains(SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL)) {
             SecureModeUtils.checkModelPy(adapterDir, "adapter at " + adapterPath);
+            SecureModeUtils.checkTorchServeManifest(adapterDir, "adapter at " + adapterPath);
         }
 
         // Check for requirements.txt

@@ -24,11 +24,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -53,6 +55,12 @@ public final class SecureModeUtils {
 
     private static final Pattern PICKLE_EXTENSIONS_REGEX =
             Pattern.compile(".*\\.(?i:bin|pt|pth|ckpt|pkl)$");
+
+    private static final Pattern BUILTIN_ENTRY_POINT =
+            Pattern.compile("djl_python(\\.[A-Za-z_][A-Za-z0-9_]*)+");
+
+    // What import_module will load: source, sourceless bytecode, or a native extension.
+    private static final String[] IMPORTABLE_SUFFIXES = {".py", ".pyc", ".so", ".pyd"};
 
     private static final Logger logger = LoggerFactory.getLogger(SecureModeUtils.class);
 
@@ -120,7 +128,8 @@ public final class SecureModeUtils {
      * Check if a disallowed option is set via environment variables. The disallowed value is
      * handled on a per-option basis.
      */
-    private static void checkOptions(ModelInfo<?, ?> modelInfo, Set<String> securityControls) {
+    private static void checkOptions(ModelInfo<?, ?> modelInfo, Set<String> securityControls)
+            throws IOException {
         Properties prop = modelInfo.getProperties();
         Path modelDir = modelInfo.getModelDir();
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
@@ -134,14 +143,17 @@ public final class SecureModeUtils {
                     prop.getProperty(
                             "option.entryPoint",
                             Utils.getenv("DJL_ENTRY_POINT", Utils.getenv("OPTION_ENTRYPOINT")));
-            if (entryPoint != null) {
-                if (!entryPoint.startsWith("djl_python.")) {
-                    throw new IllegalConfigurationException(
-                            "Custom entrypoint is prohibited in Secure Mode.");
-                }
-            } else {
-                checkModelPy(modelDir, "model directory");
+            if (entryPoint != null && !isBuiltInEntryPoint(entryPoint)) {
+                throw new IllegalConfigurationException(
+                        "Custom entrypoint is prohibited in Secure Mode.");
             }
+            // Checked even when a built-in entry point is set: the Python worker imports model.py
+            // at startup whatever the entry point is.
+            checkModelPy(modelDir, "model directory");
+            checkTorchServeManifest(modelDir, "model directory");
+            // Both checked even when no entry point is set, because the engine then selects one.
+            checkSelfNamedModule(modelDir, "model directory");
+            checkSelectableModule(modelDir, "model directory");
         }
         if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
             checkRequirementsTxt(modelDir, "model directory");
@@ -157,6 +169,21 @@ public final class SecureModeUtils {
     }
 
     /**
+     * Returns whether an entry point names a module of the bundled {@code djl_python} package.
+     *
+     * <p>The prefix alone is not enough. {@code service_loader.load_model_service} treats any entry
+     * point ending in {@code .py} as a file to load from the model directory, so {@code
+     * djl_python.evil.py} would run a script out of an untrusted model while carrying the expected
+     * prefix.
+     *
+     * @param entryPoint the configured entry point
+     * @return true if the entry point is a built-in module rather than a script
+     */
+    private static boolean isBuiltInEntryPoint(String entryPoint) {
+        return !entryPoint.endsWith(".py") && BUILTIN_ENTRY_POINT.matcher(entryPoint).matches();
+    }
+
+    /**
      * Checks if model.py exists in the given directory.
      *
      * @param dir the directory to check
@@ -167,6 +194,107 @@ public final class SecureModeUtils {
         if (Files.isRegularFile(dir.resolve("model.py"))) {
             throw new IllegalConfigurationException(
                     "Custom model.py found in "
+                            + pathDescription
+                            + ", but custom inference scripts are prohibited in Secure Mode.");
+        }
+    }
+
+    /**
+     * Refuses a file whose name is the model directory's own name.
+     *
+     * <p>{@code PyModel.findModelFile} returns {@code modelDir.resolve(prefix)} whenever that is a
+     * regular file, with no extension required, and its name becomes the entry point. The prefix
+     * defaults to the directory's name, which an artifact author chooses, so a directory {@code
+     * evil.py} holding a file {@code evil.py} is loaded and executed as a script.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IllegalConfigurationException if such a file is found
+     */
+    static void checkSelfNamedModule(Path dir, String pathDescription) {
+        Path name = dir.toAbsolutePath().normalize().getFileName();
+        if (name == null) {
+            return;
+        }
+        if (Files.isRegularFile(dir.resolve(name.toString()))) {
+            throw new IllegalConfigurationException(
+                    "Custom inference script "
+                            + name
+                            + " found in "
+                            + pathDescription
+                            + ", but custom inference scripts are prohibited in Secure Mode.");
+        }
+    }
+
+    /**
+     * Refuses an extension-less file that sits beside an importable sibling of the same name.
+     *
+     * <p>With no entry point configured the engine selects one from the model's prefix, and {@code
+     * service_loader} imports the name it selects, whichever suffix Python resolves.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IOException if the directory cannot be listed
+     */
+    static void checkSelectableModule(Path dir, String pathDescription) throws IOException {
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(dir)) {
+            for (Path file : files) {
+                if (!Files.isRegularFile(file)) {
+                    continue;
+                }
+                String name = Objects.requireNonNull(file.getFileName()).toString();
+                String module = importableModuleName(name);
+                if (module != null && Files.isRegularFile(dir.resolve(module))) {
+                    throw new IllegalConfigurationException(
+                            "Custom inference module "
+                                    + name
+                                    + " found in "
+                                    + pathDescription
+                                    + ", but custom inference scripts are prohibited in Secure"
+                                    + " Mode.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the module name {@code import_module} would load the file under, or null.
+     *
+     * <p>An extension module carries an interpreter tag between the module name and the suffix, as
+     * in {@code custom.cpython-311-x86_64-linux-gnu.so}, so the name ends at the first dot rather
+     * than at the suffix. Matching the suffix exactly would miss every tagged build.
+     *
+     * @param fileName the file name to interpret
+     * @return the module name, or null if Python would not import the file
+     */
+    private static String importableModuleName(String fileName) {
+        for (String suffix : IMPORTABLE_SUFFIXES) {
+            if (fileName.endsWith(suffix)) {
+                int dot = fileName.indexOf('.');
+                return dot > 0 ? fileName.substring(0, dot) : null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Checks if a TorchServe manifest exists in the given directory.
+     *
+     * <p>{@code service_loader.load_model_service} ignores the entry point when {@code
+     * MAR-INF/MANIFEST.json} is present and loads the handler the manifest names instead, so a
+     * manifest selects custom code the same way model.py does.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IllegalConfigurationException if a manifest is found
+     */
+    static void checkTorchServeManifest(Path dir, String pathDescription) {
+        if (Files.isRegularFile(dir.resolve("MAR-INF/MANIFEST.json"))) {
+            throw new IllegalConfigurationException(
+                    "TorchServe manifest found in "
                             + pathDescription
                             + ", but custom inference scripts are prohibited in Secure Mode.");
         }

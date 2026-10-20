@@ -109,6 +109,12 @@ public final class DependencyManager {
             name = artifactId + '-' + version + '-' + tokens[3] + ".jar";
         }
 
+        // The name is built from artifactId and version and also goes into the download URL, so it
+        // has to be a plain file name.
+        if (name.contains("/") || name.contains("\\") || name.contains("..")) {
+            throw new IllegalArgumentException("Invalid dependency: " + dependency);
+        }
+
         Path file = depDir.resolve(name);
         if (Files.isRegularFile(file)) {
             logger.info("Found existing dependency: {}", name);
