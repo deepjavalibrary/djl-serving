@@ -404,13 +404,26 @@ class VLLMHandler(AdapterFormatterMixin):
 
     async def add_lora(self, lora_name: str, lora_alias: str, lora_path: str):
         logging.info(f"Adding LoRA {lora_name} from {lora_path}")
+        # vLLM resolves the adapter through PEFTHelper.from_local_dir, which
+        # requires adapter_config.json at the root of lora_path. A missing file
+        # kills the engine core inside add_lora below, taking the base model
+        # down with it, so the path has to be rejected before we get there.
+        if not os.path.isfile(os.path.join(lora_path, "adapter_config.json")):
+            raise ValueError(
+                f"No adapter_config.json in {lora_path}. Point the adapter source at"
+                " the directory holding the adapter weights, not a parent of it"
+            )
         lora_id = self.lora_id_counter.inc(1)
         lora_request = create_lora_request(lora_name, lora_id, lora_path, None)
-        # Register the LoRA request with the model registry so vLLM can find it
-        self.model_registry.lora_requests[lora_name] = lora_request
-        self.lora_requests[lora_request.lora_name] = lora_request
         result = await self.vllm_engine.add_lora(lora_request)
         logging.info(f"LoRA {lora_name} added to engine: {result}")
+        if not result:
+            raise ValueError(
+                f"Engine rejected LoRA {lora_name} from {lora_path}")
+        # Registered only once the engine holds it, so a failed load cannot leave
+        # a lora_int_id behind for a later request to resolve.
+        self.model_registry.lora_requests[lora_name] = lora_request
+        self.lora_requests[lora_request.lora_name] = lora_request
         return result
 
     async def remove_lora(self, lora_name: str, lora_alias: str):
