@@ -23,6 +23,7 @@ import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.util.NettyUtils;
+import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -41,12 +42,16 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.handler.codec.http.multipart.MixedAttribute;
 import io.netty.util.internal.StringUtil;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -55,10 +60,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 /** A class handling inbound HTTP requests for the console API. */
 public class ConsoleRequestHandler implements RequestHandler<Void> {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConsoleRequestHandler.class);
+    private static final AtomicBoolean DISABLED_WARNED = new AtomicBoolean();
 
     /** {@inheritDoc} */
     @Override
@@ -68,7 +77,31 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         }
 
         HttpRequest req = (HttpRequest) msg;
-        return req.uri().startsWith("/console/api/");
+        if (!req.uri().startsWith("/console/api/")) {
+            return false;
+        }
+        if (!isConsoleApiEnabled()) {
+            // Warned once, not per request: the gate is consulted twice for every request.
+            if (DISABLED_WARNED.compareAndSet(false, true)) {
+                logger.warn(
+                        "Console API is disabled, returning 404. Set DJL_ENABLE_CONSOLE_API=true to"
+                                + " enable it once the port serving it is reachable only by the"
+                                + " operator.");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether the console API is explicitly enabled.
+     *
+     * <p>Not read from {@code config.properties}, because this API can rewrite that file.
+     *
+     * @return true if {@code DJL_ENABLE_CONSOLE_API} is set true
+     */
+    private static boolean isConsoleApiEnabled() {
+        return Boolean.parseBoolean(Utils.getEnvOrSystemProperty("DJL_ENABLE_CONSOLE_API"));
     }
 
     /** {@inheritDoc} */
@@ -191,12 +224,41 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(version));
     }
 
-    private void deleteDependency(ChannelHandlerContext ctx, String name) {
-        if (name.contains("..")) {
-            throw new BadRequestException("Invalid dependency file name:" + name);
+    /**
+     * Resolves a client-supplied file name inside a directory the server chose.
+     *
+     * <p>Requires a plain name: a name with a directory component can neither escape the directory
+     * nor reach a symbolic link already inside it. Every endpoint that takes a name from the client
+     * goes through this, reads included, so one rule covers them all.
+     *
+     * @param dir the directory the name must resolve inside
+     * @param fileName the client-supplied name
+     * @return the resolved path
+     */
+    private static Path resolveInDir(Path dir, String fileName) {
+        if (fileName == null
+                || fileName.isEmpty()
+                || fileName.indexOf('/') >= 0
+                || fileName.indexOf('\\') >= 0
+                || ".".equals(fileName)
+                || "..".equals(fileName)) {
+            throw new BadRequestException("Invalid file name: " + fileName);
         }
+        Path file = dir.resolve(fileName).normalize();
+        if (!file.startsWith(dir.normalize())) {
+            // resolve() is unspecified for a rooted name, as C:evil.jar is on Windows.
+            throw new BadRequestException("Invalid file name: " + fileName);
+        }
+        if (Files.isSymbolicLink(file)) {
+            // The checks above are lexical: a link inside the directory can still point out.
+            throw new BadRequestException("Invalid file name: " + fileName);
+        }
+        return file;
+    }
+
+    private void deleteDependency(ChannelHandlerContext ctx, String name) {
         String serverHome = ConfigManager.getModelServerHome();
-        Path path = Paths.get(serverHome, "deps", name);
+        Path path = resolveInDir(Paths.get(serverHome, "deps"), name);
         try {
             Files.delete(path);
         } catch (IOException e) {
@@ -276,9 +338,10 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                         String filename = file.getFilename();
                         Path write =
                                 Files.write(
-                                        Paths.get(depDir.toString(), filename),
+                                        resolveInDir(depDir, filename),
                                         bytes,
-                                        StandardOpenOption.CREATE);
+                                        StandardOpenOption.CREATE,
+                                        LinkOption.NOFOLLOW_LINKS);
                         MutableClassLoader mcl = MutableClassLoader.getInstance();
                         mcl.addURL(write.toUri().toURL());
                     }
@@ -336,9 +399,10 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                 String filename = fileUpload.getFilename();
                 Path write =
                         Files.write(
-                                Paths.get(dir.toString(), filename),
+                                resolveInDir(dir, filename),
                                 bytes,
-                                StandardOpenOption.CREATE);
+                                StandardOpenOption.CREATE,
+                                LinkOption.NOFOLLOW_LINKS);
 
                 NettyUtils.sendJsonResponse(ctx, write.toUri().toString());
 
@@ -355,10 +419,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         requiresGet(method);
         String modelServerHome = ConfigManager.getModelServerHome();
         Path dir = Paths.get(modelServerHome, "logs");
-        if (fileName.contains("..")) {
-            throw new BadRequestException("Invalid log file name:" + fileName);
-        }
-        Path file = dir.resolve(fileName);
+        Path file = resolveInDir(dir, fileName);
         if (!Files.isRegularFile(file)) {
             throw new BadRequestException("File does not exist");
         }
@@ -398,10 +459,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         requiresGet(method);
         String modelServerHome = ConfigManager.getModelServerHome();
         Path dir = Paths.get(modelServerHome, "logs");
-        if (fileName.contains("..")) {
-            throw new BadRequestException("Invalid log file name:" + fileName);
-        }
-        Path file = dir.resolve(fileName);
+        Path file = resolveInDir(dir, fileName);
         if (!Files.isRegularFile(file)) {
             throw new BadRequestException("File does not exist");
         }

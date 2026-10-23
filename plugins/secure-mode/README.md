@@ -29,7 +29,10 @@ All model options are validated against an allowlist. Only ~100 explicitly allow
 
 Blocks custom Python entrypoints:
 - `model.py` in model/adapter directory
-- `option.entryPoint` not starting with `djl_python.`
+- `option.entryPoint` other than a built-in handler (`djl_python.huggingface`, `djl_python.sagemaker`,
+  `djl_python.sklearn_handler`, `djl_python.tensorrt_llm`, `djl_python.xgboost_handler`,
+  `djl_python.lmi_trtllm.trtllm_async_service`, `djl_python.lmi_vllm.vllm_async_service`)
+- `MAR-INF/MANIFEST.json`, or a model file the engine would select as its entry point
 - Only allows built-in DJL Python handlers
 
 ### 2. Trust Remote Code (DISALLOW_TRUST_REMOTE_CODE)

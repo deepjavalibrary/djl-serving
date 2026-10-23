@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.plugins.securemode;
 
+import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.http.IllegalConfigurationException;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.util.JsonUtils;
@@ -24,6 +25,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -53,6 +56,18 @@ public final class SecureModeUtils {
 
     private static final Pattern PICKLE_EXTENSIONS_REGEX =
             Pattern.compile(".*\\.(?i:bin|pt|pth|ckpt|pkl)$");
+
+    // The bundled djl_python modules that define a handle() entry function.
+    private static final Set<String> BUILTIN_ENTRY_POINTS =
+            new HashSet<>(
+                    Arrays.asList(
+                            "djl_python.huggingface",
+                            "djl_python.sagemaker",
+                            "djl_python.sklearn_handler",
+                            "djl_python.tensorrt_llm",
+                            "djl_python.xgboost_handler",
+                            "djl_python.lmi_trtllm.trtllm_async_service",
+                            "djl_python.lmi_vllm.vllm_async_service"));
 
     private static final Logger logger = LoggerFactory.getLogger(SecureModeUtils.class);
 
@@ -134,14 +149,16 @@ public final class SecureModeUtils {
                     prop.getProperty(
                             "option.entryPoint",
                             Utils.getenv("DJL_ENTRY_POINT", Utils.getenv("OPTION_ENTRYPOINT")));
-            if (entryPoint != null) {
-                if (!entryPoint.startsWith("djl_python.")) {
-                    throw new IllegalConfigurationException(
-                            "Custom entrypoint is prohibited in Secure Mode.");
-                }
-            } else {
-                checkModelPy(modelDir, "model directory");
+            if (entryPoint != null && !isBuiltInEntryPoint(entryPoint)) {
+                throw new IllegalConfigurationException(
+                        "Custom entrypoint is prohibited in Secure Mode.");
             }
+            // Checked even when a built-in entry point is set: the Python worker imports model.py
+            // at startup whatever the entry point is.
+            checkModelPy(modelDir, "model directory");
+            checkTorchServeManifest(modelDir, "model directory");
+            // With no entry point set, the engine selects one from the model's files.
+            checkSelectedModelFile(modelInfo, modelDir);
         }
         if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
             checkRequirementsTxt(modelDir, "model directory");
@@ -157,6 +174,21 @@ public final class SecureModeUtils {
     }
 
     /**
+     * Returns whether an entry point names a handler module of the bundled {@code djl_python}
+     * package.
+     *
+     * <p>An allowlist rather than the {@code djl_python.} prefix: {@code service_loader} loads an
+     * entry point ending in {@code .py} as a file from the model directory, and any other name is
+     * imported from wherever Python finds it.
+     *
+     * @param entryPoint the configured entry point
+     * @return true if the entry point is a built-in handler
+     */
+    private static boolean isBuiltInEntryPoint(String entryPoint) {
+        return BUILTIN_ENTRY_POINTS.contains(entryPoint);
+    }
+
+    /**
      * Checks if model.py exists in the given directory.
      *
      * @param dir the directory to check
@@ -167,6 +199,91 @@ public final class SecureModeUtils {
         if (Files.isRegularFile(dir.resolve("model.py"))) {
             throw new IllegalConfigurationException(
                     "Custom model.py found in "
+                            + pathDescription
+                            + ", but custom inference scripts are prohibited in Secure Mode.");
+        }
+    }
+
+    /**
+     * Refuses a model file the Python engine would select as its entry point.
+     *
+     * <p>With no entry point configured, {@code PyModel.findModelFile} uses {@code
+     * modelDir.resolve(prefix)} whenever that is a regular file, with no extension required, and
+     * passes its name to {@code service_loader}, which loads a {@code .py} name as a script and
+     * imports any other name, dotted package paths included. The prefix is the artifact name, since
+     * {@code option.modelName} is not allowed in Secure Mode: the {@code model_name} or {@code
+     * artifact_id} URL argument, else the last segment of the model URL (a {@code .py} file URL
+     * selects that file), else the directory's own name, or its parent's when the model sits in a
+     * single nested directory.
+     *
+     * @param modelInfo the model
+     * @param modelDir the model directory
+     * @throws IllegalConfigurationException if a candidate prefix names a file
+     */
+    static void checkSelectedModelFile(ModelInfo<?, ?> modelInfo, Path modelDir) {
+        Set<String> prefixes = new HashSet<>();
+        Path dir = modelDir.toAbsolutePath().normalize();
+        addFileName(prefixes, dir);
+        Path parent = dir.getParent();
+        // getNestedModelDir fails on a directory it cannot list.
+        if (parent != null
+                && Files.isReadable(parent)
+                && dir.equals(Utils.getNestedModelDir(parent))) {
+            addFileName(prefixes, parent);
+        }
+        String url = modelInfo.getModelUrl();
+        if (url != null) {
+            int query = url.indexOf('?');
+            String path = query >= 0 ? url.substring(0, query) : url;
+            String name = path.substring(path.lastIndexOf('/') + 1);
+            prefixes.add(name);
+            prefixes.add(FilenameUtils.getNamePart(name));
+            if (query >= 0) {
+                for (String arg : url.substring(query + 1).split("&")) {
+                    String[] pair = arg.split("=", 2);
+                    if (pair.length == 2
+                            && ("model_name".equals(pair[0]) || "artifact_id".equals(pair[0]))) {
+                        prefixes.add(URLDecoder.decode(pair[1], StandardCharsets.UTF_8));
+                    }
+                }
+            }
+        }
+        for (String prefix : prefixes) {
+            if (prefix.isEmpty() || prefix.indexOf('/') >= 0 || prefix.indexOf('\\') >= 0) {
+                continue;
+            }
+            if (Files.isRegularFile(modelDir.resolve(prefix))) {
+                throw new IllegalConfigurationException(
+                        "Custom inference script "
+                                + prefix
+                                + " found in model directory, but custom inference scripts are"
+                                + " prohibited in Secure Mode.");
+            }
+        }
+    }
+
+    private static void addFileName(Set<String> names, Path path) {
+        Path name = path.getFileName();
+        if (name != null) {
+            names.add(name.toString());
+        }
+    }
+
+    /**
+     * Checks if a TorchServe manifest exists in the given directory.
+     *
+     * <p>{@code service_loader.load_model_service} ignores the entry point when {@code
+     * MAR-INF/MANIFEST.json} is present and loads the handler the manifest names instead, so a
+     * manifest selects custom code the same way model.py does.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IllegalConfigurationException if a manifest is found
+     */
+    static void checkTorchServeManifest(Path dir, String pathDescription) {
+        if (Files.isRegularFile(dir.resolve("MAR-INF/MANIFEST.json"))) {
+            throw new IllegalConfigurationException(
+                    "TorchServe manifest found in "
                             + pathDescription
                             + ", but custom inference scripts are prohibited in Secure Mode.");
         }

@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarEntry;
 
 /**
@@ -49,6 +50,8 @@ public class StaticFileHandler implements RequestHandler<Void> {
     private static final Path WEB_HOME = Paths.get(ConfigManager.getModelServerHome(), WEB_ROOT);
     private static final String RESOURCE_FOLDER = "/static";
 
+    private static final AtomicReference<Path> REAL_WEB_HOME = new AtomicReference<>();
+
     /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) {
@@ -62,7 +65,8 @@ public class StaticFileHandler implements RequestHandler<Void> {
         }
         QueryStringDecoder decoder = new QueryStringDecoder(request.uri());
         String uri = decoder.path();
-        return Files.isRegularFile(mapToPath(uri)) || mapToResource(uri) != null;
+        Path file = mapToPath(uri);
+        return file != null && Files.isRegularFile(file) || mapToResource(uri) != null;
     }
 
     /** {@inheritDoc} */
@@ -74,7 +78,7 @@ public class StaticFileHandler implements RequestHandler<Void> {
             String[] segments) {
         String uri = decoder.path();
         Path path = mapToPath(uri);
-        if (Files.isRegularFile(path)) {
+        if (path != null && Files.isRegularFile(path)) {
             NettyUtils.sendFile(ctx, path, HttpUtil.isKeepAlive(request));
             return null;
         }
@@ -97,10 +101,45 @@ public class StaticFileHandler implements RequestHandler<Void> {
 
     private Path mapToPath(String uri) {
         if (uri.endsWith("/") || uri.isEmpty()) {
-            return WEB_HOME.resolve("index.html");
+            return realFileInWebHome(WEB_HOME.resolve("index.html"));
         }
 
-        return WEB_HOME.resolve(uri.substring(1));
+        return realFileInWebHome(WEB_HOME.resolve(uri.substring(1)));
+    }
+
+    private static Path realFileInWebHome(Path file) {
+        try {
+            // The real path, not a normalized one: normalize() does not follow links, so a link
+            // under the web root would serve a file outside it. Both sides are resolved, since
+            // the root itself may be reached through one.
+            Path real = file.toRealPath();
+            return real.startsWith(realWebHome()) ? real : null;
+        } catch (IOException e) {
+            // Includes a file or a web root that does not exist, where the caller falls back to
+            // the bundled resource.
+            return null;
+        }
+    }
+
+    private static Path realWebHome() throws IOException {
+        // Cached once found; until then the web root may not exist yet.
+        Path root = REAL_WEB_HOME.get();
+        if (root == null) {
+            root = WEB_HOME.toRealPath();
+            REAL_WEB_HOME.set(root);
+        }
+        return root;
+    }
+
+    private static boolean hasDotDotSegment(String uri) {
+        // Both separators: a classpath directory resolves the name on the file system, where
+        // Windows separates on the backslash.
+        for (String segment : uri.split("[/\\\\]")) {
+            if ("..".equals(segment)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private URL mapToResource(String uri) {
@@ -108,6 +147,11 @@ public class StaticFileHandler implements RequestHandler<Void> {
         sb.append(uri);
         if (uri.endsWith("/")) {
             sb.append("index.html");
+        }
+        if (hasDotDotSegment(uri)) {
+            // Scanned as segments rather than resolved as a Path: this runs inside
+            // acceptInboundMessage, where an exception would drop the connection.
+            return null;
         }
         return getClass().getResource(sb.toString());
     }
