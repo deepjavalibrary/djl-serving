@@ -110,12 +110,16 @@ public final class DependencyManager {
         }
 
         // The name is built from artifactId and version and also goes into the download URL, so it
-        // has to be a plain file name.
-        if (name.contains("/") || name.contains("\\") || name.contains("..")) {
+        // has to be a plain file name. It ends in .jar, so without separators it cannot be "..".
+        if (name.contains("/") || name.contains("\\")) {
             throw new IllegalArgumentException("Invalid dependency: " + dependency);
         }
 
         Path file = depDir.resolve(name);
+        if (Files.isSymbolicLink(file)) {
+            // The class loader would follow the link and load whatever it points at.
+            throw new IllegalArgumentException("Invalid dependency: " + dependency);
+        }
         if (Files.isRegularFile(file)) {
             logger.info("Found existing dependency: {}", name);
         } else {

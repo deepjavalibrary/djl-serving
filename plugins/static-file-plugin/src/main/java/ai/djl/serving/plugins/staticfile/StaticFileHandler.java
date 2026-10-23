@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarEntry;
 
 /**
@@ -48,6 +49,8 @@ public class StaticFileHandler implements RequestHandler<Void> {
             ConfigManager.getInstance().getProperty("WEB_ROOT", "public");
     private static final Path WEB_HOME = Paths.get(ConfigManager.getModelServerHome(), WEB_ROOT);
     private static final String RESOURCE_FOLDER = "/static";
+
+    private static final AtomicReference<Path> REAL_WEB_HOME = new AtomicReference<>();
 
     /** {@inheritDoc} */
     @Override
@@ -110,12 +113,22 @@ public class StaticFileHandler implements RequestHandler<Void> {
             // under the web root would serve a file outside it. Both sides are resolved, since
             // the root itself may be reached through one.
             Path real = file.toRealPath();
-            return real.startsWith(WEB_HOME.toRealPath()) ? real : null;
+            return real.startsWith(realWebHome()) ? real : null;
         } catch (IOException e) {
             // Includes a file or a web root that does not exist, where the caller falls back to
             // the bundled resource.
             return null;
         }
+    }
+
+    private static Path realWebHome() throws IOException {
+        // Cached once found; until then the web root may not exist yet.
+        Path root = REAL_WEB_HOME.get();
+        if (root == null) {
+            root = WEB_HOME.toRealPath();
+            REAL_WEB_HOME.set(root);
+        }
+        return root;
     }
 
     private static boolean hasDotDotSegment(String uri) {

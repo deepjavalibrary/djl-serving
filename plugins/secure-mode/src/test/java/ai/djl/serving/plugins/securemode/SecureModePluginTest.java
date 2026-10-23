@@ -191,6 +191,15 @@ public class SecureModePluginTest {
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testUnlistedBuiltInPackageEntryPoint() throws IOException, ModelException {
+        // Only the bundled handlers are allowed, not every name under the djl_python package.
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.not_shipped");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testAllowlistedEntryPointWithModelPy() throws IOException, ModelException {
         // Naming a built-in entry point does not stop the Python worker importing model.py at
         // startup, so the file is prohibited whichever entry point is set.
@@ -215,53 +224,31 @@ public class SecureModePluginTest {
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
-    void testSelectableSourceModuleIsRefused() throws IOException, ModelException {
-        // Nothing configures an entry point, so the entry-point check never runs: PyModel resolves
-        // the prefix to the extension-less file and service_loader imports that name.
-        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
-        mockSecurityEnv(
-                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                TEST_MODEL_DIR.resolve("custom.py"),
-                "import os");
+    void testUrlNamedModuleIsRefused() throws IOException {
+        // The model_name argument becomes the prefix, and a dotted name is imported as a package
+        // path, so the file it names selects model code.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom.foo"), "");
+        String url = TEST_MODEL_DIR.toUri() + "?model_name=custom.foo";
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
-    void testSelectableBytecodeModuleIsRefused() throws IOException, ModelException {
-        // Same selection, no source file: import_module loads sourceless bytecode just as happily.
-        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
-        mockSecurityEnv(
-                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                TEST_MODEL_DIR.resolve("custom.pyc"),
-                "bytecode");
+    void testScriptModelUrlIsRefused() throws IOException {
+        // A model URL naming a .py file makes that file the entry point.
+        Path script = TEST_MODEL_DIR.resolve("custom.py");
+        createFileWithContent(script, "import os");
+        String url = script.toUri().toString();
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
-    void testSelectableExtensionModuleIsRefused() throws IOException, ModelException {
-        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
-        mockSecurityEnv(
-                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                TEST_MODEL_DIR.resolve("custom.so"),
-                "native");
-    }
-
-    @Test(expectedExceptions = IllegalConfigurationException.class)
-    void testSelectableTaggedExtensionModuleIsRefused() throws IOException, ModelException {
-        // The interpreter tag sits between the module name and the suffix, so matching the suffix
-        // against the whole name would let every tagged build through.
-        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
-        mockSecurityEnv(
-                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                TEST_MODEL_DIR.resolve("custom.cpython-311-x86_64-linux-gnu.so"),
-                "native");
-    }
-
-    @Test(expectedExceptions = IllegalConfigurationException.class)
-    void testSelectableAbi3ExtensionModuleIsRefused() throws IOException, ModelException {
-        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
-        mockSecurityEnv(
-                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                TEST_MODEL_DIR.resolve("custom.abi3.so"),
-                "native");
+    void testNestedSelfNamedModuleIsRefused() throws IOException {
+        // The artifact keeps the outer directory's name when the model is its only subdirectory.
+        Path outer = Paths.get("build/mock/outer");
+        Path inner = outer.resolve("inner");
+        createFileWithContent(inner.resolve("outer"), "");
+        String url = outer.toUri().toString();
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), inner);
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
@@ -277,18 +264,18 @@ public class SecureModePluginTest {
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
     void testSelfNamedScriptIsRefused() throws IOException {
-        // A .py prefix is selected the same way and loaded as a file rather than imported, which
-        // neither model.py nor the importable-sibling check covers.
+        // A .py prefix is selected the same way and loaded as a file rather than imported.
         Path dir = Paths.get("build/mock/evil.py");
         createFileWithContent(dir.resolve("evil.py"), "import os");
-        SecureModeUtils.checkSelfNamedModule(dir, "model directory");
+        String url = dir.toUri().toString();
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), dir);
     }
 
     @Test
     void testUnpairedFilesAreAllowed() throws IOException, ModelException {
-        // An extension-less file on its own is not importable, and a .py with no bare twin is not
-        // what the prefix selects, so neither is refused by this check.
-        createFileWithContent(TEST_MODEL_DIR.resolve("README"), "");
+        // Files the prefix does not name are not selected, whatever siblings they have.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom.py"), "import os");
         createFileWithContent(TEST_MODEL_DIR.resolve("modeling_qwen.py"), "import os");
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,

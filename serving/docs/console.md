@@ -7,9 +7,10 @@ single-port configuration that port is also the inference port. Enable it with
 `DJL_ENABLE_CONSOLE_API=true` (or `-DDJL_ENABLE_CONSOLE_API=true`). While disabled,
 `/console/api/*` returns 404 and the pages below cannot act on the server.
 
-This gate covers the console API only. The inference and management APIs are unaffected by it and
-stay reachable on their configured ports; restrict those separately, as described in
-[configurations](configuration.md).
+This gate covers the console API only. The console pages register, update and delete models
+through the `/models` management API directly, which this gate does not disable. The inference and
+management APIs stay reachable on their configured ports; restrict those separately, as described
+in [configurations](configuration.md).
 
 DJL Serving console is a DJL model server management platform that can achieve model management, log management, dependency management, configuration management and so on. It makes it easier for users to use DJL model server. We will provide the following basic functions:
 

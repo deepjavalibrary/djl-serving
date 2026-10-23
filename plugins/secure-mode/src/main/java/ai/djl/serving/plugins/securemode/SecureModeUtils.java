@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.plugins.securemode;
 
+import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.http.IllegalConfigurationException;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.util.JsonUtils;
@@ -24,13 +25,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.file.DirectoryStream;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -56,11 +57,17 @@ public final class SecureModeUtils {
     private static final Pattern PICKLE_EXTENSIONS_REGEX =
             Pattern.compile(".*\\.(?i:bin|pt|pth|ckpt|pkl)$");
 
-    private static final Pattern BUILTIN_ENTRY_POINT =
-            Pattern.compile("djl_python(\\.[A-Za-z_][A-Za-z0-9_]*)+");
-
-    // What import_module will load: source, sourceless bytecode, or a native extension.
-    private static final String[] IMPORTABLE_SUFFIXES = {".py", ".pyc", ".so", ".pyd"};
+    // The bundled djl_python modules that define a handle() entry function.
+    private static final Set<String> BUILTIN_ENTRY_POINTS =
+            new HashSet<>(
+                    Arrays.asList(
+                            "djl_python.huggingface",
+                            "djl_python.sagemaker",
+                            "djl_python.sklearn_handler",
+                            "djl_python.tensorrt_llm",
+                            "djl_python.xgboost_handler",
+                            "djl_python.lmi_trtllm.trtllm_async_service",
+                            "djl_python.lmi_vllm.vllm_async_service"));
 
     private static final Logger logger = LoggerFactory.getLogger(SecureModeUtils.class);
 
@@ -128,8 +135,7 @@ public final class SecureModeUtils {
      * Check if a disallowed option is set via environment variables. The disallowed value is
      * handled on a per-option basis.
      */
-    private static void checkOptions(ModelInfo<?, ?> modelInfo, Set<String> securityControls)
-            throws IOException {
+    private static void checkOptions(ModelInfo<?, ?> modelInfo, Set<String> securityControls) {
         Properties prop = modelInfo.getProperties();
         Path modelDir = modelInfo.getModelDir();
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
@@ -151,9 +157,8 @@ public final class SecureModeUtils {
             // at startup whatever the entry point is.
             checkModelPy(modelDir, "model directory");
             checkTorchServeManifest(modelDir, "model directory");
-            // Both checked even when no entry point is set, because the engine then selects one.
-            checkSelfNamedModule(modelDir, "model directory");
-            checkSelectableModule(modelDir, "model directory");
+            // With no entry point set, the engine selects one from the model's files.
+            checkSelectedModelFile(modelInfo, modelDir);
         }
         if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
             checkRequirementsTxt(modelDir, "model directory");
@@ -169,18 +174,18 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Returns whether an entry point names a module of the bundled {@code djl_python} package.
+     * Returns whether an entry point names a handler module of the bundled {@code djl_python}
+     * package.
      *
-     * <p>The prefix alone is not enough. {@code service_loader.load_model_service} treats any entry
-     * point ending in {@code .py} as a file to load from the model directory, so {@code
-     * djl_python.evil.py} would run a script out of an untrusted model while carrying the expected
-     * prefix.
+     * <p>An allowlist rather than the {@code djl_python.} prefix: {@code service_loader} loads an
+     * entry point ending in {@code .py} as a file from the model directory, and any other name is
+     * imported from wherever Python finds it.
      *
      * @param entryPoint the configured entry point
-     * @return true if the entry point is a built-in module rather than a script
+     * @return true if the entry point is a built-in handler
      */
     private static boolean isBuiltInEntryPoint(String entryPoint) {
-        return !entryPoint.endsWith(".py") && BUILTIN_ENTRY_POINT.matcher(entryPoint).matches();
+        return BUILTIN_ENTRY_POINTS.contains(entryPoint);
     }
 
     /**
@@ -200,84 +205,68 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Refuses a file whose name is the model directory's own name.
+     * Refuses a model file the Python engine would select as its entry point.
      *
-     * <p>{@code PyModel.findModelFile} returns {@code modelDir.resolve(prefix)} whenever that is a
-     * regular file, with no extension required, and its name becomes the entry point. The prefix
-     * defaults to the directory's name, which an artifact author chooses, so a directory {@code
-     * evil.py} holding a file {@code evil.py} is loaded and executed as a script.
+     * <p>With no entry point configured, {@code PyModel.findModelFile} uses {@code
+     * modelDir.resolve(prefix)} whenever that is a regular file, with no extension required, and
+     * passes its name to {@code service_loader}, which loads a {@code .py} name as a script and
+     * imports any other name, dotted package paths included. The prefix is the artifact name, since
+     * {@code option.modelName} is not allowed in Secure Mode: the {@code model_name} or {@code
+     * artifact_id} URL argument, else the last segment of the model URL (a {@code .py} file URL
+     * selects that file), else the directory's own name, or its parent's when the model sits in a
+     * single nested directory.
      *
-     * @param dir the directory to check
-     * @param pathDescription description of the path for error messages
-     * @throws IllegalConfigurationException if such a file is found
+     * @param modelInfo the model
+     * @param modelDir the model directory
+     * @throws IllegalConfigurationException if a candidate prefix names a file
      */
-    static void checkSelfNamedModule(Path dir, String pathDescription) {
-        Path name = dir.toAbsolutePath().normalize().getFileName();
-        if (name == null) {
-            return;
+    static void checkSelectedModelFile(ModelInfo<?, ?> modelInfo, Path modelDir) {
+        Set<String> prefixes = new HashSet<>();
+        Path dir = modelDir.toAbsolutePath().normalize();
+        addFileName(prefixes, dir);
+        Path parent = dir.getParent();
+        // getNestedModelDir fails on a directory it cannot list.
+        if (parent != null
+                && Files.isReadable(parent)
+                && dir.equals(Utils.getNestedModelDir(parent))) {
+            addFileName(prefixes, parent);
         }
-        if (Files.isRegularFile(dir.resolve(name.toString()))) {
-            throw new IllegalConfigurationException(
-                    "Custom inference script "
-                            + name
-                            + " found in "
-                            + pathDescription
-                            + ", but custom inference scripts are prohibited in Secure Mode.");
-        }
-    }
-
-    /**
-     * Refuses an extension-less file that sits beside an importable sibling of the same name.
-     *
-     * <p>With no entry point configured the engine selects one from the model's prefix, and {@code
-     * service_loader} imports the name it selects, whichever suffix Python resolves.
-     *
-     * @param dir the directory to check
-     * @param pathDescription description of the path for error messages
-     * @throws IOException if the directory cannot be listed
-     */
-    static void checkSelectableModule(Path dir, String pathDescription) throws IOException {
-        if (!Files.isDirectory(dir)) {
-            return;
-        }
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(dir)) {
-            for (Path file : files) {
-                if (!Files.isRegularFile(file)) {
-                    continue;
+        String url = modelInfo.getModelUrl();
+        if (url != null) {
+            int query = url.indexOf('?');
+            String path = query >= 0 ? url.substring(0, query) : url;
+            String name = path.substring(path.lastIndexOf('/') + 1);
+            prefixes.add(name);
+            prefixes.add(FilenameUtils.getNamePart(name));
+            if (query >= 0) {
+                for (String arg : url.substring(query + 1).split("&")) {
+                    String[] pair = arg.split("=", 2);
+                    if (pair.length == 2
+                            && ("model_name".equals(pair[0]) || "artifact_id".equals(pair[0]))) {
+                        prefixes.add(URLDecoder.decode(pair[1], StandardCharsets.UTF_8));
+                    }
                 }
-                String name = Objects.requireNonNull(file.getFileName()).toString();
-                String module = importableModuleName(name);
-                if (module != null && Files.isRegularFile(dir.resolve(module))) {
-                    throw new IllegalConfigurationException(
-                            "Custom inference module "
-                                    + name
-                                    + " found in "
-                                    + pathDescription
-                                    + ", but custom inference scripts are prohibited in Secure"
-                                    + " Mode.");
-                }
+            }
+        }
+        for (String prefix : prefixes) {
+            if (prefix.isEmpty() || prefix.indexOf('/') >= 0 || prefix.indexOf('\\') >= 0) {
+                continue;
+            }
+            if (Files.isRegularFile(modelDir.resolve(prefix))) {
+                throw new IllegalConfigurationException(
+                        "Custom inference script "
+                                + prefix
+                                + " found in model directory, but custom inference scripts are"
+                                + " prohibited in Secure Mode.");
             }
         }
     }
 
-    /**
-     * Returns the module name {@code import_module} would load the file under, or null.
-     *
-     * <p>An extension module carries an interpreter tag between the module name and the suffix, as
-     * in {@code custom.cpython-311-x86_64-linux-gnu.so}, so the name ends at the first dot rather
-     * than at the suffix. Matching the suffix exactly would miss every tagged build.
-     *
-     * @param fileName the file name to interpret
-     * @return the module name, or null if Python would not import the file
-     */
-    private static String importableModuleName(String fileName) {
-        for (String suffix : IMPORTABLE_SUFFIXES) {
-            if (fileName.endsWith(suffix)) {
-                int dot = fileName.indexOf('.');
-                return dot > 0 ? fileName.substring(0, dot) : null;
-            }
+    private static void addFileName(Set<String> names, Path path) {
+        Path name = path.getFileName();
+        if (name != null) {
+            names.add(name.toString());
         }
-        return null;
     }
 
     /**
