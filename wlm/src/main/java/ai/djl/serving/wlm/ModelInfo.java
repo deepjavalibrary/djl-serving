@@ -827,8 +827,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     private void downloadModel() throws ModelException, IOException {
         if (resolvedModelUrl.startsWith("s3://")) {
-            modelDir = downloadS3ToDownloadDir(resolvedModelUrl);
-            resolvedModelUrl = modelDir.toUri().toURL().toString();
+            Path downloaded = downloadS3ToDownloadDir(resolvedModelUrl);
+            // The url stays at the un-nested root: the engine nests it again on load.
+            resolvedModelUrl = downloaded.toUri().toURL().toString();
+            modelDir = Utils.getNestedModelDir(downloaded);
         } else {
             Repository repository = Repository.newInstance("modelStore", resolvedModelUrl);
             List<MRL> mrls = repository.getResources();
@@ -856,7 +858,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     String hash = Utils.hash(match.toAbsolutePath().toString());
                     String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
                     Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
-                    parent = parent.resolve("download");
+                    // Absolute: validateArchiveEntry compares an absolutized entry path against
+                    // the destination as given, so a relative one refuses every entry.
+                    parent = parent.toAbsolutePath().resolve("download");
                     Path extracted = parent.resolve(hash);
                     if (Files.exists(extracted)) {
                         logger.info("archive already extracted: {}", extracted);
@@ -871,8 +875,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                             Utils.deleteQuietly(tmp);
                         }
                     }
-                    modelDir = extracted;
-                    resolvedModelUrl = modelDir.toUri().toURL().toString();
+                    // Nested like the non-archive branch above, so a modelDir check sees the
+                    // directory the engine loads. The url stays at the un-nested root.
+                    resolvedModelUrl = extracted.toUri().toURL().toString();
+                    modelDir = Utils.getNestedModelDir(extracted);
                 }
             }
         }

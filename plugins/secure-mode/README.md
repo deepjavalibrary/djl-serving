@@ -29,7 +29,10 @@ All model options are validated against an allowlist. Only ~100 explicitly allow
 
 Blocks custom Python entrypoints:
 - `model.py` in model/adapter directory
-- `option.entryPoint` not starting with `djl_python.`
+- `option.entryPoint` other than a built-in handler (`djl_python.huggingface`, `djl_python.sagemaker`,
+  `djl_python.sklearn_handler`, `djl_python.tensorrt_llm`, `djl_python.xgboost_handler`,
+  `djl_python.lmi_trtllm.trtllm_async_service`, `djl_python.lmi_vllm.vllm_async_service`)
+- `MAR-INF/MANIFEST.json`, or a model file the engine would select as its entry point
 - Only allows built-in DJL Python handlers
 
 ### 2. Trust Remote Code (DISALLOW_TRUST_REMOTE_CODE)
@@ -97,7 +100,8 @@ Adapter.newInstance() → SecureModeAdapterValidator.validateAdapterPath()
 
 When `SAGEMAKER_SECURE_MODE=true`, adapters are checked for:
 
-1. **DISALLOW_CUSTOM_INFERENCE_SCRIPTS** → Blocks `model.py` in adapter directory
+1. **DISALLOW_CUSTOM_INFERENCE_SCRIPTS** → Blocks `model.py`, and a TorchServe manifest naming a
+   handler, in the adapter directory
 2. **DISALLOW_REQUIREMENTS_TXT** → Blocks `requirements.txt` in adapter directory
 3. **DISALLOW_PICKLE_FILES** → Blocks `.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl` files (recursive scan)
 
@@ -188,10 +192,10 @@ The model/adapter will not load, and the error is returned to the caller.
 ### Run Unit Tests
 
 ```bash
-# All secure mode tests (38 tests)
+# All secure mode tests (55 tests)
 ./gradlew :plugins:secure-mode:test
 
-# Adapter security tests only (17 tests)
+# Adapter security tests only (18 tests)
 ./gradlew :plugins:secure-mode:test --tests SecureModeAdapterTest
 
 # Or use the helper script
@@ -200,14 +204,14 @@ The model/adapter will not load, and the error is returned to the caller.
 
 ### Test Coverage
 
-**Model Security Tests (21 tests):**
+**Model Security Tests (37 tests):**
 - Property allowlist enforcement
 - Each security control independently
 - Environment variable vs properties file configuration
 - Valid configurations that should pass
 - Engine-specific validation (Python/MPI only)
 
-**Adapter Security Tests (17 tests):**
+**Adapter Security Tests (18 tests):**
 - Adapter with `model.py` → blocked
 - Adapter with `requirements.txt` → blocked
 - Adapter with pickle files (`.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl`) → blocked
@@ -246,7 +250,8 @@ The model/adapter will not load, and the error is returned to the caller.
 1. Check if secure mode is enabled
 2. Verify security controls are configured
 3. Validate adapter directory exists
-4. Check for `model.py` (if DISALLOW_CUSTOM_INFERENCE_SCRIPTS)
+4. Check for `model.py` and a handler-naming TorchServe manifest (if
+   DISALLOW_CUSTOM_INFERENCE_SCRIPTS)
 5. Check for `requirements.txt` (if DISALLOW_REQUIREMENTS_TXT)
 6. Scan recursively for pickle files (if DISALLOW_PICKLE_FILES)
 7. Throw exception on any violation
@@ -256,6 +261,7 @@ The model/adapter will not load, and the error is returned to the caller.
 The implementation follows DRY principles with shared validation methods:
 
 - `SecureModeUtils.checkModelPy()` - Used by both model and adapter validation
+- `SecureModeUtils.checkTorchServeManifest()` - Used by both model and adapter validation
 - `SecureModeUtils.checkRequirementsTxt()` - Used by both model and adapter validation
 - `SecureModeUtils.scanPickleFiles()` - Used by both model and adapter validation
 

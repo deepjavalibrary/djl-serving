@@ -33,7 +33,8 @@ The Secure Mode plugin (`plugins/secure-mode/`) implements security validation f
 1. **DISALLOW_REQUIREMENTS_TXT** - Blocks `requirements.txt` in model directory
 2. **DISALLOW_PICKLE_FILES** - Only allows Safetensors (blocks .bin, .pt, .pth, .ckpt, .pkl)
 3. **DISALLOW_TRUST_REMOTE_CODE** - Prevents `trust_remote_code=true`
-4. **DISALLOW_CUSTOM_INFERENCE_SCRIPTS** - Only allows `djl_python.*` entrypoints
+4. **DISALLOW_CUSTOM_INFERENCE_SCRIPTS** - Only allows an allowlisted built-in `djl_python`
+   handler, and refuses any `.py` the engine resolves as the entry point
 5. **DISALLOW_CHAT_TEMPLATE** - Blocks Jinja templates in `tokenizer_config.json`
 
 ### Validation Layers
@@ -62,7 +63,8 @@ The Secure Mode plugin (`plugins/secure-mode/`) implements security validation f
 
 **User-Configurable (validated by plugin):**
 - `OPTION_*` - Model options (validated against allowlist)
-- `DJL_ENTRY_POINT` - Entrypoint (must be `djl_python.*`)
+- `DJL_ENTRY_POINT` - Entrypoint (must be an allowlisted built-in `djl_python` handler when
+  DISALLOW_CUSTOM_INFERENCE_SCRIPTS is set)
 
 ## Development Guidelines
 
@@ -219,9 +221,9 @@ if (!"Python".equals(engine) && !"MPI".equals(engine)) {
 - Add to `PROPERTIES_ALLOWLIST` if it should be allowed
 
 **"Custom entrypoint is prohibited in Secure Mode"**
-- Entrypoint must start with `djl_python.`
+- Entrypoint must be an allowlisted built-in `djl_python` handler
 - Check `option.entryPoint`, `DJL_ENTRY_POINT`, `OPTION_ENTRYPOINT`
-- Ensure no `model.py` file exists
+- Ensure no `model.py` file exists, and that nothing names a `.py` for the engine to resolve
 
 **"Pickle-based files found in directory"**
 - Convert model to Safetensors format

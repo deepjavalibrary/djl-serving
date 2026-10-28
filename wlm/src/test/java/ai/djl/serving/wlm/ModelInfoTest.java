@@ -36,12 +36,16 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class ModelInfoTest {
 
@@ -155,6 +159,52 @@ public class ModelInfoTest {
             m2.initialize();
             Assert.assertThrows(() -> m2.checkAvailableMemory(device));
         }
+    }
+
+    @Test
+    public void testZippedModelRecordsTheDirTheEngineLoads() throws IOException, ModelException {
+        // Two levels, so recording an already-nested url is caught as well as an un-nested one.
+        Path store = Paths.get("build/models/zipped").toAbsolutePath();
+        // Relative, so the extraction destination is covered too: an entry is refused unless
+        // downloadModel absolutizes it.
+        Path cache = Paths.get("build/zipcache");
+        Utils.deleteQuietly(store);
+        // Extractions are keyed by the archive's path, so stale content survives a changed zip.
+        Utils.deleteQuietly(cache);
+        Files.createDirectories(store);
+        Path zip = store.resolve("model.zip");
+        try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(zip))) {
+            out.putNextEntry(new ZipEntry("inner/deeper/inner.onnx"));
+            out.closeEntry();
+        }
+
+        String saved = System.getProperty("DJL_CACHE_DIR");
+        System.setProperty("DJL_CACHE_DIR", cache.toString());
+        Path checked;
+        Path loaded;
+        try {
+            ModelInfo<Input, Output> model = new ModelInfo<>(store.toUri().toURL().toString());
+            // downloadModel runs before the engine is inferred, so the directory is recorded
+            // whether or not this archive carries a loadable model.
+            try {
+                model.initialize();
+            } catch (ModelException expected) {
+                // engine detection is not what this asserts
+            }
+            checked = model.getModelDir();
+            loaded = Utils.getNestedModelDir(Paths.get(URI.create(model.resolvedModelUrl)));
+        } finally {
+            if (saved == null) {
+                System.clearProperty("DJL_CACHE_DIR");
+            } else {
+                System.setProperty("DJL_CACHE_DIR", saved);
+            }
+        }
+        assertEquals(
+                checked,
+                loaded,
+                "the engine loads " + loaded + ", which is not the checked directory " + checked);
+        assertEquals(Objects.requireNonNull(checked.getFileName()).toString(), "inner");
     }
 
     @Test

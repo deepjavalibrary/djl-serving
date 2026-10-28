@@ -111,4 +111,15 @@ public interface SecureModeAllowList {
 
     public static final Set<String> PYTHON_EXECUTABLE_ALLOWLIST =
             Set.of("/opt/djl/vllm_venv/bin/python", "/usr/bin/python3");
+
+    /** The bundled {@code djl_python} modules that define a {@code handle()} entry function. */
+    public static final Set<String> BUILTIN_ENTRY_POINTS =
+            Set.of(
+                    "djl_python.huggingface",
+                    "djl_python.sagemaker",
+                    "djl_python.sklearn_handler",
+                    "djl_python.tensorrt_llm",
+                    "djl_python.xgboost_handler",
+                    "djl_python.lmi_trtllm.trtllm_async_service",
+                    "djl_python.lmi_vllm.vllm_async_service");
 }
