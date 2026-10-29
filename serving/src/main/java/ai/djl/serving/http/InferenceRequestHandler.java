@@ -253,9 +253,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 if (modelUrl == null) {
                     throw new ModelNotFoundException("Parameter model_url is required.");
                 }
-                if (!modelUrl.matches(regex)) {
-                    throw new ModelNotFoundException("Permission denied: " + modelUrl);
-                }
+            }
+            // Matched wherever the value came from, including a model_url sent as a header, which
+            // arrives as a request property.
+            if (!modelUrl.matches(regex)) {
+                throw new ModelNotFoundException("Permission denied: " + modelUrl);
             }
             String engineName = input.getProperty("engine_name", null);
             String deviceName = input.getProperty("device", null);

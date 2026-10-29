@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.plugins.securemode;
 
+import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.http.IllegalConfigurationException;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.util.JsonUtils;
@@ -24,7 +25,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -134,13 +139,19 @@ public final class SecureModeUtils {
                     prop.getProperty(
                             "option.entryPoint",
                             Utils.getenv("DJL_ENTRY_POINT", Utils.getenv("OPTION_ENTRYPOINT")));
-            if (entryPoint != null) {
-                if (!entryPoint.startsWith("djl_python.")) {
-                    throw new IllegalConfigurationException(
-                            "Custom entrypoint is prohibited in Secure Mode.");
-                }
-            } else {
-                checkModelPy(modelDir, "model directory");
+            if (entryPoint != null && !isBuiltInEntryPoint(entryPoint)) {
+                throw new IllegalConfigurationException(
+                        "Custom entrypoint is prohibited in Secure Mode.");
+            }
+            // Checked even when a built-in entry point is set: the Python worker imports model.py
+            // at startup whatever the entry point is.
+            checkModelPy(modelDir, "model directory");
+            checkTorchServeManifest(modelDir, "model directory");
+            // Only when nothing configures one: PyModel calls findModelFile only if entryPoint
+            // is still null, so with one set it never selects a file.
+            if (prop.getProperty("option.entryPoint") == null
+                    && Utils.getenv("DJL_ENTRY_POINT") == null) {
+                checkSelectedModelFile(modelInfo, modelDir);
             }
         }
         if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
@@ -157,6 +168,19 @@ public final class SecureModeUtils {
     }
 
     /**
+     * Returns whether an entry point names a bundled {@code djl_python} handler module.
+     *
+     * <p>An allowlist, because a {@code djl_python.} prefix check would also accept a name {@code
+     * service_loader} imports from outside the package.
+     *
+     * @param entryPoint the configured entry point
+     * @return true if the entry point is a built-in handler
+     */
+    private static boolean isBuiltInEntryPoint(String entryPoint) {
+        return SecureModeAllowList.BUILTIN_ENTRY_POINTS.contains(entryPoint);
+    }
+
+    /**
      * Checks if model.py exists in the given directory.
      *
      * @param dir the directory to check
@@ -167,6 +191,111 @@ public final class SecureModeUtils {
         if (Files.isRegularFile(dir.resolve("model.py"))) {
             throw new IllegalConfigurationException(
                     "Custom model.py found in "
+                            + pathDescription
+                            + ", but custom inference scripts are prohibited in Secure Mode.");
+        }
+    }
+
+    /**
+     * Refuses a model file the Python engine would select as its entry point.
+     *
+     * <p>The prefix the engine resolves is the {@code model_name} or {@code artifact_id} URL
+     * argument, else the model URL's last segment, else the directory's own name or its parent's.
+     *
+     * @param modelInfo the model
+     * @param modelDir the model directory
+     * @throws IllegalConfigurationException if a candidate prefix names a file
+     */
+    static void checkSelectedModelFile(ModelInfo<?, ?> modelInfo, Path modelDir) {
+        Set<String> prefixes = new HashSet<>();
+        Path dir = modelDir.toAbsolutePath().normalize();
+        addFileName(prefixes, dir);
+        Path parent = dir.getParent();
+        // getNestedModelDir fails on a directory it cannot list.
+        if (parent != null
+                && Files.isReadable(parent)
+                && dir.equals(Utils.getNestedModelDir(parent))) {
+            addFileName(prefixes, parent);
+        }
+        String url = modelInfo.getModelUrl();
+        if (url != null) {
+            // Decoded the way AbstractRepository does, so an encoded name resolves to the same
+            // prefix the engine derives.
+            URI uri;
+            try {
+                uri = URI.create(url);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalConfigurationException("Malformed model URL.", e);
+            }
+            String path = uri.getPath();
+            if (path != null) {
+                String name = path.substring(path.lastIndexOf('/') + 1);
+                prefixes.add(name);
+                prefixes.add(FilenameUtils.getNamePart(name));
+            }
+            String query = uri.getQuery();
+            if (query != null) {
+                for (String arg : query.split("&")) {
+                    String[] pair = arg.split("=", 2);
+                    if (pair.length != 2) {
+                        continue;
+                    }
+                    try {
+                        String key = URLDecoder.decode(pair[0], StandardCharsets.UTF_8);
+                        if ("model_name".equals(key) || "artifact_id".equals(key)) {
+                            prefixes.add(URLDecoder.decode(pair[1], StandardCharsets.UTF_8));
+                        }
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalConfigurationException(
+                                "Malformed argument in the model URL.", e);
+                    }
+                }
+            }
+        }
+        for (String prefix : prefixes) {
+            if (prefix.isEmpty()) {
+                continue;
+            }
+            // Not skipped when it carries a path: findModelFile resolves the prefix as given, and
+            // the name of whatever it lands on becomes the entry point.
+            boolean selectable;
+            try {
+                selectable = Files.isRegularFile(modelDir.resolve(prefix));
+            } catch (InvalidPathException e) {
+                throw new IllegalConfigurationException("Invalid model prefix: " + prefix, e);
+            }
+            if (selectable) {
+                throw new IllegalConfigurationException(
+                        "Custom inference script "
+                                + prefix
+                                + " found for the model directory, but custom inference scripts"
+                                + " are prohibited in Secure Mode.");
+            }
+        }
+    }
+
+    private static void addFileName(Set<String> names, Path path) {
+        Path name = path.getFileName();
+        if (name != null) {
+            names.add(name.toString());
+        }
+    }
+
+    /**
+     * Checks if a TorchServe manifest exists in the given directory.
+     *
+     * <p>{@code service_loader.load_model_service} ignores the entry point when {@code
+     * MAR-INF/MANIFEST.json} is present and loads the handler the manifest names instead, so a
+     * manifest selects custom code the same way model.py does.
+     *
+     * @param dir the directory to check
+     * @param pathDescription description of the path for error messages
+     * @throws IllegalConfigurationException if a manifest is found
+     */
+    static void checkTorchServeManifest(Path dir, String pathDescription) {
+        if (Files.isRegularFile(dir.resolve("MAR-INF/MANIFEST.json"))) {
+            throw new IllegalConfigurationException(
+                    "TorchServe manifest found in "
                             + pathDescription
                             + ", but custom inference scripts are prohibited in Secure Mode.");
         }

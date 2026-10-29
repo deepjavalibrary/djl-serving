@@ -31,6 +31,15 @@ public class DependencyManagerTest {
             DependencyManager dm = DependencyManager.getInstance();
             dm.installEngine("XGBoost");
 
+            // Asserted before the download below, which needs the network: without the name rule
+            // these reach Utils.openUrl and fail with an IOException instead.
+            Assert.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> dm.installDependency("g:../../../tmp/x:1.0"));
+            Assert.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> dm.installDependency("g:a:../../../tmp/x"));
+
             dm.installDependency("ai.djl.pytorch:pytorch-jni:2.7.1-0.34.0");
 
             Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));

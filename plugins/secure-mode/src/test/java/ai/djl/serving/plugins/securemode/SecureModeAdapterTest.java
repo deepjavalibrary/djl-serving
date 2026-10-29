@@ -58,6 +58,15 @@ public class SecureModeAdapterTest {
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testAdapterWithTorchServeManifest() throws IOException, ModelException {
+        // service_loader reads the manifest's handler, so it names code the same way model.py does.
+        createFileWithContent(
+                ADAPTER_DIR.resolve("MAR-INF/MANIFEST.json"),
+                "{\"model\":{\"handler\":\"custom.py\"}}");
+        mockSecurityEnvAndCreateAdapter(SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testAdapterWithRequirementsTxt() throws IOException, ModelException {
         createFileWithContent(ADAPTER_DIR.resolve("requirements.txt"), "torch==2.0.0");
         mockSecurityEnvAndCreateAdapter(SecureModeUtils.REQUIREMENTS_TXT_CONTROL);

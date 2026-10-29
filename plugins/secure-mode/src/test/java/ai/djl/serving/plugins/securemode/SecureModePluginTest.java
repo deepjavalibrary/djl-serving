@@ -172,6 +172,166 @@ public class SecureModePluginTest {
     }
 
     @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testPySuffixEntryPointIsNotABuiltIn() throws IOException, ModelException {
+        // The djl_python prefix is not enough: the Python worker loads any entry point ending in
+        // .py as a file from the model directory. No model.py here, so this can only throw from
+        // the entry-point check.
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.evil.py");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTraversalEntryPointIsNotABuiltIn() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.../../../tmp/evil.py");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testUnlistedBuiltInPackageEntryPoint() throws IOException, ModelException {
+        // Only the bundled handlers are allowed, not every name under the djl_python package.
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.not_shipped");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testAllowlistedEntryPointWithModelPy() throws IOException, ModelException {
+        // Naming a built-in entry point does not stop the Python worker importing model.py at
+        // startup, so the file is prohibited whichever entry point is set.
+        createFileWithContent(TEST_MODEL_DIR.resolve("model.py"), "foo");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testAllowlistedEntryPointWithTorchServeManifest() throws IOException, ModelException {
+        // service_loader ignores the entry point when a manifest is present and loads the handler
+        // the manifest names, so a built-in entry point and no model.py is not enough.
+        createFileWithContent(
+                TEST_MODEL_DIR.resolve("MAR-INF/MANIFEST.json"),
+                "{\"model\":{\"modelName\":\"m\",\"handler\":\"evil.py\"}}");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testUrlNamedModuleIsRefused() throws IOException {
+        // The model_name argument becomes the prefix, and a dotted name is imported as a package
+        // path, so the file it names selects model code.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom.foo"), "");
+        String url = TEST_MODEL_DIR.toUri() + "?model_name=custom.foo";
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testEncodedUrlArgumentKeyIsRefused() throws IOException {
+        // AbstractRepository decodes the query twice: once via URI.getQuery, then each key and
+        // value again. A doubly-encoded key still reaches it as model_name.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom.foo"), "");
+        String url = TEST_MODEL_DIR.toUri() + "?model%255Fname=custom.foo";
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testEncodedUrlPathSegmentIsRefused() throws IOException {
+        // The path is decoded before the name is taken from its last segment.
+        Path script = TEST_MODEL_DIR.resolve("custom.py");
+        createFileWithContent(script, "import os");
+        String url = TEST_MODEL_DIR.toUri() + "cust%6Fm.py";
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testScriptModelUrlIsRefused() throws IOException {
+        // A model URL naming a .py file makes that file the entry point.
+        Path script = TEST_MODEL_DIR.resolve("custom.py");
+        createFileWithContent(script, "import os");
+        String url = script.toUri().toString();
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testFragmentedScriptModelUrlIsRefused() throws IOException {
+        // A URI loader resolves the path without the fragment, so the fragment is not part of the
+        // name the engine selects either.
+        Path script = TEST_MODEL_DIR.resolve("custom.py");
+        createFileWithContent(script, "import os");
+        String url = script.toUri() + "#fragment";
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTraversalPrefixIsRefused() throws IOException {
+        // findModelFile resolves the prefix as given, so one carrying a path still selects a file.
+        createFileWithContent(Paths.get("build/mock/evil.py"), "import os");
+        String url = TEST_MODEL_DIR.toUri() + "?model_name=../evil.py";
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), TEST_MODEL_DIR);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testNestedSelfNamedModuleIsRefused() throws IOException {
+        // The artifact keeps the outer directory's name when the model is its only subdirectory.
+        Path outer = Paths.get("build/mock/outer");
+        Path inner = outer.resolve("inner");
+        createFileWithContent(inner.resolve("outer"), "");
+        String url = outer.toUri().toString();
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), inner);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelfNamedModuleIsRefused() throws IOException, ModelException {
+        // The model directory is build/mock/model, so with nothing configuring an entry point a
+        // file named "model" is what the engine resolves the prefix to.
+        createFileWithContent(TEST_MODEL_DIR.resolve("model"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "engine=Python");
+    }
+
+    @Test
+    void testSelfNamedModuleAllowedWithBuiltInEntryPoint() throws IOException, ModelException {
+        // PyModel calls findModelFile only when entryPoint is still null, so with a built-in one
+        // configured the file is never selected and refusing it would be a false positive.
+        createFileWithContent(TEST_MODEL_DIR.resolve("model"), "");
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testSelfNamedScriptIsRefused() throws IOException {
+        // A .py prefix is selected the same way and loaded as a file rather than imported.
+        Path dir = Paths.get("build/mock/evil.py");
+        createFileWithContent(dir.resolve("evil.py"), "import os");
+        String url = dir.toUri().toString();
+        SecureModeUtils.checkSelectedModelFile(new ModelInfo<Input, Output>(url), dir);
+    }
+
+    @Test
+    void testUnpairedFilesAreAllowed() throws IOException, ModelException {
+        // Files the prefix does not name are not selected, whatever siblings they have.
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom"), "");
+        createFileWithContent(TEST_MODEL_DIR.resolve("custom.py"), "import os");
+        createFileWithContent(TEST_MODEL_DIR.resolve("modeling_qwen.py"), "import os");
+        // No entryPoint, so the selection check actually runs.
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "engine=Python");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testUntrustedEntryPointPyFile() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,

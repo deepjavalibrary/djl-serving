@@ -178,6 +178,13 @@ public class PyModel extends BaseModel {
                 // find default entryPoint
                 if (modelFile != null) {
                     entryPoint = modelFile.toFile().getName();
+                    if (entryPoint.endsWith(".py") && PyEnv.customScriptsDisallowed()) {
+                        // Checked on the resolved file: whatever named it, this is the one the
+                        // worker would run.
+                        throw new IllegalArgumentException(
+                                "Custom inference script is prohibited in Secure Mode: "
+                                        + entryPoint);
+                    }
                 }
                 // find recommendedEntryPoint
                 if (hasModelFile(

@@ -157,6 +157,61 @@ public class PyEnv {
         return Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_ENGINE_METRICS"));
     }
 
+    /**
+     * Builds the {@code PYTHONPATH} of a worker.
+     *
+     * <p>The worker's cwd is the model directory, so an empty or relative entry imports from the
+     * model whatever else the path holds.
+     *
+     * @param inherited the server's own {@code PYTHONPATH}, or null
+     * @param cacheDir the engine cache directory
+     * @param modelDir the absolute model directory
+     * @param noCustomScripts whether a model may not supply its own Python
+     * @return the value to pass to the worker
+     */
+    static String buildPythonPath(
+            String inherited, String cacheDir, String modelDir, boolean noCustomScripts) {
+        List<String> entries = new ArrayList<>();
+        if (inherited != null) {
+            for (String entry : inherited.split(File.pathSeparator, -1)) {
+                if (entry.isEmpty() || (noCustomScripts && !new File(entry).isAbsolute())) {
+                    continue;
+                }
+                entries.add(entry);
+            }
+        }
+        entries.add(cacheDir);
+        if (!noCustomScripts) {
+            // A model.py that is allowed to run may import its siblings.
+            entries.add(modelDir);
+        }
+        return String.join(File.pathSeparator, entries);
+    }
+
+    /**
+     * Returns whether Secure Mode is on with the custom inference script control listed.
+     *
+     * <p>The control is a value inside {@code SAGEMAKER_SECURITY_CONTROLS}, not a variable of its
+     * own. Read here by name because the secure-mode plugin is not on this module's path.
+     *
+     * @return true if a model may not supply its own Python
+     */
+    static boolean customScriptsDisallowed() {
+        if (!Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SAGEMAKER_SECURE_MODE"))) {
+            return false;
+        }
+        String controls = Utils.getEnvOrSystemProperty("SAGEMAKER_SECURITY_CONTROLS");
+        if (controls == null) {
+            return false;
+        }
+        for (String control : controls.split("\\s*,\\s*")) {
+            if ("DISALLOW_CUSTOM_INFERENCE_SCRIPTS".equals(control)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static String getVersion() {
         return version;
     }
@@ -574,15 +629,14 @@ public class PyEnv {
 
     String[] getEnvironmentVars(Model model) {
         List<String> envList = new ArrayList<>();
-        StringBuilder pythonPath = new StringBuilder();
         Map<String, String> environment = new ConcurrentHashMap<>(Utils.getenv());
-        if (Utils.getenv("PYTHONPATH") != null) {
-            pythonPath.append(Utils.getenv("PYTHONPATH")).append(File.pathSeparatorChar);
-        }
-        pythonPath.append(engineCacheDir).append(File.pathSeparatorChar);
-        pythonPath.append(model.getModelPath().toAbsolutePath());
-
-        environment.put("PYTHONPATH", pythonPath.toString());
+        environment.put(
+                "PYTHONPATH",
+                buildPythonPath(
+                        Utils.getenv("PYTHONPATH"),
+                        engineCacheDir,
+                        model.getModelPath().toAbsolutePath().toString(),
+                        customScriptsDisallowed()));
         environment.putAll(envs);
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             envList.add(entry.getKey() + '=' + entry.getValue());
