@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -59,6 +60,10 @@ public final class SecureModeUtils {
     private static final Pattern PICKLE_EXTENSIONS_REGEX =
             Pattern.compile(".*\\.(?i:bin|pt|pth|ckpt|pkl)$");
 
+    // Strings pydantic v2 coerces to bool True.
+    private static final Set<String> TRUTHY_VALUES =
+            new HashSet<>(Arrays.asList("1", "true", "on", "yes", "t", "y"));
+
     private static final Logger logger = LoggerFactory.getLogger(SecureModeUtils.class);
 
     private SecureModeUtils() {}
@@ -70,6 +75,27 @@ public final class SecureModeUtils {
      */
     public static boolean isSecureMode() {
         return Boolean.parseBoolean(Utils.getenv(SECURE_MODE_ENV_VAR));
+    }
+
+    /**
+     * Returns whether a model option means true to the Python worker.
+     *
+     * <p>Matched against the spellings pydantic coerces to true rather than with {@link
+     * Boolean#parseBoolean}, so that a gate here and the worker that consumes the option cannot
+     * disagree. A value neither side reads as true, {@code flase} say, is false here and a
+     * validation error there, so it cannot reach the worker set either. Leading and trailing
+     * whitespace is trimmed, which pydantic does not do: that only rejects more than the worker
+     * accepts.
+     *
+     * <p>Only for options the Python worker parses. {@code SAGEMAKER_SECURE_MODE} is not one of
+     * them, and is read identically by {@code PyEnv.customScriptsDisallowed()} in another module,
+     * so widening it here alone would leave Secure Mode half-enabled.
+     *
+     * @param value the configured value, or null when it is unset
+     * @return true if the value means true
+     */
+    static boolean isTruthy(String value) {
+        return value != null && TRUTHY_VALUES.contains(value.trim().toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -129,7 +155,7 @@ public final class SecureModeUtils {
         Properties prop = modelInfo.getProperties();
         Path modelDir = modelInfo.getModelDir();
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
-            if (Boolean.parseBoolean(prop.getProperty("option.trust_remote_code"))) {
+            if (isTruthy(prop.getProperty("option.trust_remote_code"))) {
                 throw new IllegalConfigurationException(
                         "Setting TRUST_REMOTE_CODE to True is prohibited in Secure Mode.");
             }
