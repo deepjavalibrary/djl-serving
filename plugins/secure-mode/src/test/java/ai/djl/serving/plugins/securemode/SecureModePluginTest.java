@@ -24,6 +24,7 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -353,6 +354,67 @@ public class SecureModePluginTest {
                 SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
                 TEST_MODEL_DIR.resolve("serving.properties"),
                 "option.trust_remote_code=true");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTrustRemoteCodeNumericOneIsProhibited() throws IOException, ModelException {
+        // pydantic coerces "1" to true, so the worker trusts remote code while
+        // Boolean.parseBoolean read it as false and let the model through.
+        mockSecurityEnv(
+                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.trust_remote_code=1");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTrustRemoteCodeYesIsProhibited() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.trust_remote_code=YES");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTrustRemoteCodeMixedCaseTrueIsProhibited() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.trust_remote_code=TrUe");
+    }
+
+    @DataProvider(name = "falsySpellings")
+    public Object[][] falsySpellings() {
+        return new Object[][] {{"false"}, {"0"}, {"off"}, {"no"}, {"f"}, {"n"}, {"FALSE"}};
+    }
+
+    @Test(dataProvider = "falsySpellings")
+    void testTrustRemoteCodeFalseSpellingsStillLoad(String value)
+            throws IOException, ModelException {
+        // The falsy spellings pydantic accepts must keep loading, or the control starts
+        // rejecting models that never enabled it. One case per value: the fixture helper skips a
+        // file that already exists, so a loop here would re-test whichever value wrote it first.
+        mockSecurityEnv(
+                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.trust_remote_code=" + value);
+    }
+
+    @Test
+    void testIsTruthyMatchesPydanticCoercion() {
+        for (String value : new String[] {"1", "true", "on", "yes", "t", "y", "TRUE"}) {
+            Assert.assertTrue(SecureModeUtils.isTruthy(value), "should be true: " + value);
+        }
+        for (String value :
+                new String[] {"0", "false", "off", "no", "f", "n", "FALSE", "", "flase", null}) {
+            Assert.assertFalse(SecureModeUtils.isTruthy(value), "should be false: " + value);
+        }
+    }
+
+    @Test
+    void testIsTruthyTrimsWherePydanticWouldReject() {
+        // Trimming is a deliberate tightening: pydantic does not strip, so " 1 " is a validation
+        // error there and prohibited here. Both block; neither lets it through.
+        Assert.assertTrue(SecureModeUtils.isTruthy(" 1 "));
     }
 
     @Test
