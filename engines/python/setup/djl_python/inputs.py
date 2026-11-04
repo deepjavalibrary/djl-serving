@@ -58,7 +58,12 @@ def retrieve_short(conn):
     :return: retrieved integer value
     """
     data = retrieve_buffer(conn, 2)
-    return struct.unpack(">h", data)[0]
+    count = struct.unpack(">h", data)[0]
+    # Validate that retrieved short is within valid range
+    if count < -32768 or count > 32767:
+        raise ValueError(
+            f"Retrieved short value {count} exceeds signed short range")
+    return count
 
 
 def retrieve_utf8(conn):

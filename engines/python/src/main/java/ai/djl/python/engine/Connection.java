@@ -529,14 +529,14 @@ class Connection {
         @Override
         protected void encode(ChannelHandlerContext ctx, Input msg, ByteBuf out) {
             Map<String, String> prop = msg.getProperties();
-            out.writeShort(prop.size());
+            Connection.writeShort(out, prop.size());
             for (Map.Entry<String, String> entry : prop.entrySet()) {
                 CodecUtils.writeUtf8(out, entry.getKey());
                 CodecUtils.writeUtf8(out, entry.getValue());
             }
             PairList<String, BytesSupplier> content = msg.getContent();
             int size = content.size();
-            out.writeShort(size);
+            Connection.writeShort(out, size);
             for (int i = 0; i < size; ++i) {
                 CodecUtils.writeUtf8(out, content.keyAt(i));
                 BytesSupplier supplier = content.valueAt(i);
@@ -613,6 +613,39 @@ class Connection {
             logger.error("Exception occurred during request handler of python worker", cause);
             ctx.close();
         }
+    }
+
+
+    /**
+
+     * Writes a signed 16-bit integer to the buffer with bounds checking.
+
+     *
+
+     * @param out the ByteBuf to write to
+
+     * @param value the value to write
+
+     * @throws IllegalArgumentException if value exceeds signed short range
+
+     * @throws IOException if an I/O error occurs
+
+     */
+
+    private static void writeShort(ByteBuf out, int value) throws IOException {
+
+        if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
+
+            throw new IllegalArgumentException(
+
+                "Count value " + value + " exceeds signed short range [" +
+
+                Short.MIN_VALUE + ", " + Short.MAX_VALUE + "]");
+
+        }
+
+        out.writeShort(value);
+
     }
 
     private static final class DaemonThreadFactory implements ThreadFactory {
