@@ -65,7 +65,25 @@ public final class SecureModeAdapterValidator {
         }
 
         Set<String> controls = new HashSet<>(Arrays.asList(securityControls.split("\\s*,\\s*")));
-        Path adapterDir = Paths.get(adapterPath);
+
+        // Normalize path and resolve to absolute path
+        Path adapterDir = Paths.get(adapterPath).toAbsolutePath().normalize();
+
+        // Ensure path doesn't escape allowed base directory (model store)
+        String modelStore = System.getenv("MODEL_STORE");
+        if (modelStore != null) {
+            Path modelStorePath = Paths.get(modelStore).toAbsolutePath().normalize();
+            if (!adapterDir.startsWith(modelStorePath)) {
+                throw new IllegalConfigurationException(
+                        "Adapter path must be within model store directory");
+            }
+        }
+
+        // Reject paths containing directory traversal sequences
+        if (adapterPath.contains("..") || adapterPath.contains("%2e%2e") || adapterPath.contains("%2E%2E")) {
+            throw new IllegalConfigurationException(
+                    "Adapter path contains directory traversal sequences");
+        }
 
         if (!Files.isDirectory(adapterDir)) {
             throw new IllegalConfigurationException(
