@@ -69,6 +69,11 @@ public class KServeRequestHandler implements RequestHandler<Void> {
     private static final Pattern PATTERN = Pattern.compile("/v2/.+");
     private static final String EMPTY_BODY = "";
 
+    // Security limits
+    private static final int MAX_INPUTS = 1000;
+    private static final long MAX_SHAPE_ELEMENTS = Integer.MAX_VALUE;
+    private static final int MAX_DATA_ELEMENTS = 10000000; // 10M
+
     /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) {
@@ -293,6 +298,34 @@ public class KServeRequestHandler implements RequestHandler<Void> {
                 new InputStreamReader(
                         new ByteBufInputStream(req.content()), StandardCharsets.UTF_8)) {
             InferenceRequest request = JsonUtils.GSON.fromJson(reader, InferenceRequest.class);
+
+            // Security validation for KServe inputs
+            if (request.inputs != null && request.inputs.length > MAX_INPUTS) {
+                throw new BadRequestException(
+                    "Too many inputs: " + request.inputs.length + " (max " + MAX_INPUTS + ")");
+            }
+
+            for (KServeTensor tensor : request.inputs) {
+                if (tensor.shape != null) {
+                    long shapeSize = 1;
+                    for (long dim : tensor.shape) {
+                        if (dim < 0) {
+                            throw new BadRequestException("Negative shape dimension: " + dim);
+                        }
+                        shapeSize *= dim;
+                        if (shapeSize > MAX_SHAPE_ELEMENTS) {
+                            throw new BadRequestException(
+                                "Shape size " + shapeSize + " exceeds maximum " + MAX_SHAPE_ELEMENTS);
+                        }
+                    }
+                }
+
+                if (tensor.data != null && tensor.data.length > MAX_DATA_ELEMENTS) {
+                    throw new BadRequestException(
+                        "Data size " + tensor.data.length + " exceeds maximum " + MAX_DATA_ELEMENTS);
+                }
+            }
+
             Input input = request.toInput();
 
             InferenceResponse response = new InferenceResponse(request.id, modelName, modelVersion);
