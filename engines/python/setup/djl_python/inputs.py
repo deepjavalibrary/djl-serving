@@ -93,7 +93,15 @@ class Input(object):
         if not self.is_batch():
             return [self]
 
+        # Cap batch_size to prevent unbounded allocation
+        MAX_BATCH_SIZE = 1000
         batch_size = self.get_batch_size()
+        if batch_size > MAX_BATCH_SIZE:
+            import logging
+            logging.warning(
+                f"batch_size {batch_size} exceeds maximum {MAX_BATCH_SIZE}, capping")
+            self.properties["batch_size"] = str(MAX_BATCH_SIZE)
+            batch_size = MAX_BATCH_SIZE
         batch = []
         for i in range(batch_size):
             batch.append(Input())
