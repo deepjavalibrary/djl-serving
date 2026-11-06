@@ -14,6 +14,12 @@ package ai.djl.serving.console;
 
 import ai.djl.serving.http.MethodNotAllowedException;
 
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringDecoder;
+
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.DataProvider;
@@ -62,5 +68,50 @@ public class ConsoleWriteGateTest {
         System.setProperty(KEY, value);
         Assert.assertTrue(ConsoleRequestHandler.isConsoleWriteEnabled(), value);
         ConsoleRequestHandler.requiresWriteEnabled();
+    }
+
+    @DataProvider(name = "writeRoutes")
+    public Object[][] writeRoutes() {
+        return new Object[][] {
+            {HttpMethod.POST, "/console/api/upload"},
+            {HttpMethod.GET, "/console/api/restart"},
+            {HttpMethod.POST, "/console/api/config"},
+            {HttpMethod.POST, "/console/api/dependency"},
+            {HttpMethod.DELETE, "/console/api/dependency/some.jar"},
+        };
+    }
+
+    /**
+     * Dispatches each write route to prove the gate is reached, not merely that it works.
+     *
+     * <p>The context is null: every one of these must refuse before it touches the channel, so a
+     * route that reached its handler would fail here rather than quietly pass.
+     *
+     * @param method the request method
+     * @param uri the request uri
+     */
+    @Test(dataProvider = "writeRoutes")
+    public void testWriteRoutesRefuseThroughDispatch(HttpMethod method, String uri) {
+        System.clearProperty(KEY);
+        Assert.assertThrows(MethodNotAllowedException.class, () -> dispatch(method, uri));
+    }
+
+    @Test
+    public void testReadRouteIsNotGated() {
+        // The should-pass cell for the wiring: a read route must not be refused by the write
+        // gate. version only writes a response, so a null context is what it fails on instead.
+        System.clearProperty(KEY);
+        Assert.assertThrows(
+                NullPointerException.class, () -> dispatch(HttpMethod.GET, "/console/api/version"));
+    }
+
+    private static void dispatch(HttpMethod method, String uri) {
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, uri);
+        try {
+            new ConsoleRequestHandler()
+                    .handleRequest(null, req, new QueryStringDecoder(uri), uri.split("/", -1));
+        } finally {
+            req.release();
+        }
     }
 }

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Resolves the directory static files are served from. */
@@ -75,16 +76,30 @@ final class WebRoot {
      *
      * @param home the model server home, absolute and normalized
      * @param configured the configured {@code WEB_ROOT}
-     * @return a path lexically inside {@code home}
+     * @return a path lexically below {@code home}
      */
     static Path resolve(Path home, String configured) {
         Path root;
         try {
-            // resolve, not Paths.get: an absolute WEB_ROOT stays absolute here and is then
-            // refused, where Paths.get would silently graft it under the home.
-            root = home.resolve(configured).normalize();
+            Path candidate = Paths.get(configured);
+            if (candidate.isAbsolute()) {
+                // WEB_ROOT names a directory in the server home, so an absolute value has no
+                // meaning here. Refused rather than resolved: one equal to the home would
+                // otherwise pass the containment check below and serve the home itself.
+                logger.warn("WEB_ROOT {} is absolute, serving {} instead.", configured, DEFAULT);
+                return home.resolve(DEFAULT);
+            }
+            root = home.resolve(candidate).normalize();
         } catch (InvalidPathException e) {
             logger.warn("Invalid WEB_ROOT {}, serving {} instead.", configured, DEFAULT);
+            return home.resolve(DEFAULT);
+        }
+        if (root.equals(home)) {
+            // "." and "" normalize to the home, which would serve conf, logs and deps.
+            logger.warn(
+                    "WEB_ROOT {} selects the model server home itself, serving {} instead.",
+                    configured,
+                    DEFAULT);
             return home.resolve(DEFAULT);
         }
         if (!root.startsWith(home)) {

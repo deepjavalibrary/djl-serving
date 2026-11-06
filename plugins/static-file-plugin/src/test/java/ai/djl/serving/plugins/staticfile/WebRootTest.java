@@ -60,9 +60,18 @@ public class WebRootTest {
             {".."},
             {"../sibling"},
             {"public/../../etc"},
-            // Absolute: Path.resolve returns it unchanged, so it has to be refused here.
+            // Absolute values are refused whatever they point at. One equal to the home would
+            // otherwise pass containment and serve conf, logs and deps; one below it is
+            // expressible relatively.
             {"/etc"},
             {"/"},
+            {"/opt/djl"},
+            {"/opt/djl/webapp"},
+            {"/opt/djl/../djl/webapp"},
+            // Relative, but normalize to the home itself, which is the same exposure.
+            {"."},
+            {""},
+            {"public/.."},
             // Invalid rather than escaping, but must not propagate out of class init.
             {"pub\u0000lic"},
         };
@@ -75,10 +84,24 @@ public class WebRootTest {
 
     @Test
     public void testResultIsAlwaysInsideHome() {
-        String[] values = {"public", "../../..", "/etc", "a/b/c", "..", "/", "pub\u0000lic"};
+        String[] values = {
+            "public",
+            "../../..",
+            "/etc",
+            "a/b/c",
+            "..",
+            "/",
+            "pub\u0000lic",
+            "/opt/djl",
+            ".",
+            "",
+            "public/..",
+            "/opt/djl/webapp"
+        };
         for (String configured : values) {
             Path root = WebRoot.resolve(HOME, configured);
             Assert.assertTrue(root.startsWith(HOME), "web root escaped the server home: " + root);
+            Assert.assertNotEquals(root, HOME, "web root selected the server home: " + configured);
         }
     }
 
