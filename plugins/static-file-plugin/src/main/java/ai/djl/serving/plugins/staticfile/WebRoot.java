@@ -32,32 +32,46 @@ final class WebRoot {
     private WebRoot() {}
 
     /**
-     * Returns the real web root, or refuses it if it leaves the real server home.
+     * Returns the real web root, or refuses it if a link moved it.
      *
      * <p>{@link #resolve} confines the configured value lexically, which does not follow links: a
-     * symbolic link at the root itself, or at any directory above it, still resolves outside the
-     * server home. The handler anchors its per-file containment on this root, so the root is the
-     * one place that has to be compared against the real server home. Both sides are resolved, so a
-     * server home legitimately reached through a link still accepts a root inside it.
+     * symbolic link at the root itself, or at any directory above it, resolves somewhere else
+     * entirely. The handler anchors its per-file containment on this root, so the root is the one
+     * place that has to be checked.
+     *
+     * <p>The real root must be exactly where the configured value says it is, not merely somewhere
+     * under the server home. Containment alone is not enough: a link may relocate the root to
+     * another directory in the home, and {@code conf}, {@code logs} and {@code deps} are all in the
+     * home, so the whole of {@code conf} would be served as static files. The home's own links are
+     * resolved on both sides, so a server home reached through a link still works.
      *
      * @param home the model server home
      * @param webRoot the lexically confined web root
      * @return the real path of the web root
-     * @throws IOException if the root does not exist, or resolves outside the server home
+     * @throws IOException if the root does not exist, or a link moved it
      */
     static Path realRootIn(Path home, Path webRoot) throws IOException {
-        Path realHome = home.toRealPath();
-        Path real = webRoot.toRealPath();
-        if (!real.startsWith(realHome)) {
+        Path absHome = home.toAbsolutePath().normalize();
+        Path absRoot = webRoot.toAbsolutePath().normalize();
+        Path realHome = absHome.toRealPath();
+        Path real = absRoot.toRealPath();
+        Path expected;
+        try {
+            expected = realHome.resolve(absHome.relativize(absRoot)).normalize();
+        } catch (IllegalArgumentException e) {
+            // Different roots, so the configured value was never under the home.
+            throw new IOException("Web root " + absRoot + " is not under " + absHome, e);
+        }
+        if (!real.equals(expected)) {
             if (ESCAPE_WARNED.compareAndSet(false, true)) {
                 logger.warn(
-                        "Web root {} resolves to {}, outside the model server home {}. Serving the"
-                                + " bundled console instead.",
-                        webRoot,
+                        "Web root {} resolves to {} rather than {}, so a symbolic link moved it."
+                                + " Serving the bundled console instead.",
+                        absRoot,
                         real,
-                        realHome);
+                        expected);
             }
-            throw new IOException("Web root " + real + " resolves outside " + realHome);
+            throw new IOException("Web root " + absRoot + " resolves to " + real);
         }
         return real;
     }

@@ -194,4 +194,24 @@ public class WebRootTest {
         Path home = Files.createDirectory(tmp.resolve("home"));
         WebRoot.realRootIn(home, home.resolve("public"));
     }
+
+    @Test(expectedExceptions = IOException.class)
+    public void testRootSymlinkToConfInsideHomeIsRefused() throws IOException {
+        // Inside the home, so containment alone accepts it, and every file in conf would then be
+        // served as a static file -- config.properties included.
+        Path home = Files.createDirectory(tmp.resolve("home"));
+        Path conf = Files.createDirectory(home.resolve("conf"));
+        Files.writeString(conf.resolve("config.properties"), "secret_key=hunter2");
+        Path root = symlinkOrSkip(home.resolve("public"), conf);
+        WebRoot.realRootIn(home, root);
+    }
+
+    @Test(expectedExceptions = IOException.class)
+    public void testIntermediateSymlinkToSiblingInsideHomeIsRefused() throws IOException {
+        Path home = Files.createDirectory(tmp.resolve("home"));
+        Path logs = Files.createDirectory(home.resolve("logs"));
+        Files.createDirectory(logs.resolve("public"));
+        symlinkOrSkip(home.resolve("web"), logs);
+        WebRoot.realRootIn(home, home.resolve("web/public"));
+    }
 }
