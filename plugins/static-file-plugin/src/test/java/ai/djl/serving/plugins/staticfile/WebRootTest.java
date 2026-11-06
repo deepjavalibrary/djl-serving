@@ -13,12 +13,14 @@
 package ai.djl.serving.plugins.staticfile;
 
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.nio.file.FileSystemException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -112,6 +114,25 @@ public class WebRootTest {
                 });
     }
 
+    /**
+     * Creates a symbolic link, or skips the test where the platform will not allow one.
+     *
+     * <p>Windows refuses without a privilege the CI runner does not hold, and these cases are about
+     * link following, so there is nothing left to assert without one.
+     *
+     * @param link the link to create
+     * @param target what it points at
+     * @return the created link
+     * @throws IOException if creating the link fails for any other reason
+     */
+    private static Path symlinkOrSkip(Path link, Path target) throws IOException {
+        try {
+            return Files.createSymbolicLink(link, target);
+        } catch (UnsupportedOperationException | FileSystemException e) {
+            throw new SkipException("Symbolic links unavailable on this platform: " + e);
+        }
+    }
+
     @Test
     public void testRealRootInsideHomeIsReturned() throws IOException {
         Path home = Files.createDirectory(tmp.resolve("home"));
@@ -124,7 +145,7 @@ public class WebRootTest {
         // The should-pass cell: /opt -> /mnt/opt is ordinary, and must not be refused.
         Path real = Files.createDirectory(tmp.resolve("real-home"));
         Path root = Files.createDirectory(real.resolve("public"));
-        Path home = Files.createSymbolicLink(tmp.resolve("home"), real);
+        Path home = symlinkOrSkip(tmp.resolve("home"), real);
         Assert.assertEquals(WebRoot.realRootIn(home, home.resolve("public")), root.toRealPath());
     }
 
@@ -132,7 +153,7 @@ public class WebRootTest {
     public void testRootSymlinkPointingOutsideIsRefused() throws IOException {
         Path home = Files.createDirectory(tmp.resolve("home"));
         Path outside = Files.createDirectory(tmp.resolve("outside"));
-        Path root = Files.createSymbolicLink(home.resolve("public"), outside);
+        Path root = symlinkOrSkip(home.resolve("public"), outside);
         WebRoot.realRootIn(home, root);
     }
 
@@ -141,7 +162,7 @@ public class WebRootTest {
         Path home = Files.createDirectory(tmp.resolve("home"));
         Path outside = Files.createDirectory(tmp.resolve("outside"));
         Files.createDirectory(outside.resolve("public"));
-        Files.createSymbolicLink(home.resolve("web"), outside);
+        symlinkOrSkip(home.resolve("web"), outside);
         WebRoot.realRootIn(home, home.resolve("web/public"));
     }
 
