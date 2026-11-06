@@ -7,6 +7,15 @@ single-port configuration that port is also the inference port. Enable it with
 `DJL_ENABLE_CONSOLE_API=true` (or `-DDJL_ENABLE_CONSOLE_API=true`). While disabled,
 `/console/api/*` returns 404 and the pages below cannot act on the server.
 
+The operations that change the server are **gated separately and are also off by default**:
+uploading a file, adding or deleting a dependency, rewriting `config.properties`, and restarting.
+Enabling the console API alone leaves those returning 405; add
+`DJL_ENABLE_CONSOLE_WRITE=true` (or `-DDJL_ENABLE_CONSOLE_WRITE=true`) to allow them. Being able
+to read logs and configuration and being able to reconfigure and restart the server are separate
+decisions, so they are separate switches. This is defence in depth, not authentication: with the
+write switch on, any caller that reaches the port can still do all of it, so the port must remain
+reachable by the operator alone.
+
 This gate covers the console API only. The console pages register, update and delete models
 through the `/models` management API directly, which this gate does not disable. The inference and
 management APIs stay reachable on their configured ports; restrict those separately with
