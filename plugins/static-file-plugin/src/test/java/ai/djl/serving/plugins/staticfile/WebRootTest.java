@@ -13,16 +13,25 @@
 package ai.djl.serving.plugins.staticfile;
 
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 
 /** Tests that a configured web root cannot select a directory outside the server home. */
 public class WebRootTest {
 
     private static final Path HOME = Paths.get("/opt/djl").toAbsolutePath().normalize();
+
+    private Path tmp;
 
     @DataProvider(name = "containedRoots")
     public Object[][] containedRoots() {
@@ -69,5 +78,76 @@ public class WebRootTest {
             Path root = WebRoot.resolve(HOME, configured);
             Assert.assertTrue(root.startsWith(HOME), "web root escaped the server home: " + root);
         }
+    }
+
+    @BeforeMethod
+    public void createTmp() throws IOException {
+        tmp = Files.createTempDirectory("webroot-test");
+    }
+
+    @AfterMethod
+    public void deleteTmp() throws IOException {
+        if (tmp == null) {
+            return;
+        }
+        // Does not follow links by default, so an outward-pointing link is unlinked, not walked.
+        Files.walkFileTree(
+                tmp,
+                new SimpleFileVisitor<Path>() {
+                    /** {@inheritDoc} */
+                    @Override
+                    public FileVisitResult visitFile(Path f, BasicFileAttributes attrs)
+                            throws IOException {
+                        Files.delete(f);
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path d, IOException e)
+                            throws IOException {
+                        Files.delete(d);
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+    }
+
+    @Test
+    public void testRealRootInsideHomeIsReturned() throws IOException {
+        Path home = Files.createDirectory(tmp.resolve("home"));
+        Path root = Files.createDirectory(home.resolve("public"));
+        Assert.assertEquals(WebRoot.realRootIn(home, root), root.toRealPath());
+    }
+
+    @Test
+    public void testHomeReachedThroughALinkStillAcceptsAContainedRoot() throws IOException {
+        // The should-pass cell: /opt -> /mnt/opt is ordinary, and must not be refused.
+        Path real = Files.createDirectory(tmp.resolve("real-home"));
+        Path root = Files.createDirectory(real.resolve("public"));
+        Path home = Files.createSymbolicLink(tmp.resolve("home"), real);
+        Assert.assertEquals(WebRoot.realRootIn(home, home.resolve("public")), root.toRealPath());
+    }
+
+    @Test(expectedExceptions = IOException.class)
+    public void testRootSymlinkPointingOutsideIsRefused() throws IOException {
+        Path home = Files.createDirectory(tmp.resolve("home"));
+        Path outside = Files.createDirectory(tmp.resolve("outside"));
+        Path root = Files.createSymbolicLink(home.resolve("public"), outside);
+        WebRoot.realRootIn(home, root);
+    }
+
+    @Test(expectedExceptions = IOException.class)
+    public void testIntermediateSymlinkPointingOutsideIsRefused() throws IOException {
+        Path home = Files.createDirectory(tmp.resolve("home"));
+        Path outside = Files.createDirectory(tmp.resolve("outside"));
+        Files.createDirectory(outside.resolve("public"));
+        Files.createSymbolicLink(home.resolve("web"), outside);
+        WebRoot.realRootIn(home, home.resolve("web/public"));
+    }
+
+    @Test(expectedExceptions = IOException.class)
+    public void testRootThatDoesNotExistIsRefused() throws IOException {
+        Path home = Files.createDirectory(tmp.resolve("home"));
+        WebRoot.realRootIn(home, home.resolve("public"));
     }
 }

@@ -15,8 +15,10 @@ package ai.djl.serving.plugins.staticfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Resolves the directory static files are served from. */
 final class WebRoot {
@@ -24,8 +26,40 @@ final class WebRoot {
     static final String DEFAULT = "public";
 
     private static final Logger logger = LoggerFactory.getLogger(WebRoot.class);
+    private static final AtomicBoolean ESCAPE_WARNED = new AtomicBoolean();
 
     private WebRoot() {}
+
+    /**
+     * Returns the real web root, or refuses it if it leaves the real server home.
+     *
+     * <p>{@link #resolve} confines the configured value lexically, which does not follow links: a
+     * symbolic link at the root itself, or at any directory above it, still resolves outside the
+     * server home. The handler anchors its per-file containment on this root, so the root is the
+     * one place that has to be compared against the real server home. Both sides are resolved, so a
+     * server home legitimately reached through a link still accepts a root inside it.
+     *
+     * @param home the model server home
+     * @param webRoot the lexically confined web root
+     * @return the real path of the web root
+     * @throws IOException if the root does not exist, or resolves outside the server home
+     */
+    static Path realRootIn(Path home, Path webRoot) throws IOException {
+        Path realHome = home.toRealPath();
+        Path real = webRoot.toRealPath();
+        if (!real.startsWith(realHome)) {
+            if (ESCAPE_WARNED.compareAndSet(false, true)) {
+                logger.warn(
+                        "Web root {} resolves to {}, outside the model server home {}. Serving the"
+                                + " bundled console instead.",
+                        webRoot,
+                        real,
+                        realHome);
+            }
+            throw new IOException("Web root " + real + " resolves outside " + realHome);
+        }
+        return real;
+    }
 
     /**
      * Returns the web root a configured {@code WEB_ROOT} selects, confined to the server home.
@@ -36,9 +70,12 @@ final class WebRoot {
      * to the default rather than throwing, so a bad value serves the bundled console instead of
      * taking the server down at startup.
      *
+     * <p>Lexical only, so it does not follow links; {@link #realRootIn} is what establishes that
+     * the root the handler anchors on really is inside the server home.
+     *
      * @param home the model server home, absolute and normalized
      * @param configured the configured {@code WEB_ROOT}
-     * @return a directory inside {@code home}
+     * @return a path lexically inside {@code home}
      */
     static Path resolve(Path home, String configured) {
         Path root;

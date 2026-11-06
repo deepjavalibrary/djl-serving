@@ -132,10 +132,11 @@ public class StaticFileHandler implements RequestHandler<Void> {
     }
 
     private static Path realWebHome() throws IOException {
-        // Cached once found; until then the web root may not exist yet.
+        // Cached once found, and only a validated root is cached: the web root may not exist at
+        // startup, and WEB_HOME is confined only lexically.
         Path root = REAL_WEB_HOME.get();
         if (root == null) {
-            root = WEB_HOME.toRealPath();
+            root = WebRoot.realRootIn(Paths.get(ConfigManager.getModelServerHome()), WEB_HOME);
             REAL_WEB_HOME.set(root);
         }
         return root;
