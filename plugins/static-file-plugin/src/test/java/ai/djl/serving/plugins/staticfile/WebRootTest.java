@@ -68,6 +68,9 @@ public class WebRootTest {
             {"/opt/djl"},
             {"/opt/djl/webapp"},
             {"/opt/djl/../djl/webapp"},
+            // Drive-qualified on Windows, where a leading slash alone carries a root but is
+            // not absolute, so the rule is covered with a real absolute path on both.
+            {HOME.resolve("webapp").toString()},
             // Relative, but normalize to the home itself, which is the same exposure.
             {"."},
             {""},

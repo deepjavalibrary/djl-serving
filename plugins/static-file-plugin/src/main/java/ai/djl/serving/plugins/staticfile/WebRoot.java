@@ -96,11 +96,14 @@ final class WebRoot {
         Path root;
         try {
             Path candidate = Paths.get(configured);
-            if (candidate.isAbsolute()) {
+            // Rooted rather than absolute: on Windows "\dir" and "/dir" carry a root without a
+            // drive, so they are not absolute, and resolve would graft them onto the home's
+            // drive. Every absolute path has a root, so this is the wider test on both platforms.
+            if (candidate.getRoot() != null) {
                 // WEB_ROOT names a directory in the server home, so an absolute value has no
                 // meaning here. Refused rather than resolved: one equal to the home would
                 // otherwise pass the containment check below and serve the home itself.
-                logger.warn("WEB_ROOT {} is absolute, serving {} instead.", configured, DEFAULT);
+                logger.warn("WEB_ROOT {} is rooted, serving {} instead.", configured, DEFAULT);
                 return home.resolve(DEFAULT);
             }
             root = home.resolve(candidate).normalize();
