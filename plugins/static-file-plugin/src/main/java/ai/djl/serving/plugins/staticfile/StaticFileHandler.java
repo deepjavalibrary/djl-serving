@@ -46,9 +46,10 @@ import java.util.jar.JarEntry;
  */
 public class StaticFileHandler implements RequestHandler<Void> {
 
-    private static final String WEB_ROOT =
-            ConfigManager.getInstance().getProperty("WEB_ROOT", "public");
-    private static final Path WEB_HOME = Paths.get(ConfigManager.getModelServerHome(), WEB_ROOT);
+    private static final Path WEB_HOME =
+            WebRoot.resolve(
+                    Paths.get(ConfigManager.getModelServerHome()).toAbsolutePath().normalize(),
+                    ConfigManager.getInstance().getProperty("WEB_ROOT", WebRoot.DEFAULT));
     private static final String RESOURCE_FOLDER = "/static";
 
     private static final AtomicReference<Path> REAL_WEB_HOME = new AtomicReference<>();
@@ -131,10 +132,11 @@ public class StaticFileHandler implements RequestHandler<Void> {
     }
 
     private static Path realWebHome() throws IOException {
-        // Cached once found; until then the web root may not exist yet.
+        // Cached once found, and only a validated root is cached: the web root may not exist at
+        // startup, and WEB_HOME is confined only lexically.
         Path root = REAL_WEB_HOME.get();
         if (root == null) {
-            root = WEB_HOME.toRealPath();
+            root = WebRoot.realRootIn(Paths.get(ConfigManager.getModelServerHome()), WEB_HOME);
             REAL_WEB_HOME.set(root);
         }
         return root;

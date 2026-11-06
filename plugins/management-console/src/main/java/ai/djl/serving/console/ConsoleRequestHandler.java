@@ -68,6 +68,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsoleRequestHandler.class);
     private static final AtomicBoolean DISABLED_WARNED = new AtomicBoolean();
+    private static final AtomicBoolean WRITE_DISABLED_WARNED = new AtomicBoolean();
 
     /** {@inheritDoc} */
     @Override
@@ -103,6 +104,42 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         return Boolean.parseBoolean(Utils.getEnvOrSystemProperty("DJL_ENABLE_CONSOLE_API"));
     }
 
+    /**
+     * Refuses a state-changing console operation unless it is explicitly enabled.
+     *
+     * <p>These endpoints have no authentication: the console API verifies no credential, so
+     * enabling it grants every caller that reaches the port the ability to rewrite {@code
+     * config.properties}, install a jar the class loader will load, and exit the process. That is a
+     * separate decision from being able to read logs and configuration, so it is a separate opt-in
+     * and it defaults to off. It is a containment measure, not authentication; the port must still
+     * be reachable only by the operator.
+     *
+     * @throws MethodNotAllowedException if {@code DJL_ENABLE_CONSOLE_WRITE} is not set true
+     */
+    static void requiresWriteEnabled() {
+        if (!isConsoleWriteEnabled()) {
+            if (WRITE_DISABLED_WARNED.compareAndSet(false, true)) {
+                logger.warn(
+                        "Refusing a console write operation. These endpoints are unauthenticated;"
+                                + " set DJL_ENABLE_CONSOLE_WRITE=true only if every caller that"
+                                + " can reach this port is trusted to reconfigure and restart the"
+                                + " server.");
+            }
+            throw new MethodNotAllowedException();
+        }
+    }
+
+    /**
+     * Returns whether state-changing console operations are explicitly enabled.
+     *
+     * <p>Not read from {@code config.properties}, because these operations can rewrite that file.
+     *
+     * @return true if {@code DJL_ENABLE_CONSOLE_WRITE} is set true
+     */
+    static boolean isConsoleWriteEnabled() {
+        return Boolean.parseBoolean(Utils.getEnvOrSystemProperty("DJL_ENABLE_CONSOLE_WRITE"));
+    }
+
     /** {@inheritDoc} */
     @Override
     public Void handleRequest(
@@ -127,18 +164,21 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                 getInferenceAddress(ctx, req.method());
                 return null;
             case "upload":
+                requiresWriteEnabled();
                 upload(ctx, req);
                 return null;
             case "version":
                 getVersion(ctx, req.method());
                 return null;
             case "restart":
+                requiresWriteEnabled();
                 restart(ctx, req.method());
                 return null;
             case "config":
                 if (HttpMethod.GET.equals(req.method())) {
                     getConfig(ctx);
                 } else if (HttpMethod.POST.equals(req.method())) {
+                    requiresWriteEnabled();
                     modifyConfig(ctx, req);
                 } else {
                     throw new MethodNotAllowedException();
@@ -148,8 +188,10 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                 if (HttpMethod.GET.equals(req.method())) {
                     listDependency(ctx);
                 } else if (HttpMethod.POST.equals(req.method())) {
+                    requiresWriteEnabled();
                     addDependency(ctx, req);
                 } else if (HttpMethod.DELETE.equals(req.method())) {
+                    requiresWriteEnabled();
                     if (segments.length == 5) {
                         deleteDependency(ctx, segments[4]);
                     } else {
