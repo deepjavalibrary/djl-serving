@@ -46,9 +46,10 @@ import java.util.jar.JarEntry;
  */
 public class StaticFileHandler implements RequestHandler<Void> {
 
-    private static final String WEB_ROOT =
-            ConfigManager.getInstance().getProperty("WEB_ROOT", "public");
-    private static final Path WEB_HOME = Paths.get(ConfigManager.getModelServerHome(), WEB_ROOT);
+    private static final Path WEB_HOME =
+            WebRoot.resolve(
+                    Paths.get(ConfigManager.getModelServerHome()).toAbsolutePath().normalize(),
+                    ConfigManager.getInstance().getProperty("WEB_ROOT", WebRoot.DEFAULT));
     private static final String RESOURCE_FOLDER = "/static";
 
     private static final AtomicReference<Path> REAL_WEB_HOME = new AtomicReference<>();
