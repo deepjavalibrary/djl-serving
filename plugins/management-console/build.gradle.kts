@@ -7,6 +7,10 @@ plugins {
 
 dependencies {
     api(project(":serving"))
+
+    testImplementation(libs.testng) {
+        exclude(group = "junit", module = "junit")
+    }
 }
 
 tasks {

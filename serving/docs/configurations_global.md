@@ -162,6 +162,7 @@ system environment variables that user can be set for DJL Serving:
 | SERVING_OPTS      | env var | default: N/A<br>Add serving related JVM options.<br>Some of DJL configuration can only be configured by JVM system properties, user has to set DEFAULT_JVM_OPTS environment variable to configure them.<br>- `-Dai.djl.pytorch.num_interop_threads=2`, this will override interop threads for PyTorch<br>- `-Dai.djl.pytorch.num_threads=2`, this will override OMP_NUM_THREADS for PyTorch<br>- `-Dai.djl.logging.level=debug` change DJL loggging level |
 | SERVING_ENGINE_METRICS | env var | default: `false`<br>Set to `true` to serve the metrics that the inference engine records inside the Python workers (for example vLLM) at `GET /server/metrics` and `GET /metrics`, see [get metrics](management_api.md#get-metrics). The `lmi` container image sets it to `true`.                                                                                                                                                                         |
 | DJL_ENABLE_CONSOLE_API | env var | default: `false`<br>Set to `true` to serve the management console API at `/console/api/*`, see [management console](console.md). It is off by default because it has no authentication of its own and can upload files, install dependencies and rewrite `config.properties`; enable it only where the port serving it is reachable by the operator alone, which with the default single-port configuration is also the inference port.                                        |
+| DJL_ENABLE_CONSOLE_WRITE | env var | default: `false`<br>Set to `true` to allow the management console API operations that change the server: upload, add and delete dependency, rewrite `config.properties`, and restart. Requires `DJL_ENABLE_CONSOLE_API` as well; while unset those operations return 405 and the read-only ones still work. Defence in depth rather than authentication, since the console API verifies no credential.                                                                       |
 
 **Note:** Above system environment variable has higher priority than the default value in the container.
 
@@ -181,6 +182,14 @@ export SERVING_JOB_QUEUE_SIZE=1000 # This will override JOB_QUEUE_SIZE in the co
 ```
 
 Similar to system environment variable, global environment variable has higher priority than config.properties.
+
+`WEB_ROOT` names the directory the static file plugin serves the console pages from, relative to
+the model server home, and defaults to `public`. It must name a directory strictly below the
+server home: a value that is rooted or absolute, that resolves outside the home, or that selects
+the home itself (`.`, or empty) is refused and `public` is served instead, with a warning in the
+log. A symbolic link at the directory, or at one above it, is not followed either, because it
+could otherwise point the root at `conf`, `logs` or `deps` and serve those as static files. The
+server home itself may still be reached through a symbolic link.
 
 ### Per model settings
 
