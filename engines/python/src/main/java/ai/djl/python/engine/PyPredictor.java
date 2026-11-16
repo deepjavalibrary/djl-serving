@@ -72,6 +72,11 @@ class PyPredictor<I, O> extends Predictor<I, O> {
                 process.startPythonProcess();
             } catch (Exception ex) {
                 logger.error("Failed to restart Python process after abrupt exit", ex);
+                // Terminate the worker thread instead of failing every request routed to it
+                throw new EngineException(
+                        "Failed to restart Python process after abrupt exit. Initiating worker"
+                                + " termination",
+                        ex);
             }
         }
         if (!process.isReady()) {
