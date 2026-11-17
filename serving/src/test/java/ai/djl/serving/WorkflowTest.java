@@ -72,13 +72,13 @@ public class WorkflowTest {
     @Test
     public void testFunctions() throws IOException, BadWorkflowException {
         // functions.json declares a custom WorkflowFunction that ships as a bundled .java source
-        // under workflows/libs/classes, so this test needs DJL to compile it at load time. That
-        // is opt-in as of DJL 0.37.0, so skip unless the opt-in is set.
-        boolean envOptIn = Boolean.parseBoolean(Utils.getenv("DJL_COMPILE_JAVA", "false"));
-        boolean propOptIn =
-                Boolean.parseBoolean(System.getProperty("ai.djl.compile_java", "false"));
-        if (!envOptIn && !propOptIn) {
+        // under workflows/libs/classes. DJL gates compiling that source and loading the compiled
+        // output behind separate opt-ins, so skip unless both are set.
+        if (!optIn("DJL_COMPILE_JAVA", "ai.djl.compile_java")) {
             throw new SkipException("Java compilation is disabled");
+        }
+        if (!optIn("DJL_LOAD_BUNDLED_CLASSES", "ai.djl.load_bundled_classes")) {
+            throw new SkipException("Bundled class loading is disabled");
         }
         Path workflowFile = Paths.get("src/test/resources/workflows/functions.json");
         runWorkflow(workflowFile, zeroInput);
@@ -117,5 +117,10 @@ public class WorkflowTest {
         wlm.close();
         Assert.assertNotNull(output.getData());
         return output;
+    }
+
+    private static boolean optIn(String env, String prop) {
+        // The environment variable wins over the property, as it does inside DJL.
+        return Boolean.parseBoolean(Utils.getenv(env, System.getProperty(prop)));
     }
 }
