@@ -26,7 +26,7 @@ from vllm.entrypoints.openai.completion.serving import OpenAIServingCompletion
 from vllm.entrypoints.openai.models.protocol import BaseModelPath
 from vllm.entrypoints.openai.models.serving import OpenAIServingModels
 from vllm.renderers.online_renderer import OnlineRenderer
-from vllm.entrypoints.chat_utils import load_chat_template, ChatTemplateConfig
+from vllm.renderers.chat_utils import load_chat_template, ChatTemplateConfig
 from vllm.entrypoints.pooling.embed.serving import ServingEmbedding
 from vllm.entrypoints.pooling.embed.protocol import EmbeddingCompletionRequest
 from vllm.utils.counter import AtomicCounter
