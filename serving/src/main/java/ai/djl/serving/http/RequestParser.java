@@ -96,13 +96,25 @@ public class RequestParser {
             input.add("data", content);
         }
 
-        if (input.getProperties().containsKey("handler")) {
-            if (!Boolean.parseBoolean(
-                    Utils.getEnvOrSystemProperty("ALLOW_REQUEST_HANDLER_OVERRIDE"))) {
-                throw new BadRequestException("The handler can't be overridden in a request");
-            }
-        }
-
+        checkHandlerOverride(input);
         return input;
+    }
+
+    /**
+     * Rejects a request that sets the {@code handler} property, unless {@code
+     * ALLOW_REQUEST_HANDLER_OVERRIDE} is enabled.
+     *
+     * <p>Every frontend that builds an {@link Input} from client-supplied headers must call this,
+     * so that a client cannot select a different handler on any protocol.
+     *
+     * @param input the parsed request
+     * @throws BadRequestException if the request overrides the handler and that is not allowed
+     */
+    public static void checkHandlerOverride(Input input) {
+        if (input.getProperties().containsKey("handler")
+                && !Boolean.parseBoolean(
+                        Utils.getEnvOrSystemProperty("ALLOW_REQUEST_HANDLER_OVERRIDE"))) {
+            throw new BadRequestException("The handler can't be overridden in a request");
+        }
     }
 }

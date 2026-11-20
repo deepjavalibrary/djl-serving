@@ -22,6 +22,9 @@ import ai.djl.serving.util.ModelStore;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
@@ -94,6 +97,17 @@ public class GrpcTest {
 
                 Iterator<InferenceResponse> ret = client.inference("invalid", "v1", headers, "");
                 Assert.assertThrows(ret::next);
+
+                // A request must not select a different handler unless
+                // ALLOW_REQUEST_HANDLER_OVERRIDE is set, the same as over HTTP.
+                for (String key : new String[] {"handler", "Handler"}) {
+                    Map<String, String> override = Map.of(key, "invoke_management");
+                    Iterator<InferenceResponse> rejected =
+                            client.inference("echo", null, override, "hello");
+                    StatusRuntimeException e =
+                            Assert.expectThrows(StatusRuntimeException.class, rejected::next);
+                    Assert.assertEquals(e.getStatus().getCode(), Status.Code.INVALID_ARGUMENT);
+                }
             }
         } finally {
             server.stop();
