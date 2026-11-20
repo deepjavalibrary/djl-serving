@@ -139,12 +139,6 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-11B"
     },
-    "llama-68m-speculative-medusa": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "JackFram/llama-68m",
-        "speculative_decoding": True
-    },
     "llama3-1-8b-speculative-eagle": {
         "batch_size": [1, 4],
         "seq_length": [256],

@@ -154,14 +154,6 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.enable_chunked_prefill": "true",
     },
-    "llama-68m-speculative-medusa": {
-        "option.model_id": "s3://djl-llm/llama-68m/",
-        "option.task": "text-generation",
-        "option.speculative_config":
-        '{"method":"medusa","model":"abhigoyal/vllm-medusa-llama-68m-random","num_speculative_tokens":4}',
-        "option.tensor_parallel_degree": 1,
-        "option.max_rolling_batch_size": 4,
-    },
     "llama3-1-8b-speculative-eagle": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.task": "text-generation",

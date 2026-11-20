@@ -156,6 +156,7 @@ class TestCpuBoth:
     def test_pytorch(self, arch):
         with Runner(arch, "pytorch", download=True) as r:
             r.launch(
+                env_vars=["DJL_LOAD_BUNDLED_CLASSES=true"],
                 cmd=
                 "serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip"
             )
@@ -215,6 +216,7 @@ class TestGpu_g6:
     def test_pytorch(self):
         with Runner("pytorch-gpu", "pytorch_model", download=True) as r:
             r.launch(
+                env_vars=["DJL_LOAD_BUNDLED_CLASSES=true"],
                 cmd=
                 "serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip"
             )
@@ -227,6 +229,7 @@ class TestAarch64:
     def test_pytorch(self):
         with Runner("aarch64", "pytorch_model", download=True) as r:
             r.launch(
+                env_vars=["DJL_LOAD_BUNDLED_CLASSES=true"],
                 cmd=
                 "serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip"
             )
@@ -401,12 +404,6 @@ class TestVllm1_g6:
             r.launch()
             client.run(
                 "vllm falcon-11b-chunked-prefill --in_tokens 1200".split())
-
-    def test_llama_68m_speculative_medusa(self):
-        with Runner("lmi", "llama-68m-speculative-medusa") as r:
-            prepare.build_vllm_model("llama-68m-speculative-medusa")
-            r.launch()
-            client.run("vllm llama-68m-speculative-medusa".split())
 
 
 @pytest.mark.vllm

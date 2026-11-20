@@ -19,10 +19,10 @@ from vllm.tool_parsers import ToolParser
 from vllm.tokenizers.mistral import maybe_serialize_tool_calls
 from vllm.tokenizers import TokenizerLike
 from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest
-from vllm.entrypoints.chat_utils import (parse_chat_messages,
-                                         ChatCompletionMessageParam,
-                                         ChatTemplateContentFormatOption,
-                                         ConversationMessage)
+from vllm.renderers.chat_utils import (parse_chat_messages,
+                                       ChatCompletionMessageParam,
+                                       ChatTemplateContentFormatOption,
+                                       ConversationMessage)
 from vllm.renderers.hf import (safe_apply_chat_template,
                                resolve_chat_template_content_format)
 
