@@ -164,7 +164,8 @@ public class WorkerPool<I, O> {
      */
     public boolean isFullyScaled() {
         for (WorkerGroup<I, O> group : workerGroups.values()) {
-            if (group.getMinWorkers() > group.getWorkers().size()) {
+            long alive = group.getWorkers().stream().filter(WorkerThread::isRunning).count();
+            if (group.getMinWorkers() > alive) {
                 return false;
             }
         }

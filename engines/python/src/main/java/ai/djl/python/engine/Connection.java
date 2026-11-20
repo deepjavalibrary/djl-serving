@@ -55,12 +55,16 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 class Connection {
@@ -90,26 +94,7 @@ class Connection {
 
     static Process startPython(PyEnv pyEnv, Model model, int workerId, int port, String[] hosts)
             throws IOException {
-        Path tmp = Paths.get(System.getProperty("java.io.tmpdir"));
-        try (Stream<Path> stream = Files.list(tmp)) {
-            stream.forEach(
-                    p -> {
-                        try {
-                            String name = p.toFile().getName();
-                            if (name.startsWith("djl_sock." + port) && name.endsWith(".pid")) {
-                                long pid = Long.parseLong(Files.readString(p));
-                                Optional<ProcessHandle> handle = ProcessHandle.of(pid);
-                                if (handle.isPresent()) {
-                                    logger.warn("Kill dangling process: {}", pid);
-                                    handle.get().destroyForcibly();
-                                }
-                                Utils.deleteQuietly(p);
-                            }
-                        } catch (IOException e) {
-                            logger.warn("", e);
-                        }
-                    });
-        }
+        cleanupDanglingProcesses(port);
         File modelPath = model.getModelPath().toFile();
         String[] args = getPythonStartCmd(pyEnv, model, workerId, port, hosts);
         if (PyEnv.isEngineMetricsEnabled()) {
@@ -120,6 +105,75 @@ class Connection {
         logger.debug("cmd: {}", (Object) args);
 
         return Runtime.getRuntime().exec(args, envp, modelPath);
+    }
+
+    /**
+     * Removes stale pid files of the given port and kills the process only if it is verifiably the
+     * dangling python worker that wrote the file.
+     *
+     * <p>The pid file may survive a host reboot (e.g. /tmp is a host bind mount), in which case the
+     * PID may have been reused by an unrelated process or by a live sibling worker.
+     */
+    static void cleanupDanglingProcesses(int port) {
+        Path tmp = Paths.get(System.getProperty("java.io.tmpdir"));
+        String sockPath = getSocketPath(port);
+        Pattern pattern = Pattern.compile("djl_sock\\." + port + "(\\.\\d+)?\\.pid");
+        try (Stream<Path> stream = Files.list(tmp)) {
+            stream.filter(p -> pattern.matcher(p.toFile().getName()).matches())
+                    .forEach(p -> cleanupPidFile(p, sockPath));
+        } catch (IOException e) {
+            logger.warn("Failed to list tmp directory: {}", tmp, e);
+        }
+    }
+
+    private static void cleanupPidFile(Path pidFile, String sockPath) {
+        try {
+            long pid = Long.parseLong(Files.readString(pidFile).trim());
+            FileTime mtime = Files.getLastModifiedTime(pidFile);
+            Optional<ProcessHandle> handle = ProcessHandle.of(pid);
+            if (handle.isPresent()) {
+                if (isDanglingWorker(handle.get(), mtime.toInstant(), sockPath)) {
+                    logger.warn("Kill dangling process: {}", pid);
+                    handle.get().destroyForcibly();
+                } else {
+                    logger.warn(
+                            "Stale pid file {} points to pid {} which is not its owner, skip"
+                                    + " killing.",
+                            pidFile,
+                            pid);
+                }
+            }
+        } catch (IOException | NumberFormatException e) {
+            logger.warn("Invalid pid file: {}", pidFile, e);
+        }
+        Utils.deleteQuietly(pidFile);
+    }
+
+    /**
+     * Returns {@code true} only if the process is a python worker serving the socket and was
+     * started before the pid file was written, i.e. the PID was not reused.
+     */
+    static boolean isDanglingWorker(ProcessHandle handle, Instant pidFileTime, String sockPath) {
+        if (handle.pid() == ProcessHandle.current().pid()) {
+            return false;
+        }
+        ProcessHandle.Info info = handle.info();
+        Optional<Instant> startTime = info.startInstant();
+        // allow small clock granularity difference between process start and file mtime
+        if (startTime.isEmpty() || startTime.get().isAfter(pidFileTime.plusSeconds(1))) {
+            return false;
+        }
+        List<String> args;
+        if (info.arguments().isPresent()) {
+            args = Arrays.asList(info.arguments().get());
+        } else if (info.commandLine().isPresent()) {
+            args = Arrays.asList(info.commandLine().get().split("\\s+"));
+        } else {
+            return false;
+        }
+        boolean isEngine = args.stream().anyMatch(a -> a.endsWith("djl_python_engine.py"));
+        int idx = args.indexOf("--sock-name");
+        return isEngine && idx >= 0 && idx + 1 < args.size() && sockPath.equals(args.get(idx + 1));
     }
 
     int getPort() {
