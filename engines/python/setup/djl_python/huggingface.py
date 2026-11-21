@@ -36,6 +36,21 @@ from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
 
+# Chat completions parameters that ChatProperties forwards to every backend
+# (see chat_completions/chat_utils.py) but that transformers.generate() does
+# not accept. Rolling-batch backends (vLLM, TensorRT-LLM) support these
+# natively and read them from the request before this handler ever sees them,
+# so this filtering is scoped to the plain HF pipeline / generate() path only.
+UNSUPPORTED_GENERATE_KWARGS = {"frequency_penalty", "presence_penalty", "ignore_eos"}
+
+
+def filter_unsupported_generate_kwargs(parameters: Dict) -> Dict:
+    return {
+        k: v
+        for k, v in parameters.items() if k not in UNSUPPORTED_GENERATE_KWARGS
+    }
+
+
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
     "ForQuestionAnswering": "question-answering",
@@ -242,6 +257,7 @@ class HuggingFaceService(object):
         # Dynamic batching
         input_data, input_size, parameters, adapters = get_input_details(
             requests, errors, batch)
+        parameters = filter_unsupported_generate_kwargs(parameters)
 
         if isinstance(self.model, PeftModelForCausalLM):
             if adapters is None:
@@ -280,7 +296,8 @@ class HuggingFaceService(object):
             raise NotImplementedError(
                 "Dynamic batch not supported for generic streaming")
 
-        parameters = request_input.server_parameters
+        parameters = filter_unsupported_generate_kwargs(
+            request_input.server_parameters)
         outputs.add_property("content-type", "application/jsonlines")
         if self.hf_configs.enable_streaming.value == StreamingEnum.huggingface.value:
             outputs.add_stream_content(
