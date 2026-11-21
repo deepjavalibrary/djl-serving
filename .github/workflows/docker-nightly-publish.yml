@@ -144,6 +144,7 @@ jobs:
       - name: Build docker image
         run: |
           export RELEASE_VERSION="${{ env.SERVING_VERSION }}-"
+          export BUILDX_NO_DEFAULT_ATTESTATIONS=1
           cd serving/docker
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.BUILD_VERSION_ARG_DJL }} \
