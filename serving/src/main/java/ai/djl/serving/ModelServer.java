@@ -327,11 +327,8 @@ public class ModelServer {
                 channelClass.getSimpleName());
 
         ServerBootstrap b = new ServerBootstrap();
-        b.option(ChannelOption.SO_BACKLOG, 1024)
-                .channel(channelClass)
-                .childOption(ChannelOption.SO_LINGER, 0)
-                .childOption(ChannelOption.SO_REUSEADDR, true)
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
+        b.channel(channelClass);
+        configureSocketOptions(b, connector.isUds());
         b.group(serverGroup, workerGroup);
 
         SslContext sslCtx = null;
@@ -373,6 +370,32 @@ public class ModelServer {
 
         logger.info("{} API bind to: {}", connector.getType(), connector);
         return f;
+    }
+
+    /**
+     * Applies the server's socket options to the given {@link ServerBootstrap}.
+     *
+     * <p>Package-private (rather than folded inline into {@link #initializeServer(Connector,
+     * EventLoopGroup, EventLoopGroup)}) so the option set can be asserted directly in tests without
+     * needing to bind a real listening socket.
+     *
+     * @param b the bootstrap to configure
+     * @param isUds {@code true} if {@code b} will bind a unix domain socket channel; domain-socket
+     *     child channels don't support TCP-level options such as {@code TCP_NODELAY}, so it's only
+     *     applied for TCP channels
+     */
+    static void configureSocketOptions(ServerBootstrap b, boolean isUds) {
+        b.option(ChannelOption.SO_BACKLOG, 1024)
+                .childOption(ChannelOption.SO_LINGER, 0)
+                .childOption(ChannelOption.SO_REUSEADDR, true)
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
+        if (!isUds) {
+            // Streaming responses write one small HTTP chunk per token; without
+            // TCP_NODELAY, Nagle's algorithm combined with client-side delayed ACK
+            // can stall each chunk by tens of milliseconds, inflating inter-token
+            // latency and p99 for every streaming/chat-completions request.
+            b.childOption(ChannelOption.TCP_NODELAY, true);
+        }
     }
 
     private void loadModels(List<Workflow> workflows) {
