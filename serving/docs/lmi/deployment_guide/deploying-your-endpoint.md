@@ -122,6 +122,9 @@ model = sagemaker.Model(
         "HF_MODEL_ID": "<huggingface hub model id or s3 uri>",
         "OPTION_ROLLING_BATCH": "vllm",
         "TENSOR_PARALLEL_DEGREE": "max",
+        # Example: increase JVM heap for workloads that need more memory.
+        # Preserve any image-specific options required by your deployment.
+        "JAVA_OPTS": "-Xms2g -Xmx2g -XX:+ExitOnOutOfMemoryError -Dai.djl.util.cuda.fork=true",
     }
 )
 # deploy your model

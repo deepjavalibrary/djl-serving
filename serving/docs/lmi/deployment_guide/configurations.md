@@ -118,6 +118,12 @@ The configuration `<property>` is translated to environment variable `SERVING_<P
 
 * `job_queue_size` is translated to environment variable `SERVING_JOB_QUEUE_SIZE`
 
+### JVM Heap Configuration
+
+LMI containers use JVM startup options configured through the `JAVA_OPTS` environment variable. In `serving/docker/lmi.Dockerfile`, the default JVM heap is configured as 1 GB (`-Xms1g -Xmx1g`). If the Java process encounters `OutOfMemoryError: Java heap space`, you may need to increase the heap based on the container's available memory and workload.
+
+For example, to configure a 2 GB heap, set `JAVA_OPTS` to `-Xms2g -Xmx2g -XX:+ExitOnOutOfMemoryError -Dai.djl.util.cuda.fork=true`. When overriding `JAVA_OPTS`, preserve any image-specific JVM options required by your deployment. See the [global configuration reference](../../configurations_global.md) for more details.
+
 Next: [Deploying your endpoint](deploying-your-endpoint.md)
 
 Previous: [Backend Selection](backend-selection.md)
