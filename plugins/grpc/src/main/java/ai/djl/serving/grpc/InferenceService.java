@@ -21,6 +21,8 @@ import ai.djl.serving.grpc.proto.InferenceGrpc;
 import ai.djl.serving.grpc.proto.InferenceRequest;
 import ai.djl.serving.grpc.proto.InferenceResponse;
 import ai.djl.serving.grpc.proto.PingResponse;
+import ai.djl.serving.http.BadRequestException;
+import ai.djl.serving.http.RequestParser;
 import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
@@ -130,6 +132,13 @@ class InferenceService extends InferenceGrpc.InferenceImplBase {
         }
 
         Input input = parseInput(request);
+        try {
+            RequestParser.checkHandlerOverride(input);
+        } catch (BadRequestException e) {
+            observer.onError(
+                    Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+            return;
+        }
         modelManager
                 .runJob(workflow, input)
                 .whenCompleteAsync(
