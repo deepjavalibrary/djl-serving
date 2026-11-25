@@ -655,8 +655,8 @@ public class PyEngineTest {
     public void testRestartProcess()
             throws TranslateException, IOException, ModelException, InterruptedException {
         // the echo model's initialization waits while this file exists
-        Path barrier = Paths.get("build/tmp/restart_barrier_" + RandomUtils.nextInt());
-        Files.createDirectories(barrier.getParent());
+        Path tmp = Files.createDirectories(Paths.get("build/tmp"));
+        Path barrier = tmp.resolve("restart_barrier_" + RandomUtils.nextInt());
         Files.deleteIfExists(barrier);
         Criteria<Input, Output> criteria =
                 Criteria.builder()
