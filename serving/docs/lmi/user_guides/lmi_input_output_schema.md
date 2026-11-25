@@ -250,13 +250,21 @@ Example response:
 
 #### Error Responses
 
-When using dynamic batching, an error caused by the request (a `ValueError`, a custom formatter failure, or a vLLM client error such as `VLLMValidationError`) is returned with HTTP response code 424, an out-of-memory error with 507, and any other failure with 500. For a 424 or 500 the content is:
+When using dynamic batching, the HTTP response code says which side failed:
+
+| Code | Cause |
+|------|-------|
+| 424 | The request caused the error: a `ValueError`, a custom formatter failure, or a vLLM client error such as `VLLMValidationError` |
+| 500 | Any other failure in the handler or the engine |
+| 507 | The model ran out of memory |
+
+A 424 or 500 response has this content, where `code` is the response code:
 
 ``` 
 {
-    "code": 424,
+    "code": <424 or 500>,
     "message": "invoke handler failure",
-    "error": "<error details"
+    "error": "<error details>"
 }
 ```
 
