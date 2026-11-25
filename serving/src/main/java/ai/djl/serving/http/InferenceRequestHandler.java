@@ -392,32 +392,22 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         int code = output.getCode();
         if (code == 200) {
             status = HttpResponseStatus.OK;
-            SERVER_METRIC.info("{}", RESPONSE_2_XX);
         } else {
-            if (code >= 500) {
-                SERVER_METRIC.info("{}", RESPONSE_5_XX);
-                if (!exceedErrorRate && config.onServerError()) {
-                    exceedErrorRate = true;
-                }
-            } else if (code >= 400) {
-                SERVER_METRIC.info("{}", RESPONSE_4_XX);
-                if (code == 424) {
-                    if (!exceedErrorRate && config.onServerError()) {
-                        exceedErrorRate = true;
-                    }
-                }
-            } else {
-                SERVER_METRIC.info("{}", RESPONSE_2_XX);
-            }
             status = new HttpResponseStatus(code, output.getMessage());
         }
         BytesSupplier data = output.getData();
         if (data instanceof ChunkedBytesSupplier) {
+            boolean recorded = false;
             try {
                 boolean first = true;
                 ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
                 while (supplier.hasNext()) {
                     byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.SECONDS);
+                    if (first) {
+                        // the code is final once the first chunk is available
+                        recordResponse(output.getCode());
+                        recorded = true;
+                    }
                     // Defer sending HTTP header until first chunk received.
                     // This allows inference update HTTP code.
                     // If this is the first and last chunk, we're in a non-streaming case and can
@@ -457,9 +447,14 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 logger.warn("RequestId=[{}] Chunk reading interrupted", requestId, e);
                 ctx.disconnect();
                 ctx.newFailedFuture(e);
+            } finally {
+                if (!recorded) {
+                    recordResponse(output.getCode());
+                }
             }
             return;
         }
+        recordResponse(code);
         if (data instanceof PublisherBytesSupplier) {
             HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
             for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
@@ -490,6 +485,22 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         NettyUtils.sendHttpResponse(ctx, resp, true);
+    }
+
+    private void recordResponse(int code) {
+        if (code >= 500) {
+            SERVER_METRIC.info("{}", RESPONSE_5_XX);
+            if (!exceedErrorRate && config.onServerError()) {
+                exceedErrorRate = true;
+            }
+        } else if (code >= 400) {
+            SERVER_METRIC.info("{}", RESPONSE_4_XX);
+            if (code == 424 && !exceedErrorRate && config.onServerError()) {
+                exceedErrorRate = true;
+            }
+        } else {
+            SERVER_METRIC.info("{}", RESPONSE_2_XX);
+        }
     }
 
     void onException(Throwable t, ChannelHandlerContext ctx) {
