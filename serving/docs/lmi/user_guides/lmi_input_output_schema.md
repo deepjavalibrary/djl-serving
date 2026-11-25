@@ -250,7 +250,7 @@ Example response:
 
 #### Error Responses
 
-When using dynamic batching, an error caused by the request (a `ValueError` or a custom formatter failure) is returned with HTTP response code 424, and any other failure with 500. The content is:
+When using dynamic batching, an error caused by the request (a `ValueError`, a custom formatter failure, or a vLLM client error such as `VLLMValidationError`) is returned with HTTP response code 424, an out-of-memory error with 507, and any other failure with 500. For a 424 or 500 the content is:
 
 ``` 
 {

@@ -37,8 +37,12 @@ async def handle_streaming_response(
         yield output
 
 
-async def stream_generator(tokens: List[str]) -> AsyncGenerator[str, None]:
-    for token in tokens:
+async def stream_generator(
+        tokens: List[str],
+        fail_after: Optional[int] = None) -> AsyncGenerator[str, None]:
+    for i, token in enumerate(tokens):
+        if i == fail_after:
+            raise RuntimeError("engine died mid-stream")
         # simulate token generation inference time
         await asyncio.sleep(1)
         yield json.dumps({"token": token})
@@ -65,12 +69,13 @@ class AsyncEcho:
             parameters = raw_payload.pop("parameters", {})
             sleep_time = int(parameters.pop("sleep_time", 5))
             streaming = raw_payload.pop("stream", "false").lower() == "true"
+            fail_after = parameters.pop("fail_after", None)
 
             response_tokens = [
                 f"{input_text} unit", "testing", "async", "mode", "[DONE]"
             ]
             if streaming:
-                generator = stream_generator(response_tokens)
+                generator = stream_generator(response_tokens, fail_after)
                 return handle_streaming_response(generator,
                                                  first.get_properties())
 
