@@ -24,6 +24,51 @@ from djl_python.outputs import Output
 SOCKET_ACCEPT_TIMEOUT = 30.0
 
 
+def _process_start_time(pid: int):
+    """Returns the process start time in epoch seconds, or None if unknown."""
+    try:
+        with open(f"/proc/{pid}/stat", "r") as f:
+            # comm (field 2) may contain spaces, fields after it start at state (field 3)
+            fields = f.read().rsplit(")", 1)[1].split()
+        start_ticks = int(fields[19])  # field 22: starttime
+        with open("/proc/stat", "r") as f:
+            btime = next(
+                int(line.split()[1]) for line in f if line.startswith("btime"))
+        return btime + start_ticks / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError, StopIteration):
+        return None
+
+
+def is_dangling_worker(pid: int, sock_name: str, pid_file_time: float) -> bool:
+    """
+    Returns True only if pid is a djl python worker serving sock_name that was started
+    before the pid file was written. Pid files can survive a host reboot (e.g. /tmp is a
+    host bind mount) and the PID may then belong to an unrelated process or a live sibling
+    worker, which must not be killed.
+    """
+    if pid == os.getpid():
+        return False
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            args = [
+                a.decode("utf-8", "replace") for a in f.read().split(b"\0")
+                if a
+            ]
+    except OSError:
+        return False
+    if not any(a.endswith("djl_python_engine.py") for a in args):
+        return False
+    try:
+        idx = args.index("--sock-name")
+    except ValueError:
+        return False
+    if idx + 1 >= len(args) or args[idx + 1] != sock_name:
+        return False
+    start_time = _process_start_time(pid)
+    # allow small clock granularity difference
+    return start_time is not None and start_time <= pid_file_time + 1
+
+
 class PythonSyncEngine(object):
     """
     Backend engine to run python code
@@ -61,7 +106,7 @@ class PythonSyncEngine(object):
                 raise ValueError("Missing sock-name argument.")
             self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
 
-            self.clean_up()
+            self.clean_up(args.sock_name)
         elif self.sock_type == "tcp":
             if self.sock_name is None:
                 self.sock_name = "0.0.0.0"
@@ -77,18 +122,25 @@ class PythonSyncEngine(object):
         self.sock.settimeout(SOCKET_ACCEPT_TIMEOUT)
         self.cl_socket = None
 
-    def clean_up(self):
+    def clean_up(self, base_sock_name: str):
         pid_file = f"{self.sock_name}.pid"
         if os.path.exists(pid_file):
             with open(pid_file, "r") as f:
-                pid = f.readline()
-                if pid:
+                pid = f.readline().strip()
+            if pid.isdigit():
+                pid = int(pid)
+                if is_dangling_worker(pid, base_sock_name,
+                                      os.path.getmtime(pid_file)):
                     try:
-                        os.kill(int(pid), signal.SIGKILL)
+                        os.kill(pid, signal.SIGKILL)
                         logging.warning(
                             f"{self.sock_name} - kill dangling process: {pid}")
                     except ProcessLookupError:
                         pass
+                else:
+                    logging.warning(
+                        f"{self.sock_name} - stale pid file points to pid {pid}"
+                        f" which is not its owner, skip killing.")
 
         with open(pid_file, "w") as f:
             f.write(str(os.getpid()))

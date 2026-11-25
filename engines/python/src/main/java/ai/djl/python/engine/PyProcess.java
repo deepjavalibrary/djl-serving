@@ -501,6 +501,13 @@ class PyProcess {
                 if (lifeCycle.pyEnv.isMpiMode() && lifeCycle.modelLoaded) {
                     lifeCycle.processExitedAbruptly.set(1);
                     logger.warn("MPI worker may have gone down unexpectedly");
+                } else if (!lifeCycle.pyEnv.isAsyncMode()
+                        && lifeCycle.modelLoaded
+                        && lifeCycle.restartCount.get() == processId) {
+                    // The process was not stopped by stopPythonProcess() (which bumps
+                    // restartCount), so it died on its own (e.g. killed externally).
+                    lifeCycle.processExitedAbruptly.set(1);
+                    logger.warn("Python worker process exited unexpectedly - {}", getName());
                 }
                 try {
                     is.close();

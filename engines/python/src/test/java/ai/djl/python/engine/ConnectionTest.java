@@ -32,11 +32,15 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 public class ConnectionTest {
 
     private static final String SWITCH = "SERVING_ENGINE_METRICS";
+    private static final int PORT = 29876;
 
     @BeforeClass
     public void setUp() {
@@ -208,6 +212,95 @@ public class ConnectionTest {
         } finally {
             Utils.deleteQuietly(request);
             Utils.deleteQuietly(metrics);
+        }
+    }
+
+    private static String sockPath(int port) {
+        return System.getProperty("java.io.tmpdir") + "/djl_sock." + port;
+    }
+
+    /** Starts a process whose command line looks like a python worker for the given socket. */
+    private static Process startFakeWorker(String sock) throws IOException {
+        return new ProcessBuilder(
+                        "sh",
+                        "-c",
+                        "sleep 60; true",
+                        "/x/djl_python_engine.py",
+                        "--sock-name",
+                        sock)
+                .start();
+    }
+
+    private static Path writePidFile(String name, long pid, Instant mtime) throws IOException {
+        Path file = Paths.get(System.getProperty("java.io.tmpdir"), name);
+        Files.writeString(file, String.valueOf(pid));
+        Files.setLastModifiedTime(file, FileTime.from(mtime));
+        return file;
+    }
+
+    @Test
+    public void testIsDanglingWorker() throws IOException, InterruptedException {
+        String sock = sockPath(PORT);
+        Process p = startFakeWorker(sock);
+        try {
+            ProcessHandle h = p.toHandle();
+            Thread.sleep(100);
+            Instant later = Instant.now().plusSeconds(5);
+            if (h.info().startInstant().isEmpty() || h.info().arguments().isEmpty()) {
+                // platform can't inspect process: never kill
+                Assert.assertFalse(Connection.isDanglingWorker(h, later, sock));
+                return;
+            }
+            Assert.assertTrue(Connection.isDanglingWorker(h, later, sock));
+            // pid file written before the process started -> PID was reused
+            Instant earlier = Instant.now().minusSeconds(3600);
+            Assert.assertFalse(Connection.isDanglingWorker(h, earlier, sock));
+            // live sibling worker serving another socket
+            Assert.assertFalse(Connection.isDanglingWorker(h, later, sockPath(PORT + 1)));
+            // never kill ourselves
+            Assert.assertFalse(
+                    Connection.isDanglingWorker(ProcessHandle.current(), later, sockPath(PORT)));
+        } finally {
+            p.destroyForcibly().waitFor(10, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    public void testCleanupDoesNotKillReusedPid() throws IOException, InterruptedException {
+        // A live sibling worker (port PORT + 1), whose PID is reused in a stale pid file of PORT
+        Process sibling = startFakeWorker(sockPath(PORT + 1));
+        Process unrelated = new ProcessBuilder("sleep", "60").start();
+        try {
+            Instant beforeReboot = Instant.now().minusSeconds(3600);
+            Path f1 = writePidFile("djl_sock." + PORT + ".pid", sibling.pid(), beforeReboot);
+            Path f2 = writePidFile("djl_sock." + PORT + ".1.pid", unrelated.pid(), Instant.now());
+            Connection.cleanupDanglingProcesses(PORT);
+
+            Assert.assertFalse(Files.exists(f1));
+            Assert.assertFalse(Files.exists(f2));
+            Assert.assertFalse(sibling.waitFor(500, TimeUnit.MILLISECONDS));
+            Assert.assertTrue(sibling.isAlive());
+            Assert.assertTrue(unrelated.isAlive());
+        } finally {
+            sibling.destroyForcibly().waitFor(10, TimeUnit.SECONDS);
+            unrelated.destroyForcibly().waitFor(10, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    public void testCleanupKillsDanglingWorker() throws IOException, InterruptedException {
+        Process dangling = startFakeWorker(sockPath(PORT));
+        try {
+            Thread.sleep(100);
+            ProcessHandle.Info info = dangling.toHandle().info();
+            Path f = writePidFile("djl_sock." + PORT + ".pid", dangling.pid(), Instant.now());
+            Connection.cleanupDanglingProcesses(PORT);
+            Assert.assertFalse(Files.exists(f));
+            if (info.startInstant().isPresent() && info.arguments().isPresent()) {
+                Assert.assertTrue(dangling.waitFor(10, TimeUnit.SECONDS));
+            }
+        } finally {
+            dangling.destroyForcibly().waitFor(10, TimeUnit.SECONDS);
         }
     }
 
