@@ -25,6 +25,7 @@ from asyncio.queues import Queue as AsyncQueue
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.python_sync_engine import PythonSyncEngine
+from djl_python.utils import handler_error_code
 
 REQUEST_TRACKING_ID_KEY = "request_tracking_id"
 
@@ -75,7 +76,9 @@ class PythonAsyncEngine(PythonSyncEngine):
                     f"service.invoke_handler_async() failure. There was an error invoking module {self.service.module}, function {function_name}"
                 )
                 outputs = Output().error(
-                    str(e), message="service.invoke_handler_async() failure")
+                    str(e),
+                    code=handler_error_code(e),
+                    message="service.invoke_handler_async() failure")
         if outputs is None:
             outputs = Output(code=204, message="No content")
             logging.debug(
@@ -87,7 +90,7 @@ class PythonAsyncEngine(PythonSyncEngine):
                 f"Received type {type(outputs)}, does not match expected type djl_python.outputs.Output or types.AsyncGenerator"
             )
             logging.error(message)
-            outputs = Output().error(message)
+            outputs = Output().error(message, code=500)
 
         if isinstance(outputs, types.AsyncGeneratorType):
             async for output in outputs:

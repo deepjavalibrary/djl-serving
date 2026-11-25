@@ -211,11 +211,10 @@ public class MpiEngineTest {
             Input input2 = new Input();
             input2.add("data", "input");
             Output output = null;
-            for (int i = 0; i < 5; ++i) {
+            for (int i = 0; i < 5 && (output == null || output.getCode() != 200); ++i) {
                 Thread.sleep(1000);
                 try {
                     output = predictor.predict(input2);
-                    break;
                 } catch (TranslateException ignore) {
                     // ignore
                 }

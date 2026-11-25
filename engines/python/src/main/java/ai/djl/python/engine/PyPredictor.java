@@ -30,6 +30,7 @@ import ai.djl.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +42,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(PyPredictor.class);
     private static final Pattern BATCH_PATTERN = Pattern.compile("batch_(\\d+)\\.(.*)");
+    private static final String BACKEND_STOPPED = "Backend Python process is stopped.";
 
     private PyProcess process;
     private int timeout;
@@ -75,7 +77,10 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             }
         }
         if (!process.isReady()) {
-            throw new TranslateException("Backend Python process is stopped.");
+            if (inputs.get(0) instanceof Input) {
+                return backendUnavailable(inputs.size());
+            }
+            throw new TranslateException(BACKEND_STOPPED);
         }
         Object first = inputs.get(0);
         if (first instanceof Input) {
@@ -149,6 +154,23 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             return ret;
         }
         return super.batchPredict(inputs);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<O> backendUnavailable(int size) {
+        byte[] json =
+                ("{\"code\":503,\"type\":\"TranslateException\",\"message\":\""
+                                + BACKEND_STOPPED
+                                + "\"}")
+                        .getBytes(StandardCharsets.UTF_8);
+        List<O> ret = new ArrayList<>(size);
+        for (int i = 0; i < size; ++i) {
+            Output out = new Output(503, BACKEND_STOPPED);
+            out.addProperty("Content-Type", "application/json");
+            out.add(json);
+            ret.add((O) out);
+        }
+        return ret;
     }
 
     /** {@inheritDoc} */

@@ -576,18 +576,48 @@ public class PyEngineTest {
             input = new Input();
             input.add("typeerror", "type error");
             output = predictor.predict(input);
-            Assert.assertEquals(output.getCode(), 424);
+            Assert.assertEquals(output.getCode(), 500);
 
             // Test empty input
             input = new Input();
             input.add("exception", "");
             output = predictor.predict(input);
             Assert.assertEquals(output.getCode(), 424);
+
+            input = new Input();
+            input.add("broken_pool", "A child process terminated abruptly");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 500);
         }
     }
 
     @Test
-    public void testRestartProcess() throws IOException, ModelException, InterruptedException {
+    public void testAsyncModeException() throws TranslateException, IOException, ModelException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/async_echo"))
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("exception", "engine died");
+            Output output = predictor.predict(input);
+            output.getData().getAsString();
+            Assert.assertEquals(output.getCode(), 500);
+
+            input = new Input();
+            input.add("value_error", "bad input");
+            output = predictor.predict(input);
+            output.getData().getAsString();
+            Assert.assertEquals(output.getCode(), 424);
+        }
+    }
+
+    @Test
+    public void testRestartProcess()
+            throws TranslateException, IOException, ModelException, InterruptedException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
@@ -604,17 +634,15 @@ public class PyEngineTest {
 
             Input input2 = new Input();
             input2.add("data", "input");
-            Output output = null;
-            for (int i = 0; i < 5; ++i) {
+            Output output = predictor.predict(input2);
+            Assert.assertEquals(output.getCode(), 503);
+            JsonElement json =
+                    JsonUtils.GSON.fromJson(output.getData().getAsString(), JsonElement.class);
+            Assert.assertEquals(json.getAsJsonObject().get("code").getAsInt(), 503);
+            for (int i = 0; i < 5 && output.getCode() != 200; ++i) {
                 Thread.sleep(1000);
-                try {
-                    output = predictor.predict(input2);
-                    break;
-                } catch (TranslateException ignore) {
-                    // ignore
-                }
+                output = predictor.predict(input2);
             }
-            Assert.assertNotNull(output);
             Assert.assertEquals(output.getCode(), 200);
         }
     }
@@ -696,7 +724,7 @@ public class PyEngineTest {
             Input input2 = new Input();
             input2.add("data", "input");
             Output output = null;
-            for (int i = 0; i < 10 && output == null; ++i) {
+            for (int i = 0; i < 10 && (output == null || output.getCode() != 200); ++i) {
                 Thread.sleep(1000);
                 try {
                     output = predictor.predict(input2);
@@ -705,6 +733,7 @@ public class PyEngineTest {
                 }
             }
             Assert.assertNotNull(output);
+            Assert.assertEquals(output.getCode(), 200);
             Assert.assertEquals(engineMetricsSockets(model), before);
             Assert.assertTrue(Files.exists(socket));
         }

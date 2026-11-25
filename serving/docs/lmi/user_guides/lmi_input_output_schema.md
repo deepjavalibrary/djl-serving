@@ -250,7 +250,7 @@ Example response:
 
 #### Error Responses
 
-When using dynamic batching, errors are returned with HTTP response code 424 and content:
+When using dynamic batching, an error caused by the request (a `ValueError` or a custom formatter failure) is returned with HTTP response code 424, and any other failure with 500. The content is:
 
 ``` 
 {

@@ -17,6 +17,7 @@ Test Python model example.
 import logging
 import sys
 import time
+from concurrent.futures.process import BrokenProcessPool
 
 from djl_python import Input
 from djl_python import Output
@@ -37,6 +38,8 @@ def handle(inputs: Input):
         raise ValueError(ex)
     elif inputs.contains_key("typeerror"):
         return "invalid_type"
+    elif inputs.contains_key("broken_pool"):
+        raise BrokenProcessPool(inputs.get_as_string("broken_pool"))
     elif inputs.contains_key("exit"):
         sys.exit()
     elif inputs.contains_key("OOM"):

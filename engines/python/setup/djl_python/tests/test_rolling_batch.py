@@ -5,6 +5,7 @@ from djl_python.request import Request
 from djl_python.output_formatter import _json_output_formatter, _jsonlines_output_formatter, \
     _jsonlines_chat_output_formatter, _json_chat_output_formatter, _sse_chat_output_formatter
 from djl_python.request_io import Token, TextGenerationOutput, TextInput
+from djl_python.rolling_batch.rolling_batch import stop_on_any_exception
 
 
 class TestRollingBatch(unittest.TestCase):
@@ -1318,6 +1319,45 @@ class TestRollingBatch(unittest.TestCase):
                     }]
                 }
             }, json.loads(req.get_next_token()))
+
+
+class TestStopOnAnyException(unittest.TestCase):
+
+    def _fail_batch(self, error):
+
+        class FailingBatch:
+
+            def __init__(self, requests):
+                self.active_requests = requests
+
+            def postprocess_results(self):
+                return []
+
+            def reset(self):
+                self.active_requests = []
+
+            @stop_on_any_exception
+            def inference(self):
+                raise error
+
+        requests = [
+            Request(
+                TextInput(request_id=i,
+                          input_text="This is a wonderful day",
+                          parameters={"max_new_tokens": 256},
+                          output_formatter=_json_output_formatter))
+            for i in range(2)
+        ]
+        FailingBatch(requests).inference()
+        return [req.get_error_code() for req in requests]
+
+    def test_engine_failure_is_a_server_error(self):
+        self.assertEqual(self._fail_batch(RuntimeError("engine died")),
+                         [500, 500])
+
+    def test_request_error_is_a_client_error(self):
+        self.assertEqual(self._fail_batch(ValueError("prompt too long")),
+                         [424, 424])
 
 
 if __name__ == '__main__':

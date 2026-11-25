@@ -20,6 +20,7 @@ from typing import Tuple
 from djl_python.service_loader import get_annotated_function, load_model_service, has_function_in_module
 from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.utils import handler_error_code
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
 
@@ -164,7 +165,7 @@ class PythonSyncEngine(object):
                     outputs = Output(code=204, message="No content")
                 elif not isinstance(outputs, Output):
                     outputs = Output().error(
-                        f"Invalid output type: {type(outputs)}")
+                        f"Invalid output type: {type(outputs)}", code=500)
             except Exception as e:
                 logging.exception("Failed invoke service.invoke_handler()")
                 if (type(e).__name__ == "OutOfMemoryError"
@@ -173,7 +174,8 @@ class PythonSyncEngine(object):
                         or "CUDA error: out of memory" in str(e)):
                     outputs = Output(code=507, message=str(e))
                 else:
-                    outputs = Output().error(str(e))
+                    outputs = Output().error(str(e),
+                                             code=handler_error_code(e))
 
             outputs.send(self.cl_socket)
             logging.debug("Outputs is sent to DJL engine.")

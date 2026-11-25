@@ -99,5 +99,9 @@ async def handle(
     if inputs.is_empty():
         logging.info("empty inference request")
         return None
+    if inputs.contains_key("exception"):
+        raise RuntimeError(inputs.get_as_string("exception"))
+    if inputs.contains_key("value_error"):
+        raise ValueError(inputs.get_as_string("value_error"))
 
     return await service.inference(inputs)
