@@ -28,6 +28,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,18 +38,26 @@ import java.util.concurrent.TimeUnit;
 public class InferenceRequestHandlerTest {
 
     private Path configFile;
+    private Field exceedErrorRate;
+    private boolean savedExceedErrorRate;
 
     @BeforeMethod
-    public void setUp() throws IOException, ParseException {
+    public void setUp() throws IOException, ParseException, ReflectiveOperationException {
         // one server error per hour: the first onServerError() call spends it
         configFile = Files.createTempFile("error-rate", ".properties");
         Files.writeString(configFile, "error_rate_server=1/PT1H\n");
         ConfigManager.init(
                 ConfigManagerTest.parseArguments(new String[] {"-f", configFile.toString()}));
+        // once tripped, the limiter is no longer consulted; other tests in this JVM can trip it
+        exceedErrorRate = InferenceRequestHandler.class.getDeclaredField("exceedErrorRate");
+        exceedErrorRate.setAccessible(true);
+        savedExceedErrorRate = exceedErrorRate.getBoolean(null);
+        exceedErrorRate.setBoolean(null, false);
     }
 
     @AfterMethod
-    public void tearDown() throws IOException {
+    public void tearDown() throws IOException, ReflectiveOperationException {
+        exceedErrorRate.setBoolean(null, savedExceedErrorRate);
         Files.deleteIfExists(configFile);
     }
 
