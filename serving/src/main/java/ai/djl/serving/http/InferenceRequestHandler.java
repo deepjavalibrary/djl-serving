@@ -479,6 +479,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         NettyUtils.sendHttpResponse(ctx, resp, true);
+        recordResponse(output.getCode());
     }
 
     private void recordResponse(int code) {
