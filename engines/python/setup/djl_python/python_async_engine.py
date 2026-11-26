@@ -57,19 +57,14 @@ class PythonAsyncEngine(PythonSyncEngine):
                 self.invoke_handler(function_name, inputs), self.loop)
 
     def _failure_output(self, e: Exception, function_name: str) -> Output:
-        if (type(e).__name__ == "OutOfMemoryError"
-                or type(e).__name__ == "MemoryError"
-                or "No available memory for the cache blocks" in str(e)
-                or "CUDA error: out of memory" in str(e)):
-            logging.exception(
-                f"Memory Error encountered when invoking module {self.service.module}, function {function_name}"
-            )
-            return Output(code=507, message=str(e))
+        code = handler_error_code(e)
         logging.exception(
             f"service.invoke_handler_async() failure. There was an error invoking module {self.service.module}, function {function_name}"
         )
+        if code == 507:
+            return Output(code=507, message=str(e))
         return Output().error(str(e),
-                              code=handler_error_code(e),
+                              code=code,
                               message="service.invoke_handler_async() failure")
 
     async def invoke_handler(self, function_name: str, inputs: Input):

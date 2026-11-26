@@ -17,17 +17,21 @@ from concurrent.futures.process import BrokenProcessPool
 from djl_python.custom_formatter_handling import CustomFormatterError
 from djl_python.utils import handler_error_code
 
+try:
+    from vllm.exceptions import VLLMClientError, VLLMValidationError, VLLMServerError
+    _HAVE_VLLM = True
+except ImportError:
+    # vllm is an optional dependency; stand-ins mirror the real class hierarchy
+    class VLLMClientError(Exception):
+        pass
 
-class VLLMClientError(Exception):
-    pass
+    class VLLMValidationError(VLLMClientError):
+        pass
 
+    class VLLMServerError(Exception):
+        pass
 
-class VLLMValidationError(VLLMClientError):
-    pass
-
-
-class VLLMServerError(Exception):
-    pass
+    _HAVE_VLLM = False
 
 
 class TestHandlerErrorCode(unittest.TestCase):
@@ -52,6 +56,18 @@ class TestHandlerErrorCode(unittest.TestCase):
                   compile_error, RuntimeError("engine died"),
                   VLLMServerError("generation failed"), KeyError("x")):
             self.assertEqual(handler_error_code(e), 500, repr(e))
+
+    def test_oom_errors(self):
+        for e in (MemoryError("out of memory"),
+                  ValueError("No available memory for the cache blocks"),
+                  ValueError("CUDA error: out of memory"),
+                  RuntimeError("No available memory for the cache blocks")):
+            self.assertEqual(handler_error_code(e), 507, repr(e))
+
+    def test_oom_beats_client_error_type(self):
+        # a ValueError that is an OOM string returns 507, not 424
+        e = ValueError("No available memory for the cache blocks")
+        self.assertEqual(handler_error_code(e), 507)
 
 
 if __name__ == '__main__':

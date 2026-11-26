@@ -78,6 +78,15 @@ public class InferenceRequestHandlerTest {
         Assert.assertFalse(ConfigManager.getInstance().onServerError());
     }
 
+    @Test
+    public void testChunked4xxDoesNotTripServerErrorLimiter() {
+        FullHttpResponse resp = sendChunked(424);
+        Assert.assertEquals(resp.status().code(), 424);
+        resp.release();
+        // 424 is a client error; it must not consume the server-error token
+        Assert.assertFalse(ConfigManager.getInstance().onServerError());
+    }
+
     // The output starts as 200 and gets its final code only when the chunk arrives, as async
     // and rolling-batch responses do.
     private static FullHttpResponse sendChunked(int finalCode) {

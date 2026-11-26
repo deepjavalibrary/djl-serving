@@ -168,14 +168,7 @@ class PythonSyncEngine(object):
                         f"Invalid output type: {type(outputs)}", code=500)
             except Exception as e:
                 logging.exception("Failed invoke service.invoke_handler()")
-                if (type(e).__name__ == "OutOfMemoryError"
-                        or type(e).__name__ == "MemoryError"
-                        or "No available memory for the cache blocks" in str(e)
-                        or "CUDA error: out of memory" in str(e)):
-                    outputs = Output(code=507, message=str(e))
-                else:
-                    outputs = Output().error(str(e),
-                                             code=handler_error_code(e))
+                outputs = Output().error(str(e), code=handler_error_code(e))
 
             outputs.send(self.cl_socket)
             logging.debug("Outputs is sent to DJL engine.")

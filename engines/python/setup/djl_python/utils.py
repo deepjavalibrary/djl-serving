@@ -118,10 +118,18 @@ def is_streaming(parameters: dict) -> bool:
 
 # Matched by name: importing them here would be circular (formatter) or optional (vLLM).
 _CLIENT_ERROR_TYPES = {"CustomFormatterError", "VLLMClientError"}
+_OOM_NAMES = {"OutOfMemoryError", "MemoryError"}
+_OOM_STRINGS = {
+    "No available memory for the cache blocks",
+    "CUDA error: out of memory",
+}
 
 
 def handler_error_code(e: Exception) -> int:
-    """HTTP code for an exception raised by a handler: 424 for the types a bad request raises, else 500."""
+    """HTTP code for a handler exception: 507 for OOM, 424 if the request caused it, else 500."""
+    if type(e).__name__ in _OOM_NAMES or any(s in str(e)
+                                             for s in _OOM_STRINGS):
+        return 507
     if isinstance(e, ValueError) or any(t.__name__ in _CLIENT_ERROR_TYPES
                                         for t in type(e).__mro__):
         return 424

@@ -1359,6 +1359,16 @@ class TestStopOnAnyException(unittest.TestCase):
         self.assertEqual(self._fail_batch(ValueError("prompt too long")),
                          [424, 424])
 
+    def test_oom_is_507(self):
+        self.assertEqual(self._fail_batch(MemoryError("out of memory")),
+                         [507, 507])
+
+    def test_vllm_oom_string_is_507(self):
+        self.assertEqual(
+            self._fail_batch(
+                ValueError("No available memory for the cache blocks")),
+            [507, 507])
+
 
 if __name__ == '__main__':
     unittest.main()

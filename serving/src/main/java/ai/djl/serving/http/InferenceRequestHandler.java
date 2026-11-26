@@ -397,17 +397,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
         BytesSupplier data = output.getData();
         if (data instanceof ChunkedBytesSupplier) {
-            boolean recorded = false;
             try {
                 boolean first = true;
                 ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
                 while (supplier.hasNext()) {
                     byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.SECONDS);
-                    if (first) {
-                        // the code is final once the first chunk is available
-                        recordResponse(output.getCode());
-                        recorded = true;
-                    }
                     // Defer sending HTTP header until first chunk received.
                     // This allows inference update HTTP code.
                     // If this is the first and last chunk, we're in a non-streaming case and can
@@ -426,6 +420,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             resp.content().writeBytes(buf);
                         }
                         NettyUtils.sendHttpResponse(ctx, resp, true);
+                        recordResponse(output.getCode());
                         return;
                     }
                     if (first) {
@@ -448,13 +443,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 ctx.disconnect();
                 ctx.newFailedFuture(e);
             } finally {
-                if (!recorded) {
-                    recordResponse(output.getCode());
-                }
+                // record once the stream is complete, using the code set by the last chunk
+                recordResponse(output.getCode());
             }
             return;
         }
-        recordResponse(code);
         if (data instanceof PublisherBytesSupplier) {
             HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
             for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
@@ -465,7 +458,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             supplier.subscribe(
                     buf -> {
                         if (buf == null) {
-                            // End stream
+                            // End stream — record with the final code
+                            recordResponse(output.getCode());
                             ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                         } else if (buf.length > 0) {
                             // Continue stream
@@ -495,9 +489,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             }
         } else if (code >= 400) {
             SERVER_METRIC.info("{}", RESPONSE_4_XX);
-            if (code == 424 && !exceedErrorRate && config.onServerError()) {
-                exceedErrorRate = true;
-            }
         } else {
             SERVER_METRIC.info("{}", RESPONSE_2_XX);
         }
