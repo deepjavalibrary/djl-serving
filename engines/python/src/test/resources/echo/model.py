@@ -44,6 +44,10 @@ def handle(inputs: Input):
         raise ValueError(ex)
     elif inputs.contains_key("typeerror"):
         return "invalid_type"
+    elif inputs.contains_key("keyerror"):
+        raise KeyError(inputs.get_as_string("keyerror"))
+    elif inputs.contains_key("typeerror_raise"):
+        raise TypeError(inputs.get_as_string("typeerror_raise"))
     elif inputs.contains_key("broken_pool"):
         raise BrokenProcessPool(inputs.get_as_string("broken_pool"))
     elif inputs.contains_key("exit"):

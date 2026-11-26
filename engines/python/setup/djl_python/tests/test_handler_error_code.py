@@ -41,7 +41,8 @@ class TestHandlerErrorCode(unittest.TestCase):
             json.loads("{")
         except ValueError as e:
             decode_error = e
-        for e in (ValueError("bad input"), decode_error,
+        for e in (ValueError("bad input"), decode_error, KeyError("prompt"),
+                  TypeError("expected str"),
                   CustomFormatterError("formatter failed", KeyError("x")),
                   VLLMValidationError("prompt too long")):
             self.assertEqual(handler_error_code(e), 424, repr(e))
@@ -54,7 +55,7 @@ class TestHandlerErrorCode(unittest.TestCase):
             compile_error = e
         for e in (BrokenProcessPool("A child process terminated abruptly"),
                   compile_error, RuntimeError("engine died"),
-                  VLLMServerError("generation failed"), KeyError("x")):
+                  VLLMServerError("generation failed")):
             self.assertEqual(handler_error_code(e), 500, repr(e))
 
     def test_oom_errors(self):

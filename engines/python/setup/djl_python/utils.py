@@ -130,8 +130,8 @@ def handler_error_code(e: Exception) -> int:
     if type(e).__name__ in _OOM_NAMES or any(s in str(e)
                                              for s in _OOM_STRINGS):
         return 507
-    if isinstance(e, ValueError) or any(t.__name__ in _CLIENT_ERROR_TYPES
-                                        for t in type(e).__mro__):
+    if isinstance(e, (ValueError, KeyError, TypeError)) or any(
+            t.__name__ in _CLIENT_ERROR_TYPES for t in type(e).__mro__):
         return 424
     return 500
 

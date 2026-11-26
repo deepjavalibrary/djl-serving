@@ -1356,8 +1356,9 @@ class TestStopOnAnyException(unittest.TestCase):
                          [500, 500])
 
     def test_request_error_is_a_client_error(self):
-        self.assertEqual(self._fail_batch(ValueError("prompt too long")),
-                         [424, 424])
+        for e in (ValueError("prompt too long"), KeyError("prompt"),
+                  TypeError("expected str")):
+            self.assertEqual(self._fail_batch(e), [424, 424], repr(e))
 
     def test_oom_is_507(self):
         self.assertEqual(self._fail_batch(MemoryError("out of memory")),

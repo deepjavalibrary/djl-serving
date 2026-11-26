@@ -588,6 +588,16 @@ public class PyEngineTest {
             input.add("broken_pool", "A child process terminated abruptly");
             output = predictor.predict(input);
             Assert.assertEquals(output.getCode(), 500);
+
+            input = new Input();
+            input.add("keyerror", "prompt");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
+
+            input = new Input();
+            input.add("typeerror_raise", "wrong type");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
         }
     }
 
