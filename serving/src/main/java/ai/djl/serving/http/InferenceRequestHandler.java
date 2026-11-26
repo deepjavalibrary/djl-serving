@@ -392,23 +392,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         int code = output.getCode();
         if (code == 200) {
             status = HttpResponseStatus.OK;
-            SERVER_METRIC.info("{}", RESPONSE_2_XX);
         } else {
-            if (code >= 500) {
-                SERVER_METRIC.info("{}", RESPONSE_5_XX);
-                if (!exceedErrorRate && config.onServerError()) {
-                    exceedErrorRate = true;
-                }
-            } else if (code >= 400) {
-                SERVER_METRIC.info("{}", RESPONSE_4_XX);
-                if (code == 424) {
-                    if (!exceedErrorRate && config.onServerError()) {
-                        exceedErrorRate = true;
-                    }
-                }
-            } else {
-                SERVER_METRIC.info("{}", RESPONSE_2_XX);
-            }
             status = new HttpResponseStatus(code, output.getMessage());
         }
         BytesSupplier data = output.getData();
@@ -436,6 +420,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             resp.content().writeBytes(buf);
                         }
                         NettyUtils.sendHttpResponse(ctx, resp, true);
+                        recordResponse(output.getCode());
                         return;
                     }
                     if (first) {
@@ -457,6 +442,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 logger.warn("RequestId=[{}] Chunk reading interrupted", requestId, e);
                 ctx.disconnect();
                 ctx.newFailedFuture(e);
+            } finally {
+                // record once the stream is complete, using the code set by the last chunk
+                recordResponse(output.getCode());
             }
             return;
         }
@@ -470,7 +458,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             supplier.subscribe(
                     buf -> {
                         if (buf == null) {
-                            // End stream
+                            // End stream — record with the final code
+                            recordResponse(output.getCode());
                             ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                         } else if (buf.length > 0) {
                             // Continue stream
@@ -490,6 +479,20 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         NettyUtils.sendHttpResponse(ctx, resp, true);
+        recordResponse(output.getCode());
+    }
+
+    private void recordResponse(int code) {
+        if (code >= 500) {
+            SERVER_METRIC.info("{}", RESPONSE_5_XX);
+            if (!exceedErrorRate && config.onServerError()) {
+                exceedErrorRate = true;
+            }
+        } else if (code >= 400) {
+            SERVER_METRIC.info("{}", RESPONSE_4_XX);
+        } else {
+            SERVER_METRIC.info("{}", RESPONSE_2_XX);
+        }
     }
 
     void onException(Throwable t, ChannelHandlerContext ctx) {

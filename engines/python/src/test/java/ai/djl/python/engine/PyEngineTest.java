@@ -576,45 +576,130 @@ public class PyEngineTest {
             input = new Input();
             input.add("typeerror", "type error");
             output = predictor.predict(input);
-            Assert.assertEquals(output.getCode(), 424);
+            Assert.assertEquals(output.getCode(), 500);
 
             // Test empty input
             input = new Input();
             input.add("exception", "");
             output = predictor.predict(input);
             Assert.assertEquals(output.getCode(), 424);
+
+            input = new Input();
+            input.add("broken_pool", "A child process terminated abruptly");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 500);
+
+            input = new Input();
+            input.add("keyerror", "prompt");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
+
+            input = new Input();
+            input.add("typeerror_raise", "wrong type");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
         }
     }
 
     @Test
-    public void testRestartProcess() throws IOException, ModelException, InterruptedException {
+    public void testAsyncModeStreamingException()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/async_echo"))
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            for (int failAfter = 0; failAfter <= 2; failAfter += 2) {
+                Input input = new Input();
+                input.add(
+                        "{\"inputs\": \"request\", \"stream\": \"true\", \"parameters\":"
+                                + " {\"fail_after\": "
+                                + failAfter
+                                + "}}");
+                input.addProperty("Content-Type", "application/json");
+                Output output = predictor.predict(input);
+                ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
+                for (int i = 0; i < failAfter; ++i) {
+                    cbs.nextChunk(5, TimeUnit.SECONDS);
+                }
+                // the stream ends with an error chunk instead of leaving the request open
+                byte[] last = cbs.nextChunk(5, TimeUnit.SECONDS);
+                Assert.assertFalse(cbs.hasNext());
+                Assert.assertEquals(output.getCode(), 500);
+                JsonElement json =
+                        JsonUtils.GSON.fromJson(
+                                new String(last, StandardCharsets.UTF_8), JsonElement.class);
+                Assert.assertEquals(json.getAsJsonObject().get("code").getAsInt(), 500);
+            }
+        }
+    }
+
+    @Test
+    public void testAsyncModeException() throws TranslateException, IOException, ModelException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/async_echo"))
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("exception", "engine died");
+            Output output = predictor.predict(input);
+            output.getData().getAsString();
+            Assert.assertEquals(output.getCode(), 500);
+
+            input = new Input();
+            input.add("value_error", "bad input");
+            output = predictor.predict(input);
+            output.getData().getAsString();
+            Assert.assertEquals(output.getCode(), 424);
+        }
+    }
+
+    @Test
+    public void testRestartProcess()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        // the echo model's initialization waits while this file exists
+        Path tmp = Files.createDirectories(Paths.get("build/tmp"));
+        Path barrier = tmp.resolve("restart_barrier_" + RandomUtils.nextInt());
+        Files.deleteIfExists(barrier);
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optOption("restart_barrier", barrier.toAbsolutePath().toString())
                         .optEngine("Python")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
             Assert.assertNull(model.getProperty("failed"));
-            Input input = new Input();
-            input.add("exit", "true");
-            Assert.assertThrows(EngineException.class, () -> predictor.predict(input));
-            Assert.assertEquals(model.getProperty("failed"), "1");
-
             Input input2 = new Input();
             input2.add("data", "input");
-            Output output = null;
-            for (int i = 0; i < 5; ++i) {
-                Thread.sleep(1000);
-                try {
-                    output = predictor.predict(input2);
-                    break;
-                } catch (TranslateException ignore) {
-                    // ignore
-                }
+            Output output;
+            Files.createFile(barrier);
+            try {
+                Input input = new Input();
+                input.add("exit", "true");
+                Assert.assertThrows(EngineException.class, () -> predictor.predict(input));
+                Assert.assertEquals(model.getProperty("failed"), "1");
+
+                output = predictor.predict(input2);
+                Assert.assertEquals(output.getCode(), 503);
+                JsonElement json =
+                        JsonUtils.GSON.fromJson(output.getData().getAsString(), JsonElement.class);
+                Assert.assertEquals(json.getAsJsonObject().get("code").getAsInt(), 503);
+            } finally {
+                Files.deleteIfExists(barrier);
             }
-            Assert.assertNotNull(output);
+            for (int i = 0; i < 10 && output.getCode() != 200; ++i) {
+                Thread.sleep(1000);
+                output = predictor.predict(input2);
+            }
             Assert.assertEquals(output.getCode(), 200);
         }
     }
@@ -696,7 +781,7 @@ public class PyEngineTest {
             Input input2 = new Input();
             input2.add("data", "input");
             Output output = null;
-            for (int i = 0; i < 10 && output == null; ++i) {
+            for (int i = 0; i < 10 && (output == null || output.getCode() != 200); ++i) {
                 Thread.sleep(1000);
                 try {
                     output = predictor.predict(input2);
@@ -705,6 +790,7 @@ public class PyEngineTest {
                 }
             }
             Assert.assertNotNull(output);
+            Assert.assertEquals(output.getCode(), 200);
             Assert.assertEquals(engineMetricsSockets(model), before);
             Assert.assertTrue(Files.exists(socket));
         }

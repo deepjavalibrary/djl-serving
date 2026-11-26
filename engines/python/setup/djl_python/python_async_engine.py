@@ -25,6 +25,7 @@ from asyncio.queues import Queue as AsyncQueue
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.python_sync_engine import PythonSyncEngine
+from djl_python.utils import handler_error_code
 
 REQUEST_TRACKING_ID_KEY = "request_tracking_id"
 
@@ -55,6 +56,17 @@ class PythonAsyncEngine(PythonSyncEngine):
             asyncio.run_coroutine_threadsafe(
                 self.invoke_handler(function_name, inputs), self.loop)
 
+    def _failure_output(self, e: Exception, function_name: str) -> Output:
+        code = handler_error_code(e)
+        logging.exception(
+            f"service.invoke_handler_async() failure. There was an error invoking module {self.service.module}, function {function_name}"
+        )
+        if code == 507:
+            return Output(code=507, message=str(e))
+        return Output().error(str(e),
+                              code=code,
+                              message="service.invoke_handler_async() failure")
+
     async def invoke_handler(self, function_name: str, inputs: Input):
         request_tracking_id = inputs.get_property(REQUEST_TRACKING_ID_KEY)
         try:
@@ -62,20 +74,7 @@ class PythonAsyncEngine(PythonSyncEngine):
                 function_name, inputs)
         except Exception as e:
             logging.exception("Failed invoke service.invoke_handler_async()")
-            if (type(e).__name__ == "OutOfMemoryError"
-                    or type(e).__name__ == "MemoryError"
-                    or "No available memory for the cache blocks" in str(e)
-                    or "CUDA error: out of memory" in str(e)):
-                logging.exception(
-                    f"Memory Error encountered when invoking module {self.service.module}, function {function_name}"
-                )
-                outputs = Output(code=507, message=str(e))
-            else:
-                logging.exception(
-                    f"service.invoke_handler_async() failure. There was an error invoking module {self.service.module}, function {function_name}"
-                )
-                outputs = Output().error(
-                    str(e), message="service.invoke_handler_async() failure")
+            outputs = self._failure_output(e, function_name)
         if outputs is None:
             outputs = Output(code=204, message="No content")
             logging.debug(
@@ -87,13 +86,21 @@ class PythonAsyncEngine(PythonSyncEngine):
                 f"Received type {type(outputs)}, does not match expected type djl_python.outputs.Output or types.AsyncGenerator"
             )
             logging.error(message)
-            outputs = Output().error(message)
+            outputs = Output().error(message, code=500)
 
         if isinstance(outputs, types.AsyncGeneratorType):
-            async for output in outputs:
-                output.add_property(REQUEST_TRACKING_ID_KEY,
-                                    request_tracking_id)
-                await self.output_queue.put(output)
+            try:
+                async for output in outputs:
+                    output.add_property(REQUEST_TRACKING_ID_KEY,
+                                        request_tracking_id)
+                    await self.output_queue.put(output)
+            except Exception as e:
+                # without a terminal output the request stays active on the Java side
+                logging.exception("Failed while streaming the response")
+                failure = self._failure_output(e, function_name)
+                failure.add_property(REQUEST_TRACKING_ID_KEY,
+                                     request_tracking_id)
+                await self.output_queue.put(failure)
             return
         # Request tracking ID is needed always for async
         # Do this here so that users in custom handlers do not need to worry about it

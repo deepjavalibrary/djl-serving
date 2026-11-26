@@ -17,7 +17,7 @@ from typing import List, Optional
 from djl_python.properties_manager.properties import Properties
 from djl_python.request import Request
 from djl_python.request_io import Token
-from djl_python.utils import IdCounter
+from djl_python.utils import IdCounter, handler_error_code
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
@@ -63,8 +63,7 @@ def stop_on_any_exception(func):
                                        last_token=True,
                                        finish_reason="error")
                 request.set_error_message(error_message)
-                # TODO: make configurable
-                request.set_error_code(424)
+                request.set_error_code(handler_error_code(e))
             response = self.postprocess_results()
             self.reset()
             return response

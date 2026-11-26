@@ -15,8 +15,10 @@ Test Python model example.
 """
 
 import logging
+import os
 import sys
 import time
+from concurrent.futures.process import BrokenProcessPool
 
 from djl_python import Input
 from djl_python import Output
@@ -32,11 +34,22 @@ def handle(inputs: Input):
     """
     Default handler function
     """
+    barrier = inputs.get_property("restart_barrier")
+    if barrier and inputs.is_empty():
+        # initialization waits while the test holds the barrier file
+        while os.path.exists(barrier):
+            time.sleep(0.05)
     if inputs.contains_key("exception"):
         ex = inputs.get_as_string("exception")
         raise ValueError(ex)
     elif inputs.contains_key("typeerror"):
         return "invalid_type"
+    elif inputs.contains_key("keyerror"):
+        raise KeyError(inputs.get_as_string("keyerror"))
+    elif inputs.contains_key("typeerror_raise"):
+        raise TypeError(inputs.get_as_string("typeerror_raise"))
+    elif inputs.contains_key("broken_pool"):
+        raise BrokenProcessPool(inputs.get_as_string("broken_pool"))
     elif inputs.contains_key("exit"):
         sys.exit()
     elif inputs.contains_key("OOM"):

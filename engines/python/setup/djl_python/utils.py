@@ -116,6 +116,26 @@ def is_streaming(parameters: dict) -> bool:
     return "stream" in parameters and parameters.get("stream")
 
 
+# Matched by name: importing them here would be circular (formatter) or optional (vLLM).
+_CLIENT_ERROR_TYPES = {"CustomFormatterError", "VLLMClientError"}
+_OOM_NAMES = {"OutOfMemoryError", "MemoryError"}
+_OOM_STRINGS = {
+    "No available memory for the cache blocks",
+    "CUDA error: out of memory",
+}
+
+
+def handler_error_code(e: Exception) -> int:
+    """HTTP code for a handler exception: 507 for OOM, 424 if the request caused it, else 500."""
+    if type(e).__name__ in _OOM_NAMES or any(s in str(e)
+                                             for s in _OOM_STRINGS):
+        return 507
+    if isinstance(e, (ValueError, KeyError, TypeError)) or any(
+            t.__name__ in _CLIENT_ERROR_TYPES for t in type(e).__mro__):
+        return 424
+    return 500
+
+
 def wait_till_generation_finished(parameters):
     return is_best_of(parameters) or is_multiple_sequences(
         parameters) or is_beam_search(parameters)

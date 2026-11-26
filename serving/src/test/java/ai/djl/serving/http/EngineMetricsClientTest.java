@@ -15,6 +15,7 @@ package ai.djl.serving.http;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.timeout.ReadTimeoutException;
 
 import org.testng.Assert;
 import org.testng.SkipException;
@@ -120,7 +121,10 @@ public class EngineMetricsClientTest {
             Throwable error =
                     failure(EngineMetricsClient.get(server.path(), "/metrics", LIMIT, 300));
             long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - begin);
-            Assert.assertTrue(error instanceof TimeoutException, error.toString());
+            // the deadline and the read timeout share timeoutMs, so either may fire first
+            Assert.assertTrue(
+                    error instanceof TimeoutException || error instanceof ReadTimeoutException,
+                    error.toString());
             Assert.assertEquals(EngineMetricsClient.describe(error), "timeout");
             Assert.assertTrue(elapsed >= 250 && elapsed < 2500, "elapsed " + elapsed);
             Assert.assertEquals(server.requests().size(), 1);
